@@ -1,0 +1,11 @@
+# Sample Authors
+# Remove file or replace with your own
+
+NOWIL:
+  name: NOWIL
+  picture: /images/19159759.jpeg
+  twitter: "@N0W1L"
+  links:
+    - title: Twitter
+      url: https://twitter.com/N0W1L
+      icon: fab fa-twitter-square
