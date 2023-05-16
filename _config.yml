@@ -32,9 +32,9 @@ mathjax:
 google_fonts:
   - name: "HACK"
     weights: "400,400,700,700"
-google_analytics: # Google Analytics id, e.g. "UA-NNNNNNNN-N"
+google_analytics: G-SLQCSYRVVS
 disqus:
-  shortname: # Disqus shortname, e.g. "my_disqus_shortname"
+  shortname: devlog-17 # Disqus shortname, e.g. "my_disqus_shortname"
 twitter:
   username: N0W1L # site's Twitter username
 
