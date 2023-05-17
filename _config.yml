@@ -30,8 +30,10 @@ mathjax:
 #  combo: "tex-mml-chtml"
 #  tags: "none"
 google_fonts:
-  - name: "HACK"
-    weights: "400,400,700,700"
+  - name: "Roboto"
+    weights: "400,400i,700,700i"
+  - name: "Lora"
+    weights: "400,400i,700,700i"
 google_analytics: G-SLQCSYRVVS
 google_site_verification: krxdfpPBR03bGNIYfBs0QIg5rjzrL2u6M0frupqFs4E
 disqus:

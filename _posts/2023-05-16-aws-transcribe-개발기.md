@@ -8,9 +8,11 @@ tags:
   - aws
   - transcribe
   - NestJS
+image:
+  path: /images/aws_transcribe/Untitled.png
+  thumbnail: /images/aws_transcribe/Untitled.png
+author: NOWIL
 ---
-
-![Untitled](/images/aws_transcribe/Untitled.png)
 
 위급 상황 대응 시스템을 개발하기 위해 필요한 주요 기능 중 하나는 사용자가 녹음한 음성 데이터에서 텍스트를 추출하는 작업이 필요하였습니다. 이러한 작업을 위해 AWS에서 제공하는 AWS Transcribe 서비스를 통해 개발하는 과정을 기록하였습니다.
 
@@ -24,7 +26,7 @@ tags:
 
 ## 왜 AWS Transcribe를 사용하였는가
 
-우선 여러 클라우드 서비스에서 텍스트 추출 기능을 제공합니다. 구글 GCP의 \***\*Speech-to-Text,\*\*** 네이버 NCP의 **CLOVA Speech** 등이 있습니다. 이 중에서 AWS의 Transcribe를 사용한 가장 큰 이유는 음성 데이터를 S3에 저장하고 **AWS Transcribe에서 저장된 S3 객체를 키값을 통해 바로 가져올 수 있다**는 점이었습니다. 또한 AWS 프리티어도 적용 가능합니다.
+우선 여러 클라우드 서비스에서 텍스트 추출 기능을 제공합니다. 구글 GCP의 **Speech-to-Text**, 네이버 NCP의 **CLOVA Speech** 등이 있습니다. 이 중에서 AWS의 Transcribe를 사용한 가장 큰 이유는 음성 데이터를 S3에 저장하고 **AWS Transcribe에서 저장된 S3 객체를 키값을 통해 바로 가져올 수 있다**는 점이었습니다. 또한 AWS 프리티어도 적용 가능합니다.
 
 ## NestJS - S3 객체 업로드
 
@@ -144,7 +146,7 @@ export class ReportService {
 
 ![Untitled](/images/aws_transcribe/Untitled%203.png)
 
-## S3 객체 Key로 AWS \***\*Transcribe\*\*** 실행
+## S3 객체 Key로 AWS Transcribe 실행
 
 AWS Transcribe의 주요 작업 순서는 다음과 같습니다.
 

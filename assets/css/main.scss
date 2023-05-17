@@ -9,10 +9,10 @@ sitemap: false
 
 $serif-font-family: "Lora", serif;
 $sans-serif-font-family: "Source Sans Pro", sans-serif;
-$monospace-font-family: monospace;
+$monospace-font-family: "Source Code Pro", monospace;
 
-$base-font-family: $sans-serif-font-family;
+$base-font-family: $monospace-font-family;
 $headline-font-family: $monospace-font-family;
 $title-font-family: $monospace-font-family;
-$description-font-family: $serif-font-family;
-$meta-font-family: $serif-font-family;
+$description-font-family: $monospace-font-family;
+$meta-font-family: $sans-serif-font-family;

@@ -39,12 +39,12 @@ $h6-max: ($base-font-size / $modular-scale-2) !default;
 
 /* Font Families */
 $serif-font-family: "Lora", serif !default;
-$sans-serif-font-family: "Source Sans Pro", sans-serif !default;
-$monospace-font-family: Menlo, Consolas, Monaco, "Courier New", Courier, monospace !default;
+$sans-serif-font-family: "Roboto", sans-serif !default;
+$monospace-font-family: "Source Code Pro", monospace;
 
 $base-font-family: $sans-serif-font-family !default;
 $headline-font-family: $sans-serif-font-family !default;
-$title-font-family: $serif-font-family !default;
+$title-font-family: $sans-serif-font-family !default;
 $description-font-family: $serif-font-family !default;
 $meta-font-family: $serif-font-family !default;
 
