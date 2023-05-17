@@ -9,3 +9,6 @@ NOWIL:
     - title: Twitter
       url: https://twitter.com/N0W1L
       icon: fab fa-twitter-square
+    - title: GitHub
+      url: https://github.com/jiwon11
+      icon: fab fa-github-square
