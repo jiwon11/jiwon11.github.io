@@ -5,7 +5,7 @@ date: 2023-05-04
 categories:
   - "개발기"
 tags:
-  - aws
+  - AWS
   - transcribe
   - NestJS
 image:
