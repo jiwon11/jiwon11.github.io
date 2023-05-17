@@ -33,6 +33,7 @@ google_fonts:
   - name: "HACK"
     weights: "400,400,700,700"
 google_analytics: G-SLQCSYRVVS
+google_site_verification: krxdfpPBR03bGNIYfBs0QIg5rjzrL2u6M0frupqFs4E
 disqus:
   shortname: devlog-17 # Disqus shortname, e.g. "my_disqus_shortname"
 twitter:
