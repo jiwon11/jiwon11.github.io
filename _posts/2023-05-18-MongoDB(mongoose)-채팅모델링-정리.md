@@ -45,8 +45,7 @@ author: NOWIL
 > To each input document, the \$lookup stage **adds a new array field** whose elements are the matching documents from the "joined" collection.
 > (각 입력 문서에 \$lookup 단계는 요소가 "결합된" 컬렉션의 일치하는 문서인 **새 배열 필드를 추가**합니다.)
 
-- mongodb 공식문서 [https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/](https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/)
-  >
+- 참고 : mongodb 공식문서 [https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/](https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/)
 
 예시)
 
@@ -96,15 +95,13 @@ db.orders.aggregate([
 > Deconstructs an array field from the input documents to output a document for each element.
 > (입력 문서에서 배열 필드를 분해하여 각 요소에 대한 문서를 출력합니다.)
 
-- mongodb 공식문서
+- 참고 : mongodb 공식문서
   [https://www.mongodb.com/docs/manual/reference/operator/aggregation/unwind/](https://www.mongodb.com/docs/manual/reference/operator/aggregation/unwind/)
-  >
 
 그리고 \$unwind stage가 반드시 \$lookup stage 뒤에 정의되어야 합니다.
 
 > In the `db.collection.aggregate()` method and `db.aggregate()` method, pipeline stages appear in an array. **Documents pass through the stages in sequence.**
 > (db.collection.aggregate() 메서드 및 db.aggregate() 메서드에서 파이프라인 단계는 배열에 나타납니다. 문서는 순서대로 단계를 거칩니다.)
 
-- mongodb 공식문서
+- 참고 : mongodb 공식문서
   [https://www.mongodb.com/docs/manual/reference/operator/aggregation/unwind/](https://www.mongodb.com/docs/manual/reference/operator/aggregation/unwind/)
-  >
