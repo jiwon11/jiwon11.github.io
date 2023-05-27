@@ -12,7 +12,6 @@ body {
 
 blockquote,
 q {
-
   footer {
     font-size: 80%;
     font-style: normal;
@@ -103,4 +102,11 @@ figcaption {
 a {
   -webkit-transition: $global-transition;
   transition: $global-transition;
+}
+
+img + em {
+  display: block;
+  text-align: center;
+  font-size: 0.8rem;
+  color: light-grey;
 }
