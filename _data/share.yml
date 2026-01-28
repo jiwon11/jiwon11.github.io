@@ -1,0 +1,14 @@
+# Sharing options for posts
+
+platforms:
+  - type: Twitter
+    icon: "fab fa-twitter"
+    link: "https://twitter.com/intent/tweet?text=TITLE&url=URL"
+
+  - type: Facebook
+    icon: "fab fa-facebook"
+    link: "https://www.facebook.com/sharer/sharer.php?title=TITLE&u=URL"
+
+  - type: LinkedIn
+    icon: "fab fa-linkedin"
+    link: "https://www.linkedin.com/sharing/share-offsite/?url=URL"

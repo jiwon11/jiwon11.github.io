@@ -1,123 +1,153 @@
-# Welcome to Jekyll!
-#
-# This config file is meant for settings that affect your whole blog, values
-# which you are expected to set up once and rarely edit after that. If you find
-# yourself editing this file very often, consider using Jekyll's data files
-# feature for the data you need to update frequently.
-#
-# For technical reasons, this file is *NOT* reloaded automatically when you use
-# 'bundle exec jekyll serve'. If you change this file, please restart the server process.
+# The Site Configuration
 
-# Site settings
-# These are used to personalize your new site. If you look in the HTML files,
-# you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
-# You can create any custom variable you would like, and they will be accessible
-# in the templates via {{ site.myvariable }}.
-#theme: jekyll-theme-so-simple
-remote_theme: "mmistakes/so-simple-theme"
-skin: "/assets/css/skins/default.css"
-locale: en-US
-title: "NOWIL's Development & Blog"
-description: "개발 기록과 여러 생각들."
-baseurl: "" # the subpath of your site, e.g. "/blog"
-url: # the base hostname & protocol for your site e.g. "https://mmistakes.github.io"
-logo: "/images/19159759.jpeg" # path of site logo, e.g. "/assets/images/logo.png"
-date_format: "%Y-%m-%d"
-read_time: true
-words_per_minute: 200
-mathjax:
-  enable: true
-#  combo: "tex-mml-chtml"
-#  tags: "none"
-google_fonts:
-  - name: "Roboto"
-    weights: "400,400i,700,700i"
-  - name: "Lora"
-    weights: "400,400i,700,700i"
-google_analytics: G-SLQCSYRVVS
-google_site_verification: krxdfpPBR03bGNIYfBs0QIg5rjzrL2u6M0frupqFs4E
-disqus:
-  shortname: devlog-17 # Disqus shortname, e.g. "my_disqus_shortname"
+# Import the theme
+theme: jekyll-theme-chirpy
+
+# The language of the webpage
+lang: ko-KR
+
+# Change to your timezone
+timezone: Asia/Seoul
+
+# jekyll-seo-tag settings
+title: NOWIL's Dev Blog
+tagline: Backend Developer | Spring & Kotlin Enthusiast
+description: >-
+  백엔드 개발 기록과 여러 생각들을 공유합니다.
+  Spring, Kotlin, AWS, DevOps 등 다양한 기술 주제를 다룹니다.
+
+# Fill in the protocol & hostname for your site.
+url: "https://jiwon11.github.io"
+
+github:
+  username: jiwon11
+
 twitter:
-  username: N0W1L # site's Twitter username
+  username: N0W1L
 
-# Liquid
-liquid:
-  error_mode: strict
+social:
+  name: NOWIL
+  email: jeewonre@naver.com
+  links:
+    - https://twitter.com/N0W1L
+    - https://github.com/jiwon11
 
-# Build settings
-markdown: kramdown
-feed:
-  path: atom.xml
+# Google Analytics
+google_analytics:
+  id: G-SLQCSYRVVS
 
-# Pagination - https://jekyllrb.com/docs/pagination/
+# Google site verification
+google_site_verification: krxdfpPBR03bGNIYfBs0QIg5rjzrL2u6M0frupqFs4E
+
+# Theme mode [light | dark]
+theme_mode: # [light | dark]
+
+# The CDN endpoint for media resources
+cdn:
+
+# Avatar on sidebar
+avatar: /assets/img/avatar.jpg
+
+# Enable Table of Contents
+toc: true
+
+# Comments settings
+comments:
+  provider: giscus
+  giscus:
+    repo: jiwon11/jiwon11.github.io
+    repo_id: # Get from https://giscus.app
+    category: General
+    category_id: # Get from https://giscus.app
+    mapping: pathname
+    strict: 0
+    input_position: bottom
+    lang: ko
+    reactions_enabled: 1
+
+# Self-hosted static assets
+assets:
+  self_host:
+    enabled: false
+
+pwa:
+  enabled: true
+  cache:
+    enabled: true
+
 paginate: 10
-paginate_path: /page:num/
 
-# Search
-search_full_content: true
+# The base URL of your site
+baseurl: ""
 
-# Taxonomy pages
-category_archive_path: "/categories/#"
-tag_archive_path: "/tags/#"
-collection_archive_path: "/my_collections/#"
+# Kramdown settings
+kramdown:
+  footnote_backlink: "&#8617;&#xfe0e;"
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: highlight
+    span:
+      line_numbers: false
+    block:
+      line_numbers: true
+      start_line: 1
 
-# Exclude from processing.
-# The following items will not be processed, by default. Create a custom list
-# to override the default setting.
-# exclude:
-#   - Gemfile
-#   - Gemfile.lock
-#   - node_modules
-#   - vendor/bundle/
-#   - vendor/cache/
-#   - vendor/gems/
-#   - vendor/ruby/
+collections:
+  tabs:
+    output: true
+    sort_by: order
 
-plugins:
-  - jekyll-seo-tag
-  - jekyll-sitemap
-  - jekyll-feed
-  - jekyll-paginate
-
-# Collections
-#collections_dir: my_collections
-#Front Matter Defaults
 defaults:
-  #Post defaults
   - scope:
-      path: "_posts"
+      path: ""
       type: posts
     values:
       layout: post
       comments: true
-      share: true
+      toc: true
+      permalink: /posts/:title/
+  - scope:
+      path: _drafts
+    values:
+      comments: false
+  - scope:
+      path: ""
+      type: tabs
+    values:
+      layout: page
+      permalink: /:title/
+  - scope:
+      path: assets/js/dist
+    values:
+      swcache: true
 
-# Site Author
-author:
-  name: NOWIL
-  picture: /images/19159759.jpeg
-  email: jeewonre@naver.com
-  twitter: N0W1L
-  links:
-    - title: Twitter
-      url: https://twitter.com/N0W1L
-      icon: fab fa-twitter-square
-    - title: GitHub
-      url: https://github.com/jiwon11
-      icon: fab fa-github-square
+sass:
+  style: compressed
 
-# Footer Links
-footer_links:
-  - title: Twitter
-    url: https://twitter.com/N0W1L
-    icon: fab fa-twitter-square
-  - title: GitHub
-    url: https://github.com/jiwon11
-    icon: fab fa-github-square
-  - title: Email
-    url: mailto:jeewonre@naver.com
-    icon: fa fa-envelope-square
-  - title: Feed
-    url: atom.xml
-    icon: fas fa-rss-square
+compress_html:
+  clippings: all
+  comments: all
+  endings: all
+  profile: false
+  blanklines: false
+  ignore:
+    envs: [development]
+
+exclude:
+  - "*.gem"
+  - "*.gemspec"
+  - docs
+  - tools
+  - README.md
+  - LICENSE
+  - "*.config.js"
+  - package*.json
+
+jekyll-archives:
+  enabled: [categories, tags]
+  layouts:
+    category: category
+    tag: tag
+  permalinks:
+    tag: /tags/:name/
+    category: /categories/:name/
