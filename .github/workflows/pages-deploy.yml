@@ -41,9 +41,14 @@ jobs:
           ruby-version: 3.3
           bundler-cache: false
 
-      - name: Remove outdated Gemfile.lock and install dependencies
+      - name: Clean up old theme files and install dependencies
         run: |
+          # Remove old so-simple theme files
+          rm -rf _sass
+          rm -rf _includes
+          rm -rf _layouts
           rm -f Gemfile.lock
+          # Install fresh dependencies
           bundle install
 
       - name: Build site
