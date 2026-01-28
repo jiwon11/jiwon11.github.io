@@ -56,12 +56,12 @@ comments:
   provider: giscus
   giscus:
     repo: jiwon11/jiwon11.github.io
-    repo_id: # Get from https://giscus.app
-    category: General
-    category_id: # Get from https://giscus.app
+    repo_id: R_kgDOJjiVoA
+    category: Announcements
+    category_id: DIC_kwDOJjiVoM4C1hRN
     mapping: pathname
     strict: 0
-    input_position: bottom
+    input_position: top
     lang: ko
     reactions_enabled: 1
 
