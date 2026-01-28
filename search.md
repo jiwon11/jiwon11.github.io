@@ -1,6 +1,3 @@
 ---
-title: Search
-layout: search
-permalink: /search/
-sitemap: true
+published: false
 ---
