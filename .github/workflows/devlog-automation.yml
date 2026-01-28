@@ -1,0 +1,186 @@
+name: Devlog Automation
+
+on:
+  # 새 대화 백업 감지 시 트리거
+  push:
+    paths:
+      - '_data/claude-conversations/**'
+  
+  # 수동 트리거
+  workflow_dispatch:
+    inputs:
+      action:
+        description: '실행할 작업'
+        required: true
+        default: 'notify'
+        type: choice
+        options:
+          - notify
+          - create-draft
+          - summarize
+
+  # 매일 아침 9시에 실행 (KST)
+  schedule:
+    - cron: '0 0 * * *'  # UTC 00:00 = KST 09:00
+
+jobs:
+  # 새 대화 감지 및 알림
+  detect-and-notify:
+    runs-on: ubuntu-latest
+    outputs:
+      has_new_conversations: ${{ steps.check.outputs.has_new }}
+      conversation_count: ${{ steps.check.outputs.count }}
+      topics: ${{ steps.check.outputs.topics }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for new conversations
+        id: check
+        run: |
+          # 최근 변경된 대화 파일 확인
+          CONV_DIR="_data/claude-conversations"
+          
+          if [ -d "$CONV_DIR" ]; then
+            # 오늘 날짜의 파일 확인
+            TODAY=$(date +%Y-%m-%d)
+            NEW_FILES=$(find "$CONV_DIR" -name "*${TODAY}*" -type f 2>/dev/null | wc -l)
+            
+            if [ "$NEW_FILES" -gt 0 ]; then
+              echo "has_new=true" >> $GITHUB_OUTPUT
+              echo "count=$NEW_FILES" >> $GITHUB_OUTPUT
+              
+              # 주제 추출 (JSON 파일에서)
+              TOPICS=$(cat "$CONV_DIR"/*.json 2>/dev/null | jq -r '.topic // .query // "Unknown"' 2>/dev/null | head -5 | tr '\n' ', ' || echo "N/A")
+              echo "topics=$TOPICS" >> $GITHUB_OUTPUT
+            else
+              echo "has_new=false" >> $GITHUB_OUTPUT
+              echo "count=0" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "has_new=false" >> $GITHUB_OUTPUT
+            echo "count=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create summary issue
+        if: steps.check.outputs.has_new == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toISOString().split('T')[0];
+            const count = '${{ steps.check.outputs.count }}';
+            const topics = '${{ steps.check.outputs.topics }}';
+            
+            // 기존 이슈 확인
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'devlog-draft',
+              state: 'open'
+            });
+            
+            const existingIssue = issues.data.find(i => i.title.includes(today));
+            
+            const body = `## 📝 새로운 Claude Code 대화 감지
+            
+**날짜**: ${today}
+**대화 수**: ${count}개
+**주요 주제**: ${topics}
+
+---
+
+### 📌 다음 단계
+
+Claude 앱에서 다음과 같이 요청하세요:
+
+\`\`\`
+오늘 code와 대화한 내용으로 블로그 써줘
+\`\`\`
+
+또는 특정 주제로:
+
+\`\`\`
+오늘 [주제] 관련 대화로 트러블슈팅 블로그 작성해줘
+\`\`\`
+
+---
+
+### 📋 체크리스트
+
+- [ ] 제목 선택/입력
+- [ ] 썸네일 이미지 추가
+- [ ] 다이어그램 SVG 생성
+- [ ] 포스트 내용 검토
+- [ ] GitHub 푸시
+
+---
+
+*이 이슈는 자동으로 생성되었습니다.*`;
+            
+            if (existingIssue) {
+              // 기존 이슈 업데이트
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: body
+              });
+              console.log(`Updated issue #${existingIssue.number}`);
+            } else {
+              // 새 이슈 생성
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `📝 [Devlog] ${today} Claude Code 대화 정리`,
+                body: body,
+                labels: ['devlog-draft', 'automated']
+              });
+              console.log('Created new issue');
+            }
+
+  # 대화 요약 생성
+  generate-summary:
+    needs: detect-and-notify
+    if: needs.detect-and-notify.outputs.has_new_conversations == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate conversation summary
+        run: |
+          # 대화 요약 스크립트
+          CONV_DIR="_data/claude-conversations"
+          SUMMARY_FILE="_data/daily-summary.md"
+          TODAY=$(date +%Y-%m-%d)
+          
+          echo "# Claude Code 대화 요약 - $TODAY" > "$SUMMARY_FILE"
+          echo "" >> "$SUMMARY_FILE"
+          echo "생성 시간: $(date '+%Y-%m-%d %H:%M:%S KST')" >> "$SUMMARY_FILE"
+          echo "" >> "$SUMMARY_FILE"
+          
+          # JSON 파일에서 주제 추출
+          for file in "$CONV_DIR"/*${TODAY}*.json; do
+            if [ -f "$file" ]; then
+              echo "## $(basename "$file")" >> "$SUMMARY_FILE"
+              echo "" >> "$SUMMARY_FILE"
+              head -100 "$file" >> "$SUMMARY_FILE" 2>/dev/null || true
+              echo "" >> "$SUMMARY_FILE"
+              echo "---" >> "$SUMMARY_FILE"
+            fi
+          done
+
+      - name: Commit summary
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          if [ -f "_data/daily-summary.md" ]; then
+            git add _data/daily-summary.md
+            git diff --cached --quiet || git commit -m "summary: $(date +%Y-%m-%d) 대화 요약 생성"
+            git push || echo "Nothing to push"
+          fi
