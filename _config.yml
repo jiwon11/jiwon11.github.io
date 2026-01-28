@@ -45,8 +45,8 @@ theme_mode: # [light | dark]
 # The CDN endpoint for media resources
 cdn:
 
-# Avatar on sidebar
-avatar: /assets/img/avatar.jpg
+# Avatar on sidebar (using existing profile image)
+avatar: /images/19159759.jpeg
 
 # Enable Table of Contents
 toc: true
