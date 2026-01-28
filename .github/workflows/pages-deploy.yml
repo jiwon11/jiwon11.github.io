@@ -41,15 +41,24 @@ jobs:
           ruby-version: 3.3
           bundler-cache: false
 
-      - name: Clean up old theme files and install dependencies
+      - name: Clean up old so-simple theme files
         run: |
-          # Remove old so-simple theme files
+          echo "Removing old so-simple theme files..."
+          # Remove theme directories
           rm -rf _sass
           rm -rf _includes
           rm -rf _layouts
+          # Remove old data files (so-simple specific)
+          rm -rf _data
+          # Remove old assets (so-simple specific CSS/JS)
+          rm -rf assets/css
+          rm -rf assets/js
+          # Remove outdated lock file
           rm -f Gemfile.lock
-          # Install fresh dependencies
-          bundle install
+          echo "Cleanup complete!"
+
+      - name: Install dependencies
+        run: bundle install
 
       - name: Build site
         run: bundle exec jekyll b -d "_site${{ steps.pages.outputs.base_path }}"
