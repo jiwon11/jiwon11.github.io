@@ -400,19 +400,58 @@ flowchart LR
 
 ### 5.3. 응답 시간 분포
 
-| 구간 | 비율 | 분포 |
-|:---:|:---:|:---|
-| 1~2초 | **78%** | `████████████████████████████████████████` |
-| 2~3초 | **7%** | `████` |
-| 3~5초 | **7%** | `████` |
-| 5초 이상 | **7%** | `████` |
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 
-| Percentile | 응답 시간 | 구간 |
-|:---:|:---:|:---|
-| P50 (중앙값) | **1,378ms** | `██████████████` |
-| 평균 | **2,260ms** | `███████████████████████` |
-| P90 | **2,136ms** | `█████████████████████` |
-| P95 | **3,827ms** | `██████████████████████████████████████` |
+<canvas id="distributionChart" style="max-height:320px;"></canvas>
+<script>
+new Chart(document.getElementById('distributionChart'), {
+  type: 'bar',
+  data: {
+    labels: ['1~2초', '2~3초', '3~5초', '5초 이상'],
+    datasets: [{
+      label: '응답 비율 (%)',
+      data: [78, 7, 7, 7],
+      backgroundColor: ['#51cf66', '#ffa94d', '#ff922b', '#ff6b6b'],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      title: { display: true, text: '응답 시간 구간별 분포', font: { size: 16 } }
+    },
+    scales: {
+      y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+    }
+  }
+});
+</script>
+
+<canvas id="percentileChart" style="max-height:320px; margin-top:2rem;"></canvas>
+<script>
+new Chart(document.getElementById('percentileChart'), {
+  type: 'bar',
+  data: {
+    labels: ['P50 (중앙값)', '평균', 'P90', 'P95'],
+    datasets: [{
+      label: '응답 시간 (ms)',
+      data: [1378, 2260, 2136, 3827],
+      backgroundColor: ['#51cf66', '#ffa94d', '#ff922b', '#ff6b6b'],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    indexAxis: 'y',
+    plugins: {
+      title: { display: true, text: 'Percentile별 응답 시간', font: { size: 16 } }
+    },
+    scales: {
+      x: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() + 'ms' } }
+    }
+  }
+});
+</script>
 
 **결론**: 최적화 결과 평균 응답 시간이 크게 단축되었으며, 응답 시간 분포 또한 안정적인 범위 내에 있음을 확인할 수 있습니다.
 
