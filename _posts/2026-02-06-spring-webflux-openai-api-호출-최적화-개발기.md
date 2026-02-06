@@ -8,16 +8,6 @@ description: "Spring WebFlux WebClient를 활용한 OpenAI API 호출 최적화 
 mermaid: true
 ---
 
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('pre > code.language-mermaid').forEach(function(el) {
-    el.parentElement.outerHTML = '<pre class="mermaid">' + el.textContent + '</pre>';
-  });
-  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
-});
-</script>
-
 안녕하세요! 듀리안(Duurian) 서버 개발팀에서 백엔드 개발을 맡고 있는 정지원입니다.
 
 듀리안은 부담 없는 개인 맞춤형 만남을 통해 따뜻한 관계를 형성하는 매칭 서비스입니다. 듀리안의 핵심 기능 중 하나는 AI 캐릭터 '듀리'와의 대화인데, 사용자가 직접 프로필을 작성하는 대신 듀리가 던지는 질문에 자연스럽게 답하다 보면 AI가 대화 내용을 분석해 취향과 성향 기반의 페르소나를 자동으로 생성해줍니다. 이렇게 만들어진 페르소나는 프로필에 노출되어, 기존 매칭 서비스들의 표면적인 정보와는 차별화된 깊이 있는 매칭을 가능하게 합니다.
@@ -42,9 +32,9 @@ document.addEventListener('DOMContentLoaded', function() {
 ```mermaid
 flowchart LR
     subgraph "기존 문제점"
-        A[Client 요청] -->|매번 새 TCP 연결| B[WebClient<br/>기본 설정]
+        A[Client 요청] -->|매번 새 TCP 연결| B[WebClient<br>기본 설정]
         B -->|타임아웃 없음| C[OpenAI API]
-        C -->|에러 발생| D[RuntimeException<br/>일괄 처리]
+        C -->|에러 발생| D[RuntimeException<br>일괄 처리]
         D -->|디버깅 불가| E[서비스 장애]
     end
 
@@ -99,7 +89,7 @@ flowchart LR
     end
 
     subgraph "After: 커넥션 풀 재사용"
-        R4[요청 1] --> P[Connection Pool<br/>max: 50개]
+        R4[요청 1] --> P[Connection Pool<br>max: 50개]
         R5[요청 2] --> P
         R6[요청 3] --> P
         P -->|기존 연결 재사용| S2[OpenAI]
@@ -196,7 +186,7 @@ sequenceDiagram
     Note right of App: 2초 대기 (2차 재시도, backoff)
     App->>API: 3차 요청
     API-->>App: 200 OK
-    Note over App,API: Exponential Backoff:<br/>1초 → 2초 → 4초 → ... → 최대 100초
+    Note over App,API: Exponential Backoff:<br>1초 → 2초 → 4초 → ... → 최대 100초
 ```
 
 **효과**: 일시적인 오류 발생 시 자동으로 재시도하여 서비스 안정성을 높였습니다.
@@ -255,10 +245,10 @@ class OpenAiRateLimitException : BaseException(ErrorCode.OPENAI_RATE_LIMIT)
 ```mermaid
 flowchart TD
     E[Exception 발생] --> W{when 표현식}
-    W -->|TimeoutException| T[OpenAiTimeoutException<br/>EXT004 / 504]
-    W -->|TooManyRequests| R[OpenAiRateLimitException<br/>EXT005 / 429]
-    W -->|EmptyResponse| ER[OpenAiEmptyResponseException<br/>EXT003 / 503]
-    W -->|기타| A[OpenAiApiException<br/>EXT002 / 503]
+    W -->|TimeoutException| T[OpenAiTimeoutException<br>EXT004 / 504]
+    W -->|TooManyRequests| R[OpenAiRateLimitException<br>EXT005 / 429]
+    W -->|EmptyResponse| ER[OpenAiEmptyResponseException<br>EXT003 / 503]
+    W -->|기타| A[OpenAiApiException<br>EXT002 / 503]
 
     T --> G[GlobalExceptionHandler]
     R --> G
@@ -426,7 +416,7 @@ pie title OpenAI API 응답 시간 분포
 ```mermaid
 graph LR
     subgraph "Percentile별 응답 시간"
-        P50["P50<br/>1,378ms"] --- AVG["평균<br/>2,260ms"] --- P90["P90<br/>2,136ms"] --- P95["P95<br/>3,827ms"]
+        P50["P50<br>1,378ms"] --- AVG["평균<br>2,260ms"] --- P90["P90<br>2,136ms"] --- P95["P95<br>3,827ms"]
     end
 
     style P50 fill:#51cf66,color:#fff
@@ -443,15 +433,15 @@ graph LR
 
 ```mermaid
 flowchart LR
-    subgraph API Layer
+    subgraph "API Layer"
         C[Controller]
     end
 
-    subgraph Application Layer
-        S[ConversationService] --> P["OpenAiClientPort<br/>(interface)"]
+    subgraph "Application Layer"
+        S[ConversationService] --> P["OpenAiClientPort<br>(interface)"]
     end
 
-    subgraph Infrastructure Layer
+    subgraph "Infrastructure Layer"
         P -.->|구현| AD[OpenAiClientAdapter]
         AD --> WC[WebClient]
         WC --> CP[Connection Pool]
@@ -459,7 +449,7 @@ flowchart LR
         WC --> EM[Error Mapping]
     end
 
-    subgraph External
+    subgraph "External"
         CP --> OA[OpenAI API Server]
     end
 
