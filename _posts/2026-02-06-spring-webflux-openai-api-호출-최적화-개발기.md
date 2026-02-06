@@ -1,4 +1,22 @@
-# [Spring WebFlux] OpenAI API 호출 최적화 개발기 - 응답 시간을 줄이기 위해 한 모든 것
+---
+layout: post
+title: "[Spring WebFlux] OpenAI API 호출 최적화 개발기 - 응답 시간을 줄이기 위해 한 모든 것"
+date: 2026-02-06 18:00:00 +0900
+categories: [backend, spring]
+tags: [Spring Boot, WebFlux, Kotlin, OpenAI, API 최적화, WebClient, Reactor Netty]
+description: "Spring WebFlux WebClient를 활용한 OpenAI API 호출 최적화 경험을 공유합니다. 커넥션 풀링, 타임아웃, 재시도, gzip 압축, 에러 관리 등 7가지 핵심 개선 사항을 다룹니다."
+mermaid: true
+---
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('pre > code.language-mermaid').forEach(function(el) {
+    el.parentElement.outerHTML = '<pre class="mermaid">' + el.textContent + '</pre>';
+  });
+  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+});
+</script>
 
 안녕하세요! 듀리안(Duurian) 서버 개발팀에서 백엔드 개발을 맡고 있는 정지원입니다.
 
