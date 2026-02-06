@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "[Spring WebFlux] OpenAI API 호출 최적화 개발기 - 응답 시간을 줄이기 위해 한 모든 것"
+title: "[Spring WebFlux] OpenAI API 호출 최적화 개발기"
 date: 2026-02-06 18:00:00 +0900
 categories: [backend, spring]
 tags: [Spring Boot, WebFlux, Kotlin, OpenAI, API 최적화, WebClient, Reactor Netty]
@@ -306,13 +306,10 @@ val reasoningEffort = if (actualModel == "gpt-5-nano") "low" else null
 *   low -> minimal: 대화 68% 개선 (4325ms -> 1382ms), 요약 82% 개선 (6272ms -> 1110ms)
 *   completionTokens 88% 감소 (369 -> 45)
 
-```mermaid
-xychart-beta
-    title "reasoning_effort에 따른 응답 시간 비교 (ms)"
-    x-axis ["대화 (low)", "대화 (minimal)", "요약 (low)", "요약 (minimal)"]
-    y-axis "응답 시간 (ms)" 0 --> 7000
-    bar [4325, 1382, 6272, 1110]
-```
+| 요청 유형 | low | minimal | 개선율 |
+|---|---|---|---|
+| 대화 | 4,325ms | 1,382ms | **68% 감소** |
+| 요약 | 6,272ms | 1,110ms | **82% 감소** |
 
 ## 4. Before & After 코드 비교
 
@@ -427,11 +424,15 @@ pie title OpenAI API 응답 시간 분포
 ```
 
 ```mermaid
-xychart-beta
-    title "Percentile별 응답 시간 (ms)"
-    x-axis ["P50", "평균", "P90", "P95"]
-    y-axis "응답 시간 (ms)" 0 --> 4500
-    bar [1378, 2260, 2136, 3827]
+graph LR
+    subgraph "Percentile별 응답 시간"
+        P50["P50<br/>1,378ms"] --- AVG["평균<br/>2,260ms"] --- P90["P90<br/>2,136ms"] --- P95["P95<br/>3,827ms"]
+    end
+
+    style P50 fill:#51cf66,color:#fff
+    style AVG fill:#ffa94d,color:#fff
+    style P90 fill:#ff922b,color:#fff
+    style P95 fill:#ff6b6b,color:#fff
 ```
 
 **결론**: 최적화 결과 평균 응답 시간이 크게 단축되었으며, 응답 시간 분포 또한 안정적인 범위 내에 있음을 확인할 수 있습니다.
