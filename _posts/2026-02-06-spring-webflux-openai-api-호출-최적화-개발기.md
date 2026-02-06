@@ -400,24 +400,12 @@ flowchart LR
 
 ### 5.3. 응답 시간 분포
 
-*   1~2초 구간: 78%
-*   2~3초 구간: 7%
-*   3~5초 구간: 7%
-*   5초 이상: 7%
-
-```mermaid
-graph LR
-    T["전체 요청<br>100%"] --> G["1~2초<br>78%"]
-    T --> Y["2~3초<br>7%"]
-    T --> O["3~5초<br>7%"]
-    T --> R["5초 이상<br>7%"]
-
-    style T fill:#339af0,color:#fff
-    style G fill:#51cf66,color:#fff
-    style Y fill:#ffa94d,color:#fff
-    style O fill:#ff922b,color:#fff
-    style R fill:#ff6b6b,color:#fff
-```
+| 구간 | 비율 | 분포 |
+|:---:|:---:|:---|
+| 1~2초 | **78%** | `████████████████████████████████████████` |
+| 2~3초 | **7%** | `████` |
+| 3~5초 | **7%** | `████` |
+| 5초 이상 | **7%** | `████` |
 
 ```mermaid
 graph LR
