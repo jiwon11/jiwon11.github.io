@@ -3,722 +3,539 @@ title: "[MCP] Blog Generator MCP 개발기 — AI로 기술 블로그를 자동 
 date: 2026-02-06
 category: 개발기
 tags: [mcp, typescript, gemini, claude, ai, blog, model-context-protocol]
+mermaid: true
+image:
+  path: "https://mintcdn.com/mcp/bEUxYpZqie0DsluH/images/mcp-simple-diagram.png?w=1650&fit=max&auto=format&n=bEUxYpZqie0DsluH&q=85&s=a131a609c7b6a70f342f493bbad57fcb"
+  thumbnail: "https://mintcdn.com/mcp/bEUxYpZqie0DsluH/images/mcp-simple-diagram.png?w=560&fit=max&auto=format&n=bEUxYpZqie0DsluH&q=85&s=2391513484df96fa7203739dae5e53b0"
 ---
 
-# Blog Generator MCP 개발기: "블로그 써줘" 한 마디로 기술 블로그가 만들어지기까지
-
-코드를 커밋하면 개발일지가 자동으로 생성된다면 어떨까요? MCP(Model Context Protocol) 서버를 만들어 Gemini와 Claude를 조합한 블로그 자동 생성 시스템을 구축한 과정을 공유합니다.
-
----
-
-## 배경: 기술 블로그, 쓰고 싶지만 쓸 시간이 없다
-
-기술 블로그를 꾸준히 쓰고 싶었습니다. 코드를 작성하고, 리뷰하고, 배포하다 보면 하루가 끝나 있었습니다. 블로그 글 하나를 쓰려면 코드를 다시 들여다보고, 맥락을 정리하고, 서사를 만들어야 합니다. 코드 작성과는 전혀 다른 종류의 에너지가 필요한 작업이었습니다.
-
-그러던 중 **MCP(Model Context Protocol)**를 알게 되었습니다. "코드를 커밋하면 자동으로 개발일지가 생성되면 좋겠다"는 아이디어가 떠올랐습니다. 그렇게 시작된 것이 **Blog Generator MCP** — AI를 활용한 기술 블로그 자동 생성 MCP 서버입니다.
-
-> 이 블로그 포스트 자체가 Blog Generator MCP를 사용해서 생성되었습니다. 자기 자신의 개발기를 자기 자신이 쓰는 셈이죠.
-
----
-
-## MCP(Model Context Protocol)란?
-
-본격적인 개발기에 앞서, MCP가 무엇인지 설명하겠습니다.
-
-USB-C 케이블 하나로 충전기, 모니터, 외장 하드를 모두 연결하듯이, **MCP는 AI 모델과 다양한 외부 서비스를 하나의 표준 프로토콜로 연결하는 기술**입니다.
-
-MCP는 **Anthropic이 만든 오픈 프로토콜**입니다. LLM 애플리케이션(Claude Desktop, Claude Code 등)이 외부 **도구(Tool)**와 **데이터 소스**에 접근할 수 있게 해줍니다. MCP 서버를 한 번 만들어두면 Claude Desktop에서 "도구"로 바로 사용할 수 있습니다. 별도의 웹 UI나 REST API를 만들 필요가 없습니다.
-
-```mermaid
-sequenceDiagram
-    participant U as 사용자
-    participant C as Claude Desktop/Code
-    participant M as Blog Generator MCP 서버
-    participant G as Gemini API
-    participant A as Claude API
-
-    U->>C: "블로그 써줘"
-    C->>M: MCP 프로토콜로 도구 호출
-    M->>G: 코드 분석 요청
-    G-->>M: 구조화된 분석 결과
-    M->>A: 블로그 작성 요청
-    A-->>M: 완성된 블로그 초안
-    M-->>C: 결과 반환
-    C-->>U: "블로그 초안이 완성되었습니다!"
-```
-
-REST API와 프론트엔드를 따로 만들 필요 없이, Claude 안에서 자연어로 동작하는 도구를 만들 수 있다는 점이 매력적이었습니다.
-
----
-
-## 전체 아키텍처: 10개의 MCP 도구로 이루어진 블로그 파이프라인
-
-먼저 완성된 프로젝트의 전체 구조를 살펴보겠습니다.
-
-```mermaid
-flowchart TD
-    A["사용자: 블로그 써줘"] --> B[Claude Desktop/Code]
-    B --> C[Blog Generator MCP]
-    C --> D{모드 선택}
-    D -->|Standard Mode| E[Gemini가 직접 작성]
-    D -->|Pro Mode| F["Claude Opus 분석 → 작성"]
-    E --> G[blog_apply_feedback<br/>사용자 피드백 반영]
-    F --> H[blog_apply_feedback_pro<br/>Claude로 피드백 반영]
-    G --> I[blog_finalize_draft<br/>최종 확정]
-    H --> I
-    I --> J{저장 방식}
-    J -->|로컬| K[blog_save<br/>마크다운 파일 저장]
-    J -->|배포| L[blog_deploy_github<br/>GitHub 저장소 배포]
-```
-
-프로젝트의 디렉토리 구조는 다음과 같습니다:
-
-```text
-src/
-├── index.ts              # CLI 엔트리포인트 (Commander)
-├── server.ts             # MCP 서버 — 10개 도구 등록
-├── types.ts              # 타입 + Zod 스키마 (입력 검증)
-├── services/
-│   ├── gemini.ts         # Gemini API (초안 생성, 코드 분석)
-│   ├── anthropic.ts      # Claude API (Pro Mode 글 작성)
-│   ├── database.ts       # SQLite 상태 관리 (sql.js)
-│   ├── taskRunner.ts     # 백그라운드 작업 실행
-│   ├── env.ts            # 환경변수 관리
-│   ├── instructions.ts   # 작성 지침 파일 관리
-│   └── github.ts         # GitHub 배포 (Octokit)
-├── tools/                # 10개 MCP 도구 각각의 구현
-└── transports/
-    ├── stdio.ts          # Claude Desktop용 표준입출력
-    └── http.ts           # HTTP 서버용 (팀 공유, 멀티유저)
-```
-
-처음부터 이런 구조는 아니었습니다. 9번의 커밋을 거쳐 여기에 도달했습니다. 각 버전별로 어떤 문제를 해결했고, 어떤 결정을 내렸는지 살펴보겠습니다.
-
----
-
-## v1.0 — 첫 걸음: 기본적인 블로그 생성기
-
-첫 버전은 가장 작은 범위에서 시작했습니다. Gemini API로 블로그 초안을 생성하고, 로컬에 저장하거나 GitHub에 배포하는 4개의 도구만 만들었습니다.
-
-MCP 서버의 핵심은 `server.tool()`로 도구를 등록하는 것입니다. **도구 하나가 곧 사용자가 호출할 수 있는 기능 하나**입니다:
-
-```typescript
-// v1.0 — server.ts (MCP 도구 등록)
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-
-const server = new McpServer({
-  name: "blog-generator-mcp",
-  version: "1.0.0"
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('pre > code.language-mermaid').forEach(function(el) {
+    el.parentElement.outerHTML = '<pre class="mermaid">' + el.textContent + '</pre>';
+  });
+  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
 });
+</script>
 
-// 각 도구를 이름, 설명, 입력 스키마, 핸들러 함수로 등록
-registerGenerateDraftTool(server);  // 초안 생성
-registerReviewPostTool(server);     // 검수
-registerSaveBlogTool(server);       // 로컬 저장
-registerDeployGithubTool(server);   // GitHub 배포
-```
+# [MCP] Blog Generator MCP 개발 심층 분석: AI로 기술 블로그 자동 생성 서버 구축기
 
-v1.0은 stdio 트랜스포트(표준 입출력)만 지원했고, API 키는 환경변수로 받았습니다. 4가지 입력 타입(`keyword`, `code`, `memo`, `git_push`)과 4가지 스타일(`tutorial`, `til`, `deep-dive`, `troubleshooting`)을 지원했습니다.
+안녕하세요. 백엔드 개발자 정지원입니다. 현재 AI를 활용한 개발 자동화 도구 개발에 몰두하고 있습니다. 이 글은 Blog Generator MCP의 설계부터 6번의 메이저 버전 업그레이드까지의 여정을 심층적으로 다룹니다. 재미있는 점은, 이 글 또한 MCP의 도움을 받아 작성되었다는 것입니다!
 
-**v1.0의 한계**: 한 번 생성하면 끝이었습니다. AI가 만든 글이 마음에 들지 않으면 처음부터 다시 생성해야 했습니다. "여기를 이렇게 고쳐줘"라고 말할 수 없었습니다.
+## 목차
 
----
+1. 배경 및 문제 정의: 블로그, 쓰고는 싶은데...
+2. MCP란 무엇인가: Anthropic의 오픈 프로토콜 활용
+3. 전체 아키텍처: 10개의 도구, Standard/Pro Mode
+4. 버전 진화: 좌충우돌 성장기
+5. 주요 학습 내용: 개발하며 얻은 인사이트
+6. MCP 서버 만들기: 핵심 코드 살펴보기
+7. 결론 및 회고: 앞으로의 계획
+8. 참고 자료
 
-## v2.0 — 인터랙티브 워크플로우: 피드백 루프 도입
+## 1. 배경 및 문제 정의: 블로그, 쓰고는 싶은데...
 
-### 해결해야 할 문제
+기술 블로그를 운영하는 것은 개발자에게 여러모로 유익합니다. 자신의 지식을 정리하고 공유하며, 다른 개발자들과 소통할 수 있는 기회를 제공합니다. 하지만 현실은 녹록지 않습니다.
 
-v1.0을 쓰면서 느낀 것은, **한 번에 만족스러운 글을 기대하는 것은 비현실적**이라는 점이었습니다. 사람이 글을 쓸 때도 초안 → 수정 → 수정 → 완성의 과정을 거칩니다. AI도 마찬가지여야 했습니다.
+| 블로그 운영의 어려움 | 구체적 상황 | 결과 |
+|---|---|---|
+| 시간 부족 | 업무 + 코딩 + 학습으로 글 쓸 여유 없음 | 블로그 방치 |
+| 글쓰기 진입 장벽 | 빈 에디터 앞에서 막막함 | 시작조차 못함 |
+| 품질 고민 | "이 정도로 올려도 될까?" 고민 | 완성 후에도 게시 망설임 |
+| 반복 작업 | frontmatter, 이미지, 태그 등 매번 수동 설정 | 귀찮음 누적 |
 
-### 해결 방식: 5단계 워크플로우
+> **💡 핵심 동기**: 개발 과정에서 이미 코드를 작성하고, 의사결정을 하고, 문제를 해결하고 있습니다. 이 과정을 자동으로 블로그 글로 변환할 수 있다면?
 
-v2.0의 핵심은 **인터랙티브 워크플로우**입니다. 사용자가 AI와 대화하듯 글을 다듬어 나갈 수 있게 했습니다:
+이러한 문제를 해결하기 위해, **AI를 활용하여 기술 블로그를 자동으로 생성해주는 도구**를 개발하기로 결심했습니다. 그것이 바로 Blog Generator MCP의 시작입니다.
 
 ```mermaid
 flowchart LR
-    A[blog_start_draft<br/>초안 생성] --> B[blog_get_status<br/>진행률 확인]
-    B --> C[blog_apply_feedback<br/>피드백 반영]
-    C --> B
-    C --> D[blog_start_review<br/>검수 요청]
-    D --> E[blog_finalize_draft<br/>최종 확정]
+    A[개발자의 일상] --> B{블로그 글감}
+    B --> C[코드 변경사항]
+    B --> D[문제 해결 경험]
+    B --> E[기술 학습 메모]
+    B --> F[Notion 문서]
+    C & D & E & F --> G[Blog Generator MCP]
+    G --> H[고품질 기술 블로그]
+
+    style G fill:#ccf,stroke:#333,stroke-width:2px
+    style H fill:#9f9,stroke:#333,stroke-width:2px
 ```
 
-1. `blog_start_draft` → 백그라운드에서 초안 생성 시작
-2. `blog_get_status` → 진행률 폴링 (0~100%)
-3. `blog_apply_feedback` → "이 부분을 이렇게 고쳐줘" 피드백 반영
-4. `blog_start_review` → 검수 (정확성/가독성/SEO 점검)
-5. `blog_finalize_draft` → 최종 확정
+## 2. MCP란 무엇인가: Anthropic의 오픈 프로토콜 활용
 
-이 워크플로우를 구현하기 위해 두 가지 큰 기술적 결정이 필요했습니다.
+MCP(Model Context Protocol)는 Anthropic에서 공개한 오픈 프로토콜로, AI 모델이 외부 서비스와 상호작용할 수 있도록 표준화된 인터페이스를 제공합니다.
 
-### 기술적 결정 1: sql.js(WASM SQLite)로 상태 관리
+```mermaid
+flowchart TD
+    subgraph Client["MCP 클라이언트 (Claude Desktop / Claude Code)"]
+        A[AI 모델 - Claude]
+    end
 
-블로그 생성은 수십 초가 걸리는 작업입니다. 동기적으로 처리하면 Claude Desktop이 응답 대기 상태로 멈춥니다. **비동기 처리 + 상태 저장**이 필요했습니다.
+    subgraph Server["MCP 서버 (Blog Generator)"]
+        B[Tool 1: blog_start_draft]
+        C[Tool 2: blog_get_status]
+        D[Tool 3: blog_apply_feedback]
+        E[Tool 4: blog_finalize_draft]
+        F[Tool 5: blog_save]
+        G[Tool 6: blog_deploy_github]
+        H[Tool 7: blog_start_review]
+        I[Tool 8: blog_start_draft_pro]
+        J[Tool 9: blog_apply_feedback_pro]
+        K[Tool 10: blog_apply_review_feedback]
+    end
 
-| 방법 | 장점 | 단점 | 선택 여부 |
-|------|------|------|-----------|
-| 메모리 저장 | 구현이 빠름 | 서버 재시작 시 데이터 소실 | ❌ |
-| 파일 기반 (JSON) | 외부 의존성 없음 | 동시 접근 문제, 느림 | ❌ |
-| **sql.js (WASM SQLite)** | **외부 DB 불필요 + 영속성** | WASM 번들 크기 | ✅ 채택 |
-| better-sqlite3 | 네이티브 성능 | C++ 바인딩 설치 필요 | ❌ |
+    subgraph External["외부 서비스"]
+        L[Gemini API]
+        M[Anthropic API]
+        N[GitHub API]
+        O[Notion API]
+    end
 
-**sql.js**를 선택했습니다. WASM 기반으로 별도의 데이터베이스 서버 없이 순수 JavaScript만으로 SQLite를 실행할 수 있습니다. `npx blog-generator-mcp` 한 줄로 실행 가능해야 했기에, 외부 의존성 최소화가 중요했습니다.
+    A <-->|stdio / HTTP| Server
+    Server --> L & M & N & O
 
-이 코드는 작업 상태를 관리하는 SQLite 테이블 스키마입니다:
-
-```typescript
-// database.ts — 작업 상태 관리 테이블
-const SCHEMA = `
-  CREATE TABLE IF NOT EXISTS tasks (
-    id TEXT PRIMARY KEY,           -- 고유 작업 ID
-    type TEXT NOT NULL,            -- 'draft', 'review' 등 작업 유형
-    status TEXT NOT NULL DEFAULT 'pending',  -- 상태 머신
-    progress INTEGER DEFAULT 0,    -- 진행률 (0~100)
-    input TEXT NOT NULL,           -- 사용자 입력 (JSON)
-    result TEXT,                   -- 생성 결과 (블로그 본문)
-    history TEXT DEFAULT '[]',     -- 피드백 히스토리 (JSON 배열)
-    error TEXT,                    -- 에러 메시지
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now'))
-  );
-`;
+    style Client fill:#f9f,stroke:#333,stroke-width:2px
+    style Server fill:#ccf,stroke:#333,stroke-width:2px
+    style External fill:#ffc,stroke:#333,stroke-width:2px
 ```
 
-`history` 컬럼이 핵심입니다. 피드백을 줄 때마다 이전 버전이 히스토리에 쌓여서, 수정 과정을 추적할 수 있습니다.
+### MCP의 핵심 개념
 
-데이터베이스 초기화 로직은 기존 파일이 있으면 읽고, 없으면 새로 생성합니다:
+| 개념 | 설명 | Blog Generator에서의 활용 |
+|---|---|---|
+| **Tool** | AI가 호출할 수 있는 함수 | `blog_start_draft`, `blog_save` 등 10개 도구 |
+| **Transport** | 클라이언트-서버 통신 방식 | stdio (로컬) / HTTP (원격) |
+| **Schema** | 도구의 입출력 정의 | Zod 스키마로 타입 안전성 확보 |
+| **Resource** | AI에게 제공하는 데이터 | 작업 상태, 초안 내용 등 |
 
-```typescript
-// database.ts — 데이터베이스 초기화
-export async function initDatabase(customPath?: string): Promise<void> {
-  const SQL = await initSqlJs();
+> **📝 참고**: MCP는 단순히 API를 호출하는 것이 아니라, AI 모델이 "도구를 사용하는 방법"을 이해할 수 있도록 설계되었습니다. Zod 스키마의 `description` 필드가 AI에게 도구 사용법을 설명하는 핵심 역할을 합니다.
 
-  // 디렉토리가 없으면 생성
-  await fs.mkdir(dir, { recursive: true });
+## 3. 전체 아키텍처: 10개의 도구, Standard/Pro Mode
 
-  try {
-    // 기존 DB 파일이 있으면 로드
-    const buffer = await fs.readFile(dbPath);
-    db = new SQL.Database(buffer);
-  } catch {
-    // 없으면 새 DB 생성
-    db = new SQL.Database();
-  }
+MCP는 현재 10개의 도구로 구성되어 있으며, 크게 **Standard Mode**와 **Pro Mode** 두 가지 모드를 제공합니다.
 
-  db.run(SCHEMA);
-  await saveDatabase();
-}
+```mermaid
+flowchart TD
+    subgraph Input["입력 유형"]
+        I1[keyword - 키워드/주제]
+        I2[code - 코드 스니펫]
+        I3[memo - 메모/노트]
+        I4[git_push - Git 변경사항]
+        I5[notion - Notion 페이지]
+    end
+
+    subgraph Standard["Standard Mode (Gemini)"]
+        S1[blog_start_draft] --> S2[blog_get_status]
+        S2 --> S3{피드백?}
+        S3 -->|Yes| S4[blog_apply_feedback]
+        S4 --> S2
+        S3 -->|No| S5[blog_start_review]
+        S5 --> S6[blog_apply_review_feedback]
+        S6 --> S7[blog_finalize_draft]
+    end
+
+    subgraph Pro["Pro Mode (Claude Opus)"]
+        P1[blog_start_draft_pro] --> P2[blog_get_status]
+        P2 --> P3{피드백?}
+        P3 -->|Yes| P4[blog_apply_feedback_pro]
+        P4 --> P2
+        P3 -->|No| P5[blog_finalize_draft]
+    end
+
+    subgraph Output["출력"]
+        O1[blog_save - 로컬 저장]
+        O2[blog_deploy_github - GitHub 배포]
+    end
+
+    Input --> S1 & P1
+    S7 & P5 --> O1 & O2
+
+    style Standard fill:#f9f,stroke:#333,stroke-width:2px
+    style Pro fill:#ccf,stroke:#333,stroke-width:2px
 ```
 
-### 기술적 결정 2: Stateless HTTP 트랜스포트 추가
+### Standard Mode vs Pro Mode 비교
 
-Claude Desktop용 stdio 트랜스포트만으로는 팀에서 공유하기 어려웠습니다. 여러 사용자가 동시에 접속할 수 있는 HTTP 방식이 필요했습니다.
+| 특성 | Standard Mode | Pro Mode |
+|---|---|---|
+| AI 모델 | Google Gemini (Flash/Pro) | Anthropic Claude Opus |
+| 입력 방식 | keyword, code, memo, git_push, notion | code_diff + dev_log |
+| 글 스타일 | tutorial, til, deep-dive, troubleshooting | deep-dive 중심 |
+| 웹 검색 | 선택적 활성화 | 기본 활성화 |
+| 검수 기능 | blog_start_review로 별도 검수 | 작성 시 자체 검수 |
+| 비용 | Gemini API 비용 (저렴) | Anthropic API 비용 (고가) |
+| 품질 | 양호 | 최상급 |
+| 속도 | 빠름 (Flash 기준 30초~1분) | 느림 (2~5분) |
 
-Express 기반 HTTP 트랜스포트를 추가하되, **Stateless(무상태) 설계**를 택했습니다.
+## 4. 버전 진화: 좌충우돌 성장기
 
-**Before (v1.0)**: stdio 트랜스포트만 지원
+MCP는 처음부터 완벽한 모습이 아니었습니다. 수많은 시행착오와 개선을 거쳐 현재의 모습으로 발전해왔습니다.
+
+```mermaid
+timeline
+    title Blog Generator MCP 버전 히스토리
+    v1.0 : 기본 생성기 4 도구
+         : Initial commit
+    v2.0 : 인터랙티브 워크플로우
+         : sql.js 상태 관리
+         : Zod 스키마
+    v3.0 : Pro Mode 도입
+         : Gemini 분석 + Claude 작성
+    v3.1 : instructions_file
+         : 사용자 정의 작성 지침
+    v3.2 : 환경 변수 지원
+         : API 키 안전 관리
+    v4.1 : Claude Opus 단일 파이프라인
+         : 웹 검색 + 썸네일 자동화
+```
+
+### v1.0: 기본 생성기 — 4개의 도구로 시작
+
+MCP의 첫 번째 버전은 가장 기본적인 파이프라인을 구현했습니다.
+
+```mermaid
+sequenceDiagram
+    participant User as 사용자
+    participant MCP as MCP Server
+    participant Gemini as Gemini API
+
+    User->>MCP: blog_start_draft(keyword, content)
+    MCP->>Gemini: 블로그 초안 생성 요청
+    Gemini-->>MCP: 초안 반환
+    MCP-->>User: task_id 반환
+
+    User->>MCP: blog_get_status(task_id)
+    MCP-->>User: 진행률 + 결과
+
+    User->>MCP: blog_apply_feedback(task_id, feedback)
+    MCP->>Gemini: 피드백 반영 요청
+    Gemini-->>MCP: 수정된 초안
+    MCP-->>User: 수정 완료
+
+    User->>MCP: blog_save(task_id)
+    MCP-->>User: 마크다운 파일 저장 완료
+```
+
+이 시점의 핵심 도전 과제는 **장시간 소요되는 AI 작업을 어떻게 처리할 것인가**였습니다. MCP 도구 호출은 기본적으로 동기적이지만, Gemini API 호출은 수십 초가 걸릴 수 있습니다.
+
+### v2.0: 인터랙티브 워크플로우, sql.js, Zod 스키마
+
+v2.0에서는 사용자 경험을 크게 개선했습니다.
+
+| 기능 | 도입 이유 | 구현 방식 |
+|---|---|---|
+| **sql.js** | 작업 상태 영속화 필요 | 서버리스 SQLite, 메모리 DB |
+| **백그라운드 작업** | AI 호출 대기 시간 해결 | 비동기 실행 + 폴링 |
+| **Zod 스키마** | 타입 안전성 + AI UX | 입력 검증 + description |
+| **인터랙티브 피드백** | 사용자 개입도 향상 | 피드백 히스토리 관리 |
+| **다중 입력 유형** | 다양한 글감 지원 | keyword, code, memo, git_push |
+
+**sql.js를 선택한 이유:**
+
+```mermaid
+flowchart TD
+    A{DB 선택} --> B[PostgreSQL/MySQL]
+    A --> C[SQLite]
+    A --> D[sql.js]
+    A --> E[인메모리 Map]
+
+    B --> B1[❌ 서버 필요, 과도한 복잡도]
+    C --> C1[❌ 네이티브 바인딩, 설치 문제]
+    D --> D1[✅ 순수 JS, 제로 의존성, WASM]
+    E --> E1[❌ 프로세스 재시작 시 데이터 유실]
+
+    style D1 fill:#9f9,stroke:#333,stroke-width:2px
+```
+
+### v3.0: Pro Mode — Gemini 분석 + Claude 작성
+
+v3.0에서 가장 큰 변화는 **AI 분업** 패턴의 도입이었습니다.
+
+```mermaid
+sequenceDiagram
+    participant User as 사용자
+    participant MCP as MCP Server
+    participant Gemini as Gemini API
+    participant Claude as Claude API
+
+    User->>MCP: blog_start_draft_pro(code_diff, dev_log)
+    MCP->>Gemini: 코드 분석 요청
+    Note right of Gemini: 코드 구조 분석<br/>핵심 변경사항 추출<br/>기술적 인사이트 도출
+    Gemini-->>MCP: 분석 결과 반환
+
+    MCP->>Claude: 블로그 작성 요청 (분석 결과 포함)
+    Note right of Claude: 분석 결과 기반 글 작성<br/>코드 예시 포함<br/>Mermaid 다이어그램 생성
+    Claude-->>MCP: 완성된 블로그 초안
+    MCP-->>User: task_id 반환
+```
+
+> **🔥 핵심 인사이트**: Gemini는 대용량 코드 분석에 강하고, Claude는 구조화된 글쓰기에 강합니다. 각 모델의 장점을 조합하면 단일 모델보다 훨씬 높은 품질의 결과물을 얻을 수 있었습니다.
+
+### v3.1 ~ v3.2: instructions_file과 환경 변수
+
+| 버전 | 기능 | 해결한 문제 |
+|---|---|---|
+| v3.1 | `instructions_file` 파라미터 | 매번 스타일 가이드를 복붙하는 번거로움 해소 |
+| v3.2 | 환경 변수 지원 | API 키를 파라미터로 전달하는 보안 위험 제거 |
+
+`instructions_file`은 마크다운 파일 경로를 지정하면 해당 파일의 내용을 작성 지침으로 사용합니다. 이를 통해 팀 단위의 글쓰기 스타일 가이드를 공유하고, 일관된 품질의 블로그 글을 생성할 수 있게 되었습니다.
+
+### v4.1: Claude Opus 단일 파이프라인
+
+최신 버전에서는 Claude Opus의 성능 향상으로 **분석과 작성을 하나의 모델에서 처리**하도록 변경되었습니다.
+
+| 비교 항목 | v3.0 (Gemini + Claude) | v4.1 (Claude Opus 단일) |
+|---|---|---|
+| API 호출 횟수 | 2회 (분석 + 작성) | 1회 |
+| 총 소요 시간 | 3~5분 | 2~3분 |
+| 컨텍스트 유실 | 분석→작성 전달 시 일부 유실 | 없음 (단일 컨텍스트) |
+| 비용 | Gemini + Claude | Claude만 |
+| 글 품질 | 우수 | 최우수 |
+
+## 5. 주요 학습 내용: 개발하며 얻은 인사이트
+
+### 5.1 Zod 스키마 = MCP UX
+
+Zod 스키마를 어떻게 정의하느냐가 MCP의 사용자 경험을 결정합니다. AI 모델은 스키마의 `description`을 읽고 도구를 어떻게 사용할지 결정하기 때문입니다.
 
 ```typescript
-// v1.0 — stdio 트랜스포트만 지원
+// ❌ 나쁜 예 - AI가 이해하기 어려움
+const BadSchema = z.object({
+  type: z.string(),
+  data: z.string(),
+});
+
+// ✅ 좋은 예 - AI가 정확하게 이해
+const GoodSchema = z.object({
+  input_type: z.enum(["keyword", "code", "memo", "git_push", "notion"])
+    .describe("입력 유형: keyword(키워드/주제), code(코드 스니펫), memo(메모/노트), git_push(git 변경사항), notion(Notion 페이지 URL)"),
+  content: z.string()
+    .min(1).max(50000)
+    .describe("블로그 글 생성에 사용할 입력 내용"),
+  style: z.enum(["tutorial", "til", "deep-dive", "troubleshooting"])
+    .default("tutorial")
+    .describe("블로그 글 스타일"),
+});
+```
+
+> **💡 핵심 포인트**: `describe()`에 작성하는 설명은 사용자가 아닌 **AI 모델**을 위한 것입니다. AI가 어떤 상황에서 이 도구를 사용해야 하는지, 각 파라미터에 어떤 값을 넣어야 하는지 명확히 안내해야 합니다.
+
+### 5.2 백그라운드 작업 + 폴링 패턴
+
+AI API 호출은 수십 초가 걸릴 수 있습니다. MCP 도구 호출 시 즉시 응답하고, 백그라운드에서 작업을 처리한 뒤 폴링으로 상태를 확인하는 패턴을 사용했습니다.
+
+```mermaid
+sequenceDiagram
+    participant Client as Claude (클라이언트)
+    participant MCP as MCP Server
+    participant DB as sql.js DB
+    participant AI as Gemini/Claude API
+
+    Client->>MCP: blog_start_draft(...)
+    MCP->>DB: 작업 생성 (status: pending)
+    MCP-->>Client: { task_id, status: "pending" }
+
+    Note over MCP,AI: 백그라운드 실행
+    MCP->>AI: AI 호출 (비동기)
+    MCP->>DB: status: in_progress, progress: 30
+    AI-->>MCP: 결과 반환
+    MCP->>DB: status: completed, result: draft
+
+    Client->>MCP: blog_get_status(task_id)
+    MCP->>DB: 상태 조회
+    DB-->>MCP: { status, progress, result }
+    MCP-->>Client: 작업 완료 + 결과
+```
+
+### 5.3 에러 메시지에 해결 방법 제시
+
+MCP 도구에서 에러가 발생했을 때, 단순히 에러 내용만 표시하는 것이 아니라 해결 방법까지 함께 제시하면 AI가 자동으로 문제를 해결할 수 있습니다.
+
+```typescript
+// ❌ 나쁜 에러 메시지
+throw new Error("API key invalid");
+
+// ✅ 좋은 에러 메시지 - AI가 사용자에게 안내 가능
+throw new Error(
+  "Gemini API 키가 유효하지 않습니다. " +
+  "다음 방법으로 해결할 수 있습니다:\n" +
+  "1. GEMINI_API_KEY 환경변수가 올바르게 설정되어 있는지 확인\n" +
+  "2. Google AI Studio에서 새 API 키 발급: https://aistudio.google.com/\n" +
+  "3. claude_desktop_config.json의 env 섹션에 키 추가"
+);
+```
+
+### 5.4 환경 변수의 중요성
+
+| 관리 방식 | 보안 | 편의성 | 적용 |
+|---|---|---|---|
+| 파라미터 직접 전달 | ❌ 대화 기록에 노출 | ❌ 매번 입력 | v1.0~v3.1 |
+| 환경 변수 | ✅ 프로세스 내부에서만 접근 | ✅ 한번 설정으로 영구 | v3.2+ |
+| .env 파일 | ⚠️ 실수로 커밋 가능 | ✅ 편리 | 지원 |
+
+## 6. MCP 서버 만들기: 핵심 코드 살펴보기
+
+### 서버 초기화
+
+MCP 서버는 `@modelcontextprotocol/sdk`를 사용하여 구축됩니다.
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+
+// 1. 서버 인스턴스 생성
+const server = new McpServer({
+  name: "blog-generator",
+  version: "4.1.0",
+});
+
+// 2. 도구 등록
+registerStartDraftTool(server);      // blog_start_draft
+registerGetStatusTool(server);       // blog_get_status
+registerApplyFeedbackTool(server);   // blog_apply_feedback
+registerFinalizeDraftTool(server);   // blog_finalize_draft
+registerSaveBlogTool(server);        // blog_save
+registerDeployGithubTool(server);    // blog_deploy_github
+registerStartReviewTool(server);     // blog_start_review
+registerStartDraftProTool(server);   // blog_start_draft_pro
+registerApplyFeedbackProTool(server);// blog_apply_feedback_pro
+registerApplyReviewFeedbackTool(server); // blog_apply_review_feedback
+
+// 3. Transport 연결 및 실행
 const transport = new StdioServerTransport();
 await server.connect(transport);
 ```
 
-**After (v2.0)**: HTTP 트랜스포트 추가 — 매 요청마다 새로운 transport 생성
+### 도구 등록 패턴
+
+각 도구는 `server.registerTool()` 또는 `server.tool()`로 등록합니다.
 
 ```typescript
-// v2.0 — transports/http.ts
-// Stateless JSON 모드: 세션 없이 각 요청을 독립적으로 처리
-app.post("/mcp", async (req, res) => {
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,  // 세션을 사용하지 않음
-    enableJsonResponse: true        // 스트리밍 대신 단일 JSON 응답
-  });
-  await server.connect(transport);
-  await transport.handleRequest(req, res, req.body);
-});
-```
-
-`sessionIdGenerator: undefined`가 핵심입니다. HTTP 서버가 이전 요청의 정보를 기억하지 않습니다. 모든 상태는 SQLite에 저장하고, 서버 자체는 상태를 갖지 않습니다. 서버 인스턴스를 여러 개 띄워도 문제없이 동작합니다.
-
-### Zod 스키마: 입력 검증이 곧 사용자 인터페이스
-
-MCP SDK는 **Zod**(TypeScript용 스키마 검증 라이브러리)를 네이티브로 지원합니다. Zod 스키마를 정의하면 그것이 곧 도구의 파라미터 명세가 됩니다. Claude가 이 스키마를 읽고, 사용자의 의도에 맞게 파라미터를 결정합니다.
-
-이 코드는 블로그 초안 생성 도구의 입력 스키마입니다:
-
-```typescript
-// types.ts — Zod 스키마 = 사용자 인터페이스
-export const StartDraftInputSchema = z.object({
-  input_type: z.nativeEnum(InputType)
-    .describe("입력 유형: keyword, code, memo, git_push"),  // ← Claude가 읽는 설명
-  content: z.string().min(1).max(50000)
-    .describe("블로그 글 생성에 사용할 입력 내용"),
-  style: z.nativeEnum(BlogStyle)
-    .default(BlogStyle.TUTORIAL)
-    .describe("블로그 글 스타일"),
-  model: z.nativeEnum(GeminiModel)
-    .default(GeminiModel.FLASH)
-    .describe("사용할 Gemini 모델"),
-  instructions: z.string().optional()
-    .describe("상세 작성 지침 (톤, 구조, 타겟 독자 등)")
-}).strict();
-```
-
-`.describe()`가 핵심입니다. 이 설명을 Claude가 읽고, 사용자의 의도에 맞게 파라미터를 자동으로 채워넣습니다. 사용자가 "이 코드로 TIL 블로그 써줘"라고 하면, Claude는 `input_type: "code"`, `style: "til"`을 선택합니다.
-
-**Zod 스키마를 잘 설계하는 것이 곧 좋은 UX를 만드는 것**이라는 깨달음을 얻었습니다. MCP에서는 UI 버튼이나 폼 대신, 스키마의 `.describe()`가 사용자 인터페이스 역할을 합니다.
-
----
-
-## v2.1 — 모델 선택과 상세 지침
-
-### 모델 선택
-
-모든 도구에 Gemini 모델을 선택할 수 있는 파라미터를 추가했습니다:
-
-```typescript
-// GeminiModel enum — 용도별 모델 선택
-export enum GeminiModel {
-  FLASH = "gemini-1.5-flash",      // 빠른 응답, 일반 용도 (기본값)
-  FLASH_8B = "gemini-1.5-flash-8b", // 가장 빠름, 간단한 작업
-  PRO = "gemini-1.5-pro",          // 고품질, 복잡한 작업
-  PRO_2 = "gemini-2.0-flash"       // 최신 모델
-}
-```
-
-### instructions 파라미터
-
-팀마다 블로그 스타일 가이드가 다릅니다. `instructions` 파라미터를 추가하여 AI가 따라야 할 상세한 작성 규칙을 지정할 수 있게 했습니다:
-
-```typescript
-// gemini.ts — instructions가 있으면 최우선으로 적용
-if (instructions) {
-  prompt += `
-====== 상세 작성 지침 (반드시 따라야 함) ======
-${instructions}
-====== 지침 끝 ======`;
-}
-```
-
-`====== 지침 끝 ======` 같은 구분자를 사용한 이유는, AI 모델이 지침과 본문 내용을 혼동하지 않도록 경계를 명확히 하기 위해서입니다.
-
----
-
-## v3.0 — Pro Mode: 이중 AI 파이프라인
-
-### 해결해야 할 문제
-
-v2.0까지는 Gemini 하나로 분석과 작성을 모두 처리했습니다. 결과물은 괜찮았지만, **분석이 얕거나 글이 딱딱해지는** 경향이 있었습니다. 한국어 블로그의 경우 문장이 부자연스럽거나, 코드의 맥락을 충분히 설명하지 못하는 문제가 반복되었습니다.
-
-### 핵심 아이디어: 각 AI의 강점을 분업하자
-
-**"분석은 Gemini가, 작성은 Claude가 하면 어떨까?"**
-
-각 모델에는 고유한 강점이 있습니다:
-
-| 역할 | 모델 | 강점 |
-|------|------|------|
-| **Researcher** (분석) | Gemini Pro | 대규모 컨텍스트 윈도우로 코드를 한 번에 분석 |
-| **Writer** (작성) | Claude | 자연스럽고 서사적인 한국어 글쓰기 |
-
-이 둘을 조합한 **2단계 파이프라인**을 만들었습니다.
-
-이 코드는 Pro Mode의 핵심 로직입니다:
-
-```typescript
-// taskRunner.ts — Pro Mode 파이프라인
-export async function runProDraftGeneration(taskId, codeDiff, devLog, ...) {
-  // Stage 1: 코드 분석 (Researcher 역할)
-  // → 코드 diff와 개발 메모를 받아 구조화된 인사이트 추출
-  const analysis = await analyzeCodeWithGemini(
-    codeDiff, devLog, request, geminiApiKey
-  );
-
-  await updateTaskStatus(taskId, TaskStatus.IN_PROGRESS, 40);
-
-  // Stage 2: 블로그 작성 (Writer 역할)
-  // → 분석 결과를 바탕으로 매력적인 기술 블로그 작성
-  const result = await writeBlogWithClaude(
-    analysis, codeDiff, style, language, instructions, anthropicApiKey
-  );
-}
-```
-
-Stage 1에서 Researcher는 코드를 분석해서 **구조화된 인사이트**를 추출합니다:
-
-```typescript
-// CodeAnalysis — Researcher가 반환하는 구조화된 분석 결과
-interface CodeAnalysis {
-  summary: string;              // 이 코드가 무엇을 하는가
-  problem: string;              // 왜 이 코드를 작성했는가
-  approach: string;             // 접근 방식과 이유
-  key_decisions: string[];      // 주요 의사결정 목록
-  technical_insights: string[]; // 기술적 인사이트
-  narrative_hooks: string[];    // 글에서 강조할 흥미로운 포인트
-}
-```
-
-이 분석 결과를 Writer에게 전달하면, Writer는 분석을 바탕으로 서사(Narrative)를 만들어냅니다:
-
-```typescript
-// anthropic.ts — Writer의 시스템 프롬프트
-const systemPrompt = `당신은 뛰어난 기술 블로그 작가입니다.
-코드 분석 인사이트를 바탕으로 매력적인 기술 블로그 글을 작성합니다.
-
-${styleGuide}   // 스타일 가이드 (tutorial, deep-dive 등)
-${langGuide}    // 언어 설정 (한국어/영어)
-
-${instructions ? `추가 지침: ${instructions}` : ""}`;
-```
-
-### 결과: 확실한 품질 차이
-
-**두 모델이 각자 잘하는 것을 분업하면 결과가 훨씬 좋았습니다.** Researcher가 코드의 구조적 맥락을 짚어내면, Writer가 그것을 읽기 좋은 이야기로 풀어냈습니다.
-
-| 비교 항목 | Standard Mode (Gemini) | Pro Mode (Gemini + Claude) |
-|----------|----------------------|---------------------------|
-| 코드 분석 깊이 | 표면적 | 구조화된 인사이트 |
-| 한국어 자연스러움 | 번역체 느낌 | 자연스러운 서사 |
-| 기술적 설명 | 코드 나열 위주 | 의사결정 과정 포함 |
-| API 호출 | 1회 (Gemini) | 2회 (Gemini → Claude) |
-
----
-
-## v3.1 — instructions_file: 팀 스타일 가이드 관리
-
-매번 `instructions` 파라미터에 긴 텍스트를 넣는 것은 불편했습니다. 마크다운 파일로 작성 지침을 관리할 수 있게 했습니다.
-
-```bash
-# Claude Desktop에서 이렇게 사용합니다
-"이 코드로 블로그 써줘, 스타일은 company-style-guide.md 따라서"
-```
-
-파일 지침과 파라미터 지침을 **병합하는 로직**도 구현했습니다. 기본 스타일 가이드(파일) + 이번 글에만 적용할 추가 지침(파라미터)을 함께 사용할 수 있습니다:
-
-```typescript
-// instructions.ts — 파일과 파라미터 지침 병합
-export async function mergeInstructions(
-  instructionsFile: string | undefined,
-  instructions: string | undefined
-): Promise<string | undefined> {
-  let fileContent: string | null = null;
-
-  if (instructionsFile) {
-    fileContent = await readInstructionsFile(instructionsFile);
-    if (fileContent === null) {
-      throw new Error(`Instructions 파일을 찾을 수 없습니다: ${instructionsFile}`);
-    }
-  }
-
-  // 둘 다 있으면 병합
-  if (fileContent && instructions) {
-    return `${fileContent}\n\n---\n\n## 추가 지침\n${instructions}`;
-  } else if (fileContent) {
-    return fileContent;
-  } else if (instructions) {
-    return instructions;
-  }
-
-  return undefined;
-}
-```
-
----
-
-## v3.2 — 환경변수: 처음부터 있었어야 할 설정 방식
-
-처음에는 매번 API 키를 파라미터로 전달하게 설계했습니다. "보안을 위해"라는 이유였지만, 실제로 사용해보니 매우 불편했습니다.
-
-v3.2에서 Claude Desktop 설정의 `env` 블록에서 한 번 설정하면 끝나도록 바꿨습니다:
-
-```json
-{
-  "mcpServers": {
-    "blog-generator": {
-      "command": "npx",
-      "args": ["-y", "blog-generator-mcp"],
-      "env": {
-        "GEMINI_API_KEY": "your-gemini-api-key",
-        "ANTHROPIC_API_KEY": "your-anthropic-api-key",
-        "BLOG_SAVE_DIRECTORY": "./posts"
-      }
-    }
-  }
-}
-```
-
-환경변수와 파라미터의 **우선순위**도 명확히 했습니다:
-
-```typescript
-// services/env.ts — 우선순위: 파라미터 > 환경변수 > 에러
-export function getGeminiApiKey(paramValue?: string): string {
-  const key = paramValue || process.env[ENV_KEYS.GEMINI_API_KEY];
-  if (!key) {
-    throw new Error(
-      "Gemini API 키가 필요합니다. " +
-      "gemini_api_key 파라미터로 전달하거나 " +
-      "GEMINI_API_KEY 환경변수를 설정하세요."
-    );
-  }
-  return key;
-}
-```
-
-에러 메시지에 **해결 방법을 포함**한 것도 의도적입니다. "API 키가 없습니다"에서 멈추지 않고, "어떻게 해결하면 되는지"까지 안내합니다.
-
----
-
-## v4.1 — Pro Mode 완전 전환: Claude Opus가 분석과 작성 모두 수행
-
-### 아키텍처 변경
-
-v3.0에서는 Gemini(분석) + Claude(작성) 구조였습니다. v4.1에서는 **Claude Opus 4.6이 분석과 작성 모두 수행**하도록 전환했습니다.
-
-**Before (v3.0)**: Gemini 분석 → Claude 작성
-
-```typescript
-// v3.0 — taskRunner.ts
-const analysis = await analyzeCodeWithGemini(
-  codeDiff, devLog, request, geminiApiKey
-);
-const result = await writeBlogWithClaude(
-  analysis, codeDiff, style, language, instructions, anthropicApiKey
-);
-```
-
-**After (v4.1)**: Claude Opus 분석 → Claude Opus 작성
-
-```typescript
-// v4.1 — taskRunner.ts
-const analysis = await analyzeCodeWithClaude(
-  codeDiff, devLog, request, anthropicApiKey
-);
-const result = await writeBlogWithClaude(
-  analysis, codeDiff, style, language, instructions, anthropicApiKey
-);
-```
-
-변경 포인트는 `analyzeCodeWithGemini` → `analyzeCodeWithClaude`입니다. 분석도 Claude Opus가 수행하게 되면서, Pro Mode에서는 Gemini API 키가 더 이상 필요하지 않습니다.
-
-### 변경 이유
-
-Claude Opus 4.6의 코드 분석 능력이 충분히 좋았습니다. 두 모델을 사용할 때의 복잡성(API 키 2개 관리, 두 모델 간 인터페이스 조율)보다 단일 모델의 일관성이 더 큰 가치를 제공했습니다.
-
-### 주요 리팩토링
-
-이 전환에서 진행한 주요 변경사항입니다:
-
-| 항목 | Before (v3.0) | After (v4.1) |
-|------|-------------|-------------|
-| 분석 모델 | Gemini Pro | Claude Opus 4.6 |
-| 작성 모델 | Claude Opus | Claude Opus 4.6 |
-| 인터페이스 이름 | `GeminiAnalysis` | `CodeAnalysis` |
-| Pro Mode API 키 | Gemini + Anthropic | Anthropic만 |
-| 분석 함수 | `analyzeCodeWithGemini()` | `analyzeCodeWithClaude()` |
-
-```typescript
-// anthropic.ts — Claude Opus로 코드 분석 (v4.1에서 추가)
-const CLAUDE_MODEL = "claude-opus-4-6";
-
-export async function analyzeCodeWithClaude(
-  codeDiff: string,
-  devLog: string | undefined,
-  request: string | undefined,
-  apiKey: string
-): Promise<CodeAnalysis> {
-  const anthropic = new Anthropic({ apiKey });
-
-  const prompt = `당신은 코드 분석 전문가입니다. 개발자의 작업 내용을 분석하여
-Writer AI가 블로그 글을 작성할 수 있도록 구조화된 분석을 제공하세요.
-...`;
-
-  const response = await anthropic.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: 4096,
-    messages: [{ role: "user", content: prompt }],
-    system: "당신은 코드 분석 전문가입니다. 반드시 요청된 JSON 형식으로만 응답하세요."
-  });
-
-  // JSON 파싱 + 필수 필드 검증
-  const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
-  // ...
-}
-```
-
-### Claude Desktop/Code 환경에서의 Pro Mode
-
-v4.1에서 중요한 사용성 개선이 있습니다. **Claude Desktop이나 Claude Code를 사용 중이라면 Pro Mode 도구를 호출할 필요가 없습니다.**
-
-대화 중인 Claude 자체가 Opus 모델이므로, 직접 요청하면 됩니다:
-
-```text
-User: "이 코드로 블로그 써줘"
-User: <git diff 내용>
-
-→ Claude가 직접 코드를 분석하고 블로그를 작성합니다.
-→ blog_save로 저장하면 끝!
-```
-
-이 방식의 장점은 API 키가 불필요하고, 대화 맥락을 활용해 더 자연스러운 글쓰기가 가능하다는 것입니다. Pro Mode MCP 도구는 HTTP 서버로 배포할 때(외부 사용자가 API로 접근할 때)만 사용합니다.
-
----
-
-## 결과 및 검증
-
-### 실행 방법
-
-```bash
-# 설치 없이 바로 실행 (stdio 모드 — Claude Desktop용)
-npx blog-generator-mcp
-
-# HTTP 서버 모드 (팀 공유용)
-npx blog-generator-mcp --http --port 3000
-```
-
-### 실제 사용 예시 (Claude Desktop)
-
-```text
-사용자: "오늘 작성한 인증 코드로 TIL 블로그 써줘"
-Claude: blog_start_draft 도구를 호출합니다...
-Claude: 초안이 생성되었습니다. 확인해보시겠어요?
-사용자: "코드 설명이 좀 부족해. 더 자세히 설명해줘"
-Claude: blog_apply_feedback 도구로 피드백을 반영합니다...
-Claude: 수정이 완료되었습니다!
-사용자: "좋아, 저장해줘"
-Claude: blog_save 도구로 저장합니다...
-       ./posts/2026-02-06-auth-til.md에 저장되었습니다.
-```
-
-### 프로젝트 검증 결과
-
-| 검증 항목 | 결과 |
-|----------|------|
-| Standard Mode 초안 생성 | Gemini 2.0 Flash 기준 10~30초 |
-| Pro Mode 초안 생성 | Claude Opus 분석 + 작성 30~60초 |
-| 피드백 반영 | 5~15초 |
-| 지원 스타일 | tutorial, til, deep-dive, troubleshooting |
-| 지원 언어 | 한국어, 영어 |
-| 저장 형식 | YAML frontmatter + Markdown |
-| 도구 개수 | 10개 (Standard 8 + Pro 2) |
-| 트랜스포트 | stdio (Claude Desktop) + HTTP (서버 배포) |
-
-### 버전별 진화 요약
-
-| 버전 | 핵심 변화 | 도구 수 |
-|------|----------|--------|
-| v1.0 | 기본 생성기 | 4개 |
-| v2.0 | 인터랙티브 워크플로우, SQLite, HTTP | 8개 |
-| v2.1 | 모델 선택, instructions 파라미터 | 8개 |
-| v3.0 | Pro Mode (Gemini + Claude) | 10개 |
-| v3.1 | instructions_file 지원 | 10개 |
-| v3.2 | 환경변수 지원 | 10개 |
-| v4.1 | Pro Mode → Claude Opus 단일 파이프라인 | 10개 |
-
----
-
-## 개발 과정에서 배운 것들
-
-### 1. MCP 서버에서 Zod 스키마 설계가 핵심이다
-
-MCP 도구의 파라미터 스키마가 곧 사용자 인터페이스입니다. `.describe()`에 쓴 설명을 Claude가 읽고 파라미터를 결정합니다. 스키마를 잘 설계하면 사용자는 아무것도 모르고도 도구를 잘 사용할 수 있습니다. `.strict()`로 스키마를 닫아 정의하지 않은 파라미터가 들어오는 것을 방지하는 것도 중요합니다.
-
-### 2. 백그라운드 작업 + 폴링 패턴이 MCP에서 잘 동작한다
-
-AI 생성 작업은 오래 걸립니다. `task_id`를 반환하고, `blog_get_status`로 폴링하는 패턴은 MCP 환경에서 자연스럽게 동작합니다. Claude가 알아서 "아직 진행 중이네요, 잠시 후 다시 확인하겠습니다"라고 대화합니다.
-
-### 3. 두 AI 모델의 분업은 예상보다 효과적이다
-
-Researcher(분석) + Writer(작성)의 조합은 하나의 모델이 모든 것을 하는 것보다 나은 결과를 냈습니다. v4.1에서 단일 모델(Claude Opus)로 통합했지만, 분석과 작성이라는 **역할 분리** 자체는 유지했습니다. 같은 모델이라도 다른 프롬프트로 다른 역할을 수행하게 하면 결과가 좋아집니다.
-
-### 4. 환경변수 지원은 처음부터 넣자
-
-"나중에 추가하면 되지" 생각했지만, 사용자 불편은 바로 피드백으로 돌아왔습니다. DX(Developer Experience)에 영향을 주는 설정은 초기에 설계하는 것이 좋습니다.
-
-### 5. 에러 메시지에 해결 방법을 포함하자
-
-"API 키가 없습니다" 대신 "API 키가 필요합니다. GEMINI_API_KEY 환경변수를 설정하세요."처럼 안내하면, 사용자가 문제를 스스로 해결할 수 있습니다. MCP 도구는 대화형 환경에서 동작하므로, 친절한 에러 메시지가 더욱 중요합니다.
-
----
-
-## 나도 MCP 서버를 만들어볼까?
-
-Blog Generator MCP의 개발 과정에 영감을 받으셨다면, 직접 MCP 서버를 만들어보세요. 핵심은 3단계입니다.
-
-### Step 1: 프로젝트 초기화
-
-```bash
-npx @modelcontextprotocol/create-server my-mcp-server
-cd my-mcp-server
-```
-
-### Step 2: 도구 등록
-
-```typescript
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-const server = new McpServer({
-  name: "my-mcp-server",
-  version: "1.0.0"
-});
-
-// Zod로 입력 스키마를 정의하고, 핸들러 함수를 등록합니다
 server.tool(
-  "my_tool",                                     // 도구 이름
-  "이 도구가 하는 일을 설명합니다",                    // 도구 설명
-  { input: z.string().describe("입력 내용") },     // 입력 스키마
-  async ({ input }) => {                          // 핸들러 함수
+  "blog_start_draft",  // 도구 이름
+  {
+    // Zod 스키마로 입력 정의
+    input_type: z.enum(["keyword", "code", "memo", "git_push", "notion"])
+      .describe("입력 유형"),
+    content: z.string().min(1).max(50000)
+      .describe("블로그 글 생성에 사용할 입력 내용"),
+    style: z.enum(["tutorial", "til", "deep-dive", "troubleshooting"])
+      .default("tutorial")
+      .describe("블로그 글 스타일"),
+    model: z.enum(["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"])
+      .default("gemini-1.5-flash")
+      .describe("사용할 Gemini 모델"),
+    web_search: z.boolean().default(false)
+      .describe("웹 검색 활용 여부"),
+  },
+  async (params) => {
+    // 1. 작업 생성
+    const taskId = generateTaskId();
+    await createTask(taskId, params);
+
+    // 2. 백그라운드 실행
+    generateDraftInBackground(taskId, params);
+
+    // 3. 즉시 응답
     return {
-      content: [{ type: "text", text: `결과: ${input}` }]
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          task_id: taskId,
+          status: "pending",
+          message: "블로그 생성이 시작되었습니다."
+        })
+      }]
     };
   }
 );
 ```
 
-### Step 3: 트랜스포트 연결
+### 프로젝트 구조
 
-```typescript
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-
-// stdio 트랜스포트로 연결 → Claude Desktop에서 바로 사용 가능
-const transport = new StdioServerTransport();
-await server.connect(transport);
+```
+blog-generator-mcp/
+├── src/
+│   ├── index.ts              # 서버 진입점
+│   ├── types.ts              # Zod 스키마 + 타입 정의
+│   ├── tools/
+│   │   ├── startDraft.ts     # Standard Mode 초안 생성
+│   │   ├── startDraftPro.ts  # Pro Mode 초안 생성
+│   │   ├── getStatus.ts      # 작업 상태 조회
+│   │   ├── applyFeedback.ts  # 피드백 반영
+│   │   ├── finalizeDraft.ts  # 초안 확정
+│   │   ├── saveBlog.ts       # 로컬 저장
+│   │   ├── deployGithub.ts   # GitHub 배포
+│   │   └── startReview.ts    # 검수
+│   └── services/
+│       ├── database.ts       # sql.js DB 관리
+│       ├── gemini.ts         # Gemini API 클라이언트
+│       ├── claude.ts         # Claude API 클라이언트
+│       ├── github.ts         # GitHub API 클라이언트
+│       ├── env.ts            # 환경 변수 관리
+│       ├── instructions.ts   # 작성 지침 로더
+│       └── thumbnail.ts      # 썸네일 이미지 검색
+├── data/
+│   └── tasks.db              # sql.js 데이터베이스
+├── posts/                    # 생성된 블로그 글 저장
+├── example-instructions.md   # 기본 작성 지침
+├── package.json
+└── tsconfig.json
 ```
 
-Claude Desktop의 설정 파일(`claude_desktop_config.json`)에 등록하면 바로 사용할 수 있습니다.
+## 7. 결론 및 회고: 앞으로의 계획
 
----
+Blog Generator MCP는 "블로그 쓰기가 귀찮다"는 단순한 불편함에서 시작하여, 6번의 메이저 버전 업그레이드를 거치며 10개의 도구를 갖춘 본격적인 AI 블로그 자동화 시스템으로 성장했습니다.
 
-## 향후 계획
+### 개발을 통해 배운 점
 
-- 이미지 자동 생성 (코드 아키텍처 다이어그램)
-- 시리즈 포스트 관리 (이전/다음 편 자동 링크)
-- 여러 플랫폼 동시 배포 (Velog, Tistory, Medium)
-- 글 히스토리 비교 뷰 (diff 형태로 수정 과정 시각화)
+| 학습 포인트 | 내용 |
+|---|---|
+| **MCP 설계** | Zod 스키마의 description이 AI UX를 결정한다 |
+| **AI 분업** | 각 모델의 강점을 조합하면 단일 모델보다 나은 결과를 얻는다 |
+| **비동기 패턴** | 백그라운드 작업 + 폴링이 장시간 AI 작업의 해법이다 |
+| **에러 설계** | 에러 메시지에 해결 방법을 포함하면 AI가 자동 복구할 수 있다 |
+| **환경 변수** | 민감 정보는 반드시 환경 변수로 관리해야 한다 |
+| **지침 파일** | 글쓰기 스타일을 파일로 외부화하면 품질 일관성을 유지할 수 있다 |
 
----
+### 향후 계획
 
-## 참고 자료
+```mermaid
+flowchart LR
+    A[현재 v4.1] --> B[v5.0 계획]
+    B --> C[다중 AI 모델 통합]
+    B --> D[이미지 자동 생성]
+    B --> E[시리즈 글 관리]
+    B --> F[SEO 자동 최적화]
+    B --> G[다국어 지원]
 
-- [MCP 공식 문서](https://modelcontextprotocol.io/)
-- [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
-- [Blog Generator MCP GitHub](https://github.com/jeongjiwon/blog-generator-mcp)
-- [Zod 공식 문서](https://zod.dev/)
-- [sql.js — SQLite in WASM](https://github.com/sql-js/sql.js)
-
----
-
-## 마무리
-
-Blog Generator MCP는 "기술 블로그 쓰기가 귀찮다"는 개인적인 불편함에서 시작했습니다. v1.0의 기본 생성기에서 v4.1의 Claude Opus 단일 파이프라인까지, 9번의 커밋을 거치며 발전했습니다.
-
-돌이켜보면 핵심 교훈은 이것입니다. **도구를 만들 때 가장 중요한 것은 "얼마나 잘 만드느냐"가 아니라 "실제로 사용할 수 있느냐"입니다.** Zod 스키마의 `.describe()`를 신경 써서 작성하고, 에러 메시지에 해결 방법을 포함하고, 환경변수로 설정을 관리하는 것 — 이런 사소한 사용성 개선이 모여 도구의 가치를 결정합니다.
-
-마지막으로 재미있는 사실 하나. 지금 여러분이 읽고 있는 이 글은 **Blog Generator MCP의 Pro Mode를 사용해서 생성**되었습니다. Claude Code에서 git diff와 커밋 이력을 분석하고, example-instructions.md 스타일 가이드를 참고하여 작성했습니다. 자기 자신의 개발기를 자기 자신이 쓰는 — 이런 메타적인 상황이야말로 이 프로젝트가 제대로 동작하고 있다는 증거가 아닐까요?
-
-```bash
-# 여러분도 시작해보세요
-npx blog-generator-mcp
+    style A fill:#9f9,stroke:#333,stroke-width:2px
+    style B fill:#ccf,stroke:#333,stroke-width:2px
 ```
+
+- **다중 AI 모델 통합**: OpenAI GPT, Google Gemini, Anthropic Claude를 상황에 맞게 자동 선택
+- **이미지 자동 생성**: DALL-E, Midjourney 등을 활용한 블로그 삽화 자동 생성
+- **시리즈 글 관리**: 연재물의 이전/다음 편 자동 연결 및 목차 관리
+- **SEO 자동 최적화**: 키워드 분석, 메타 태그 자동 생성, 내부 링크 추천
+
+## 8. 참고 자료
+
+📚 **공식 문서**
+- [Model Context Protocol](https://modelcontextprotocol.io/) — MCP 공식 사양
+- [Zod 공식 문서](https://zod.dev/) — TypeScript 스키마 검증
+- [Google AI Platform](https://ai.google.dev/) — Gemini API
+
+📝 **기술 블로그**
+- [sql.js GitHub 저장소](https://github.com/sql-js/sql.js) — 브라우저/Node.js용 SQLite
+- [Anthropic API Documentation](https://docs.anthropic.com/) — Claude API
+
+🎓 **튜토리얼 가이드**
+- [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) — MCP 서버 구축 SDK
+
+---
+
+> 이 글은 Blog Generator MCP의 도움을 받아 작성되었습니다. 궁금한 점이나 피드백이 있다면 언제든지 댓글로 남겨주세요!
