@@ -7,8 +7,8 @@ tags: [Kotlin, Coroutine, Spring Boot, Transactional, ThreadLocal, 동시성]
 description: "Kotlin 코루틴의 suspend 함수에서 @Transactional을 사용할 때 발생하는 트랜잭션 컨텍스트 유실 문제와 4가지 해결 방안을 알아봅니다."
 mermaid: true
 image:
-  path: "https://jenkov.com/images/java-concurrency/thread-local-1.png"
-  thumbnail: "https://jenkov.com/images/java-concurrency/thread-local-1.png"
+  path: "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?auto=format&fit=crop&w=1200&q=80"
+  thumbnail: "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?auto=format&fit=crop&w=600&q=80"
 ---
 
 # [Kotlin/Spring] suspend 함수와 @Transactional의 위험한 조합 - ThreadLocal 기반 트랜잭션의 함정
