@@ -10,16 +10,6 @@ image:
   thumbnail: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=600&q=80"
 ---
 
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('pre > code.language-mermaid').forEach(function(el) {
-    el.parentElement.outerHTML = '<pre class="mermaid">' + el.textContent + '</pre>';
-  });
-  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
-});
-</script>
-
 # Kotlin Coroutines에서 Spring @Async로 -- 대화 요약 비동기화로 API 응답 시간 71% 개선한 이야기
 
 안녕하세요. duurian 팀에서 백엔드 개발을 담당하고 있는 정지원입니다.

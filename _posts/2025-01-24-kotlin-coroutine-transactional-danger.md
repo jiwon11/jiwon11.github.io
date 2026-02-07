@@ -11,16 +11,6 @@ image:
   thumbnail: "https://jenkov.com/images/java-concurrency/thread-local-1.png"
 ---
 
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('pre > code.language-mermaid').forEach(function(el) {
-    el.parentElement.outerHTML = '<pre class="mermaid">' + el.textContent + '</pre>';
-  });
-  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
-});
-</script>
-
 # [Kotlin/Spring] suspend 함수와 @Transactional의 위험한 조합 - ThreadLocal 기반 트랜잭션의 함정
 
 안녕하세요. duurian 팀에서 백엔드 개발을 담당하고 있는 정지원입니다.

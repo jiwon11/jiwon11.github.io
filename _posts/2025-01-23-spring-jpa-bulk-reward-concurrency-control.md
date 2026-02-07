@@ -11,16 +11,6 @@ image:
   thumbnail: "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?auto=format&fit=crop&w=600&q=80"
 ---
 
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('pre > code.language-mermaid').forEach(function(el) {
-    el.parentElement.outerHTML = '<pre class="mermaid">' + el.textContent + '</pre>';
-  });
-  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
-});
-</script>
-
 # [Spring/JPA] 다중 보상 일괄 수령 시스템 구현 - 동시성 제어와 데이터 정합성 확보
 
 안녕하세요. duurian 팀에서 백엔드 개발을 담당하고 있는 정지원입니다.

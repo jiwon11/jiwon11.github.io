@@ -9,16 +9,6 @@ image:
   thumbnail: "https://mintcdn.com/mcp/bEUxYpZqie0DsluH/images/mcp-simple-diagram.png?w=560&fit=max&auto=format&n=bEUxYpZqie0DsluH&q=85&s=2391513484df96fa7203739dae5e53b0"
 ---
 
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('pre > code.language-mermaid').forEach(function(el) {
-    el.parentElement.outerHTML = '<pre class="mermaid">' + el.textContent + '</pre>';
-  });
-  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
-});
-</script>
-
 # [MCP] Blog Generator MCP 개발 심층 분석: AI로 기술 블로그 자동 생성 서버 구축기
 
 안녕하세요. 백엔드 개발자 정지원입니다. 현재 AI를 활용한 개발 자동화 도구 개발에 몰두하고 있습니다. 이 글은 Blog Generator MCP의 설계부터 6번의 메이저 버전 업그레이드까지의 여정을 심층적으로 다룹니다. 재미있는 점은, 이 글 또한 MCP의 도움을 받아 작성되었다는 것입니다!

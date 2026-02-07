@@ -11,16 +11,6 @@ image:
   thumbnail: "https://docs.spring.io/spring-framework/reference/_images/spring-mvc-and-webflux-venn.png"
 ---
 
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('pre > code.language-mermaid').forEach(function(el) {
-    el.parentElement.outerHTML = '<pre class="mermaid">' + el.textContent + '</pre>';
-  });
-  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
-});
-</script>
-
 # [Spring WebFlux] OpenAI API 호출 최적화 개발기 - 듀리안 AI 매칭 서비스 성능 개선 사례
 
 안녕하세요. 듀리안(Duurian) 서버 개발팀에서 백엔드 개발을 맡고 있는 정지원입니다. 듀리안 AI 매칭 서비스의 성능 개선을 위해 Spring WebFlux를 사용하여 OpenAI API 호출을 최적화한 경험을 공유하고자 합니다.
