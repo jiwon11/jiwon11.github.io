@@ -1,186 +1,136 @@
 name: Devlog Automation
 
 on:
-  # 새 대화 백업 감지 시 트리거
-  push:
-    paths:
-      - '_data/claude-conversations/**'
-  
-  # 수동 트리거
+  # 매일 자정 (KST 09:00 = UTC 00:00) 실행
+  schedule:
+    - cron: '0 15 * * *'  # UTC 15:00 = KST 00:00
+
+  # 수동 실행
   workflow_dispatch:
     inputs:
       action:
         description: '실행할 작업'
         required: true
-        default: 'notify'
+        default: 'backup'
         type: choice
         options:
-          - notify
-          - create-draft
-          - summarize
+          - backup
+          - clean-old-theme
 
-  # 매일 아침 9시에 실행 (KST)
-  schedule:
-    - cron: '0 0 * * *'  # UTC 00:00 = KST 09:00
+  # _posts 또는 assets/images 변경 시 실행
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - '_posts/**'
+      - 'assets/images/posts/**'
 
 jobs:
-  # 새 대화 감지 및 알림
-  detect-and-notify:
+  # 대화 백업 작업
+  backup:
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'backup')
     runs-on: ubuntu-latest
-    outputs:
-      has_new_conversations: ${{ steps.check.outputs.has_new }}
-      conversation_count: ${{ steps.check.outputs.count }}
-      topics: ${{ steps.check.outputs.topics }}
-    
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
-      - name: Check for new conversations
-        id: check
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create backup directory
+        run: mkdir -p _data/claude-conversations
+
+      - name: Create daily backup file
         run: |
-          # 최근 변경된 대화 파일 확인
-          CONV_DIR="_data/claude-conversations"
-          
-          if [ -d "$CONV_DIR" ]; then
-            # 오늘 날짜의 파일 확인
-            TODAY=$(date +%Y-%m-%d)
-            NEW_FILES=$(find "$CONV_DIR" -name "*${TODAY}*" -type f 2>/dev/null | wc -l)
-            
-            if [ "$NEW_FILES" -gt 0 ]; then
-              echo "has_new=true" >> $GITHUB_OUTPUT
-              echo "count=$NEW_FILES" >> $GITHUB_OUTPUT
-              
-              # 주제 추출 (JSON 파일에서)
-              TOPICS=$(cat "$CONV_DIR"/*.json 2>/dev/null | jq -r '.topic // .query // "Unknown"' 2>/dev/null | head -5 | tr '\n' ', ' || echo "N/A")
-              echo "topics=$TOPICS" >> $GITHUB_OUTPUT
-            else
-              echo "has_new=false" >> $GITHUB_OUTPUT
-              echo "count=0" >> $GITHUB_OUTPUT
-            fi
+          TODAY=$(date +%Y-%m-%d)
+          BACKUP_FILE="_data/claude-conversations/$TODAY.md"
+
+          if [ ! -f "$BACKUP_FILE" ]; then
+            cat > "$BACKUP_FILE" << EOF
+          ---
+          date: $TODAY
+          generated_at: $(date +"%Y-%m-%d %H:%M:%S %z")
+          auto_generated: true
+          ---
+
+          # Claude Code 대화 기록 - $TODAY
+
+          > 이 파일은 자동으로 생성되었습니다.
+          > 대화 내용을 추가하려면 로컬에서 편집하세요.
+
+          ## 요약
+
+
+
+          ## 대화 내용
+
+
+
+          EOF
+            echo "Created backup file: $BACKUP_FILE"
           else
-            echo "has_new=false" >> $GITHUB_OUTPUT
-            echo "count=0" >> $GITHUB_OUTPUT
+            echo "Backup file already exists: $BACKUP_FILE"
           fi
 
-      - name: Create summary issue
-        if: steps.check.outputs.has_new == 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const today = new Date().toISOString().split('T')[0];
-            const count = '${{ steps.check.outputs.count }}';
-            const topics = '${{ steps.check.outputs.topics }}';
-            
-            // 기존 이슈 확인
-            const issues = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: 'devlog-draft',
-              state: 'open'
-            });
-            
-            const existingIssue = issues.data.find(i => i.title.includes(today));
-            
-            const body = `## 📝 새로운 Claude Code 대화 감지
-            
-**날짜**: ${today}
-**대화 수**: ${count}개
-**주요 주제**: ${topics}
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add _data/claude-conversations/
+          git diff --staged --quiet || git commit -m "Auto backup: $(date +%Y-%m-%d)"
+          git push || echo "Nothing to push"
 
----
-
-### 📌 다음 단계
-
-Claude 앱에서 다음과 같이 요청하세요:
-
-\`\`\`
-오늘 code와 대화한 내용으로 블로그 써줘
-\`\`\`
-
-또는 특정 주제로:
-
-\`\`\`
-오늘 [주제] 관련 대화로 트러블슈팅 블로그 작성해줘
-\`\`\`
-
----
-
-### 📋 체크리스트
-
-- [ ] 제목 선택/입력
-- [ ] 썸네일 이미지 추가
-- [ ] 다이어그램 SVG 생성
-- [ ] 포스트 내용 검토
-- [ ] GitHub 푸시
-
----
-
-*이 이슈는 자동으로 생성되었습니다.*`;
-            
-            if (existingIssue) {
-              // 기존 이슈 업데이트
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existingIssue.number,
-                body: body
-              });
-              console.log(`Updated issue #${existingIssue.number}`);
-            } else {
-              // 새 이슈 생성
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: `📝 [Devlog] ${today} Claude Code 대화 정리`,
-                body: body,
-                labels: ['devlog-draft', 'automated']
-              });
-              console.log('Created new issue');
-            }
-
-  # 대화 요약 생성
-  generate-summary:
-    needs: detect-and-notify
-    if: needs.detect-and-notify.outputs.has_new_conversations == 'true'
+  # 이전 테마 파일 정리 (so-simple → chirpy 마이그레이션 후)
+  clean-old-theme:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'clean-old-theme'
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate conversation summary
+      - name: Clean old theme files
         run: |
-          # 대화 요약 스크립트
-          CONV_DIR="_data/claude-conversations"
-          SUMMARY_FILE="_data/daily-summary.md"
-          TODAY=$(date +%Y-%m-%d)
-          
-          echo "# Claude Code 대화 요약 - $TODAY" > "$SUMMARY_FILE"
-          echo "" >> "$SUMMARY_FILE"
-          echo "생성 시간: $(date '+%Y-%m-%d %H:%M:%S KST')" >> "$SUMMARY_FILE"
-          echo "" >> "$SUMMARY_FILE"
-          
-          # JSON 파일에서 주제 추출
-          for file in "$CONV_DIR"/*${TODAY}*.json; do
-            if [ -f "$file" ]; then
-              echo "## $(basename "$file")" >> "$SUMMARY_FILE"
-              echo "" >> "$SUMMARY_FILE"
-              head -100 "$file" >> "$SUMMARY_FILE" 2>/dev/null || true
-              echo "" >> "$SUMMARY_FILE"
-              echo "---" >> "$SUMMARY_FILE"
-            fi
-          done
+          # 이전 테마(so-simple)의 잔여 파일 삭제
+          rm -rf _sass _includes _layouts _data 2>/dev/null || true
+          rm -rf assets/css assets/js 2>/dev/null || true
+          echo "Old theme files cleaned"
 
-      - name: Commit summary
+      - name: Commit and push
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          
-          if [ -f "_data/daily-summary.md" ]; then
-            git add _data/daily-summary.md
-            git diff --cached --quiet || git commit -m "summary: $(date +%Y-%m-%d) 대화 요약 생성"
-            git push || echo "Nothing to push"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet || git commit -m "Clean old theme files"
+          git push || echo "Nothing to push"
+
+  # 블로그 빌드 테스트
+  build-test:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Build Jekyll
+        run: |
+          bundle install
+          bundle exec jekyll build
+        env:
+          JEKYLL_ENV: production
+
+      - name: Check build output
+        run: |
+          if [ -d "_site" ]; then
+            echo "✅ Build successful!"
+            echo "Files generated: $(find _site -type f | wc -l)"
+          else
+            echo "❌ Build failed - _site directory not found"
+            exit 1
           fi

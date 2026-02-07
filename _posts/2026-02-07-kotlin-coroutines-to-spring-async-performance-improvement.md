@@ -2,14 +2,14 @@
 title: "Kotlin Coroutines에서 Spring @Async로 — 대화 요약 비동기화로 API 응답 시간 71% 개선한 이야기"
 date: 2026-02-07
 tags: [kotlin, spring-boot, coroutines, async, performance, dip, webclient]
-category: Performance
+category: 개발기
 readTime: 15min
 ---
 
 # Kotlin Coroutines에서 Spring @Async로 — 대화 요약 비동기화로 API 응답 시간 71% 개선한 이야기
 
 
-안녕하세요. duurian 팀에서 백엔드 개발을 담당하고 있는 개발자입니다. AI 기반 대화 서비스의 서버 성능 최적화와 안정성 개선을 맡고 있습니다.
+안녕하세요. duurian 팀에서 백엔드 개발을 담당하고 있는 정지원입니다. AI 기반 대화 서비스의 서버 성능 최적화와 안정성 개선을 맡고 있습니다.
 
 ---
 
