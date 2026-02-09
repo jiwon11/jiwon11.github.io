@@ -6,6 +6,9 @@ categories: [TIL]
 tags: [Kotlin, Spring Boot, Transactional, TransactionalEventListener, Coroutine, PostgreSQL, 트랜잭션]
 description: "@Transactional 메서드 내부에서 코루틴을 실행하면 미커밋 데이터를 읽지 못하는 트랜잭션 가시성 문제가 발생합니다. Spring의 @TransactionalEventListener(AFTER_COMMIT)로 해결하는 과정을 공유합니다."
 mermaid: true
+image:
+  path: "https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&w=1200&q=80"
+  thumbnail: "https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&w=600&q=80"
 ---
 
 # [Spring/Kotlin] @Transactional 내부 코루틴의 트랜잭션 가시성 문제 - @TransactionalEventListener로 해결하기
