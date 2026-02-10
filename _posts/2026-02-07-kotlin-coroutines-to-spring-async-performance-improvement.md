@@ -1,16 +1,16 @@
 ---
-title: "Kotlin Coroutines에서 Spring @Async로 — 대화 요약 비동기화로 API 응답 시간 71% 개선한 이야기"
+title: "Kotlin Coroutines에서 Spring @Async로 — 대화 요약 비동기화로 API 응답 시간 1/3로 개선한 이야기"
 date: 2026-02-07
 tags: [kotlin, spring-boot, coroutines, async, performance, dip, webclient]
 category: 개발기
-readTime: 15min
+readTime: 30min
 mermaid: true
 image:
   path: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80"
   thumbnail: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=600&q=80"
 ---
 
-# Kotlin Coroutines에서 Spring @Async로 -- 대화 요약 비동기화로 API 응답 시간 71% 개선한 이야기
+# Kotlin Coroutines에서 Spring @Async로 -- 대화 요약 비동기화로 API 응답 시간 1/3로 개선한 이야기
 
 안녕하세요. duurian 팀에서 백엔드 개발을 담당하고 있는 정지원입니다.
 
@@ -1327,7 +1327,7 @@ Connection Pool, 타임아웃, 재시도 전략 없이 WebClient를 사용하는
 
 ### 6.4 마무리
 
-"성능 최적화"라고 하면 흔히 캐싱, 인덱스 최적화, 알고리즘 개선 등을 떠올리지만, 때로는 **"이 작업을 사용자가 기다릴 필요가 있는가?"**라는 근본적인 질문에서 가장 큰 개선이 시작됩니다. 대화 요약 생성이라는 18초짜리 작업을 비동기로 분리하는 것만으로 API 응답 시간을 71% 줄일 수 있었던 것처럼, 비즈니스 요구사항을 정확히 이해하는 것이 기술적 최적화의 출발점입니다.
+"성능 최적화"라고 하면 흔히 캐싱, 인덱스 최적화, 알고리즘 개선 등을 떠올리지만, 때로는 **"이 작업을 사용자가 기다릴 필요가 있는가?"** 라는 근본적인 질문에서 가장 큰 개선이 시작됩니다. 대화 요약 생성이라는 18초짜리 작업을 비동기로 분리하는 것만으로 API 응답 시간을 71% 줄일 수 있었던 것처럼, 비즈니스 요구사항을 정확히 이해하는 것이 기술적 최적화의 출발점입니다.
 
 이 글이 비슷한 문제를 겪고 계신 분들에게 도움이 되었으면 합니다. 궁금한 점이나 개선할 부분이 있다면 언제든지 댓글로 남겨주세요.
 
