@@ -198,15 +198,6 @@ fun calculateConsecutiveDays(userId: UUID): Int {
 - 어제도 대화하지 않았다면 → `consecutiveDays = 0`
 - `consecutiveDays < 1` → **early return** → 보상 로직에 도달 불가
 
-### 2.4 이전 글과의 차이점
-
-| | 이전 글 (ThreadLocal 유실) | 이번 글 (트랜잭션 가시성) |
-|---|---|---|
-| **원인** | 코루틴 스레드 전환으로 ThreadLocal 유실 | 미커밋 데이터를 별도 트랜잭션에서 조회 |
-| **위치** | `suspend` 함수 + `@Transactional` | 일반 함수에서 코루틴 `launch` |
-| **증상** | 트랜잭션 자체가 없음 | 트랜잭션은 있지만 데이터가 안 보임 |
-| **해결** | 트랜잭션 범위 분리 | `@TransactionalEventListener(AFTER_COMMIT)` |
-
 ---
 
 ## 3. 해결: @TransactionalEventListener(AFTER_COMMIT)
@@ -361,201 +352,19 @@ class ProcessConversationPostTurnService(
 
 ---
 
-## 4. @TransactionalEventListener 동작 원리
+## 4. 실무 팁
 
-### 4.1 Spring 이벤트와 트랜잭션 연동
-
-`@TransactionalEventListener`는 Spring 4.2부터 제공되는 기능으로, 트랜잭션의 특정 단계(phase)에서 이벤트를 처리합니다.
-
-```mermaid
-flowchart TD
-    subgraph "트랜잭션 라이프사이클"
-        A["@Transactional 시작"] --> B["비즈니스 로직 실행"]
-        B --> C["publishEvent()"]
-        C --> D["비즈니스 로직 계속"]
-        D --> E{"커밋 성공?"}
-        E -->|Yes| F["AFTER_COMMIT 리스너 실행"]
-        E -->|No| G["AFTER_ROLLBACK 리스너 실행"]
-    end
-
-    style C fill:#FF9800,color:#fff
-    style F fill:#4CAF50,color:#fff
-    style G fill:#f44336,color:#fff
-```
-
-| Phase | 실행 시점 | 사용 사례 |
-|-------|----------|----------|
-| `BEFORE_COMMIT` | 커밋 직전 | 추가 검증, 감사 로그 |
-| `AFTER_COMMIT` | 커밋 성공 후 | **알림 발송, 후속 비동기 작업** |
-| `AFTER_ROLLBACK` | 롤백 후 | 보상 트랜잭션, 상태 복구 |
-| `AFTER_COMPLETION` | 커밋/롤백 후 | 리소스 정리 |
-
-### 4.2 @EventListener vs @TransactionalEventListener
-
-```mermaid
-sequenceDiagram
-    participant TX as @Transactional 메서드
-    participant EL as @EventListener
-    participant TEL as @TransactionalEventListener
-
-    TX->>TX: publishEvent()
-
-    Note over EL: 즉시 실행 (트랜잭션 내부)
-    TX->>EL: 동기 호출
-    EL-->>TX: 완료
-
-    TX->>TX: 나머지 로직
-    TX->>TX: COMMIT
-
-    Note over TEL: 커밋 후 실행
-    TX->>TEL: AFTER_COMMIT 호출
-```
-
-| | `@EventListener` | `@TransactionalEventListener` |
-|---|---|---|
-| **실행 시점** | 즉시 (트랜잭션 내부) | 트랜잭션 커밋/롤백 후 |
-| **데이터 가시성** | 미커밋 데이터 보임 (같은 트랜잭션) | 커밋된 데이터만 보임 |
-| **실패 시 영향** | 트랜잭션 롤백 가능 | 트랜잭션에 영향 없음 |
-| **적합한 사용처** | 트랜잭션 내 동기 처리 | 비동기 후처리, 알림 발송 |
-
-### 4.3 주의사항
-
-#### 트랜잭션 없이 publishEvent를 호출하면?
-
-`@TransactionalEventListener`는 활성 트랜잭션이 있을 때만 동작합니다. 트랜잭션 없이 `publishEvent()`를 호출하면 **이벤트가 무시됩니다**(기본 동작).
-
-```kotlin
-// 기본값: fallbackExecution = false → 트랜잭션 없으면 이벤트 무시
-@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-fun handle(event: MyEvent) { ... }
-
-// fallbackExecution = true → 트랜잭션 없어도 즉시 실행
-@TransactionalEventListener(
-    phase = TransactionPhase.AFTER_COMMIT,
-    fallbackExecution = true
-)
-fun handle(event: MyEvent) { ... }
-```
-
-#### AFTER_COMMIT 리스너에서의 예외
-
-`AFTER_COMMIT` 리스너에서 발생한 예외는 이미 커밋된 트랜잭션에 영향을 주지 않습니다. 하지만 예외가 전파되면 다른 리스너의 실행을 방해할 수 있으므로, 반드시 try-catch로 감싸야 합니다.
+`@Transactional` 메서드 안에서 비동기 작업을 실행할 때는 항상 **"이 비동기 작업이 같은 트랜잭션의 데이터를 읽어야 하는가?"**를 확인하세요. 코루틴 `launch`, `@Async`, `CompletableFuture` 모두 별도 스레드에서 새 트랜잭션을 시작하므로, 미커밋 데이터를 읽지 못합니다. 답이 Yes라면 `@TransactionalEventListener(AFTER_COMMIT)`가 안전한 선택입니다.
 
 ---
 
-## 5. 아키텍처 개선: Port → Event
-
-### 5.1 Before: Port 기반 직접 결합
-
-```mermaid
-flowchart LR
-    A[ProcessConversationService] -->|"직접 호출"| B[ProcessConversationPostTurnPort]
-    B --> C[ProcessConversationPostTurnService]
-
-    style B fill:#FF9800,color:#fff
-```
-
-서비스가 Port를 통해 후처리 서비스를 **직접 호출**합니다. 이 구조에서는 호출 시점을 제어하기 어렵습니다.
-
-### 5.2 After: 이벤트 기반 느슨한 결합
-
-```mermaid
-flowchart LR
-    A[ProcessConversationService] -->|"publishEvent"| B[Spring Event Bus]
-    B -->|"AFTER_COMMIT"| C[ProcessConversationPostTurnService]
-
-    style B fill:#4CAF50,color:#fff
-```
-
-이벤트 기반으로 전환하면:
-
-- **느슨한 결합**: 발행자와 수신자가 서로를 알 필요 없음
-- **트랜잭션 경계 보장**: `AFTER_COMMIT`으로 커밋 후 실행 보장
-- **확장성**: 새로운 후처리 로직 추가 시 리스너만 추가하면 됨
-- **Port 인터페이스 제거**: 불필요한 추상화 계층 정리
-
----
-
-## 6. 실무 팁
-
-### 6.1 @Transactional + 비동기 작업 체크리스트
-
-```mermaid
-flowchart TD
-    A["@Transactional 메서드 안에서<br/>비동기 작업을 실행하는가?"] -->|Yes| B["비동기 작업이 같은 트랜잭션의<br/>데이터를 읽는가?"]
-    A -->|No| C["OK - 문제없음"]
-    B -->|Yes| D["@TransactionalEventListener<br/>(AFTER_COMMIT) 사용"]
-    B -->|No| E["주의: 향후 데이터 의존성<br/>추가 가능성 확인"]
-
-    style A fill:#FF9800,color:#fff
-    style D fill:#4CAF50,color:#fff
-    style C fill:#4CAF50,color:#fff
-```
-
-| 체크 항목 | 확인 내용 |
-|-----------|-----------|
-| `@Transactional` 내 `launch` | 코루틴이 같은 트랜잭션의 데이터를 읽는지 확인 |
-| `@Transactional` 내 `@Async` | 비동기 메서드가 미커밋 데이터에 의존하는지 확인 |
-| `@Transactional` 내 `CompletableFuture` | 별도 스레드에서 DB 조회 시 가시성 문제 확인 |
-| 이벤트 발행 위치 | `publishEvent`가 트랜잭션 내부에서 호출되는지 확인 |
-
-### 6.2 디버깅: 트랜잭션 커밋 시점 확인
-
-문제가 의심될 때 JPA의 SQL 로그를 활성화하면 커밋 시점을 확인할 수 있습니다.
-
-```yaml
-# application.yml
-logging:
-  level:
-    org.springframework.transaction: DEBUG
-    org.springframework.orm.jpa: DEBUG
-```
-
-출력 예시:
-
-```
-DEBUG - Creating new transaction with name [processConversation]
-DEBUG - Opened new EntityManager for JPA transaction
-...
-DEBUG - Committing JPA transaction on EntityManager
-DEBUG - Closing JPA EntityManager after transaction
-```
-
-`Committing JPA transaction` 로그가 출력된 **후에** 이벤트 리스너가 실행되어야 정상입니다.
-
----
-
-## 7. 마무리
+## 5. 마무리
 
 > **💡 Key Takeaways**
 > 1. **`@Transactional` 내 비동기 = 트랜잭션 가시성 함정** — 코루틴 `launch`는 별도 스레드에서 새 트랜잭션을 시작하므로, 부모의 미커밋 데이터를 읽지 못합니다. "같은 코드 블록 안에 있으니까 같은 트랜잭션이겠지"라는 가정이 가장 위험합니다.
 > 2. **데이터 의존성이 있으면 `AFTER_COMMIT`** — `@TransactionalEventListener(AFTER_COMMIT)`는 커밋 완료 후 실행을 보장하므로, 후처리 로직이 항상 완전한 데이터를 읽을 수 있습니다.
-> 3. **이벤트 기반 전환은 부수 효과까지 개선** — 트랜잭션 가시성 문제를 해결하면서 동시에 Port → Event 전환으로 느슨한 결합, 확장성까지 얻었습니다. 문제 해결이 아키텍처 개선으로 이어진 사례입니다.
 
 ### Before → After
-
-```mermaid
-stateDiagram-v2
-    state "Before: Port 직접 호출" as before {
-        [*] --> 트랜잭션시작
-        트랜잭션시작 --> 메시지저장: INSERT (미커밋)
-        메시지저장 --> 코루틴launch: launch(Dispatchers.IO)
-        코루틴launch --> 새트랜잭션조회: 별도 스레드, 새 트랜잭션
-        새트랜잭션조회 --> 데이터불일치: 5번째 메시지 안 보임 ❌
-        메시지저장 --> API호출: OpenAI (수 초)
-        API호출 --> 커밋: COMMIT (너무 늦음)
-    }
-
-    state "After: Event 기반" as after {
-        [*] --> TX시작
-        TX시작 --> 저장: INSERT
-        저장 --> 이벤트발행: publishEvent()
-        저장 --> API: OpenAI 호출
-        API --> COMMIT: ✅ COMMIT
-        COMMIT --> 리스너실행: AFTER_COMMIT
-        리스너실행 --> 정상조회: 모든 데이터 가시 ✅
-    }
-```
 
 | 항목 | Before | After |
 |------|--------|-------|
@@ -565,7 +374,7 @@ stateDiagram-v2
 | **결합도** | 서비스 → Port → 구현체 직접 결합 | 이벤트 기반 느슨한 결합 |
 | **보상 지급** | `consecutiveDays = 0` → 미지급 | 정상 계산 → 정상 지급 |
 
-`@Transactional` 메서드 안에서 비동기 작업을 실행할 때는 항상 **"이 비동기 작업이 같은 트랜잭션의 데이터를 읽어야 하는가?"**를 자문해 보세요. 답이 Yes라면, `@TransactionalEventListener(AFTER_COMMIT)`가 안전한 선택입니다.
+> **참고**: 트랜잭션 없이 `publishEvent`를 호출하면 이벤트가 무시됩니다 (`fallbackExecution = false` 기본값).
 
 ---
 
