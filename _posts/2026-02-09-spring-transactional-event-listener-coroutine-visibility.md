@@ -15,7 +15,7 @@ image:
 
 안녕하세요. duurian 팀에서 백엔드 개발을 담당하고 있는 정지원입니다.
 
-이전 글 [suspend 함수와 @Transactional의 위험한 조합](/kotlin-coroutine-transactional-danger)에서는 코루틴의 스레드 전환으로 인한 **트랜잭션 컨텍스트 유실** 문제를 다뤘습니다.
+이전 글 [suspend 함수와 @Transactional의 위험한 조합](/posts/kotlin-coroutine-transactional-danger/)에서는 코루틴의 스레드 전환으로 인한 **트랜잭션 컨텍스트 유실** 문제를 다뤘습니다.
 
 이번에는 비슷하지만 다른 함정을 만났습니다. `@Transactional` 메서드 내부에서 코루틴을 launch하면, 코루틴의 새 트랜잭션이 **부모 트랜잭션의 미커밋 데이터를 읽지 못하는** 문제입니다. 이 글에서는 문제의 원인을 분석하고 `@TransactionalEventListener(AFTER_COMMIT)`로 해결하는 과정을 공유합니다.
 
