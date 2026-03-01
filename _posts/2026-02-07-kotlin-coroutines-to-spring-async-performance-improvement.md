@@ -322,9 +322,9 @@ val httpClient = HttpClient.create(connectionProvider)
 
 ```mermaid
 graph LR
-    A["TCP 연결\n5초"] --> B["요청 쓰기\n10초"]
-    B --> C["응답 대기\n60초"]
-    C --> D["응답 읽기\n60초"]
+    A["TCP 연결 </br> 5초"] --> B["요청 쓰기 </br> 10초"]
+    B --> C["응답 대기 </br> 60초"]
+    C --> D["응답 읽기 </br> 60초"]
 
     style A fill:#3498DB,stroke:#333,color:#fff
     style B fill:#2ECC71,stroke:#333,color:#fff
