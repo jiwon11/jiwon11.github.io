@@ -80,21 +80,6 @@ OpenAI API 호출 성능 개선을 위해 7가지 방안을 검토하고 모두 
 | 6 | **통합 에러 관리** | 일관된 에러 처리, 모니터링 연동 | 에러 코드 관리 필요 | ✅ |
 | 7 | **모델 변경** | 응답 속도 + 품질 동시 향상 | 비용 변동 가능 | ✅ |
 
-```mermaid
-flowchart TD
-    A[기존 WebClient] --> B{7가지 개선}
-    B --> C[1. 커넥션 풀]
-    B --> D[2. 타임아웃 계층화]
-    B --> E[3. gzip 압축]
-    B --> F[4. Exponential Backoff]
-    B --> G[5. JSON 최적화]
-    B --> H[6. 통합 에러 관리]
-    B --> I[7. 모델 변경]
-    C & D & E & F & G & H & I --> J[최적화된 WebClient]
-
-    style A fill:#fcc,stroke:#333,stroke-width:2px
-    style J fill:#9f9,stroke:#333,stroke-width:2px
-```
 
 ## 3. 구현 세부 사항
 

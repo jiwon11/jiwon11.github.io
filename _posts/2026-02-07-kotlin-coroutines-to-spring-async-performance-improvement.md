@@ -1,589 +1,510 @@
 ---
-title: "Kotlin Coroutines에서 Spring @Async로 — 대화 요약 비동기화로 API 응답 시간 1/3로 개선한 이야기"
+title: "OpenAI API 호출 최적화 — 모델 선택부터 WebClient 튜닝까지"
 date: 2026-02-07
-tags: [kotlin, spring-boot, coroutines, async, performance, webclient]
+tags: [spring-boot, kotlin, webclient, reactor-netty, openai, performance]
 category: 개발기
-readTime: 15min
+readTime: 12min
 mermaid: true
 image:
   path: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80"
   thumbnail: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=600&q=80"
 ---
 
-# Kotlin Coroutines에서 Spring @Async로 -- 대화 요약 비동기화로 API 응답 시간 1/3로 개선한 이야기
+# OpenAI API 호출 최적화 -- 모델 선택부터 WebClient 튜닝까지
 
 안녕하세요. duurian 팀에서 백엔드 개발을 담당하고 있는 정지원입니다.
 
-이번 글에서는 대화 요약 기능의 비동기 처리 전략을 **Kotlin Coroutines에서 Spring @Async로 전환**하면서 API 응답 시간을 **25.98초에서 7.56초로 71% 개선**한 과정을 공유합니다.
+이번 글에서는 AI 대화 서비스에서 OpenAI API 호출을 최적화한 과정을 공유합니다. 크게 두 가지 축으로 진행했습니다.
+
+1. **OpenAI 모델 최적화**: `reasoning_effort` 파라미터 튜닝과 모델 비교를 통한 응답 속도 개선
+2. **WebClient 최적화**: Connection Pool, Timeout 계층화, gzip 압축, 지수 백오프 재시도를 통한 네트워크 효율 및 안정성 개선
 
 ---
 
-## 1. 배경: AI 대화 요약 기능과 성능 문제
+## 1. 배경: AI 대화 서비스와 OpenAI API 의존도
 
 ### 1.1 서비스 소개
 
-duurian은 AI 기반의 대화 매칭 서비스입니다. 사용자 간 대화가 이루어질 때마다 AI가 대화 내용을 분석하고 대화 요약을 생성하여 매칭 품질을 높이는 데 활용합니다. 문제가 된 부분은 대화 요약 생성이 OpenAI API를 호출하는데, 이 과정이 **동기적으로 처리**되고 있었다는 것입니다.
+duurian은 AI 페르소나 기반의 대화 서비스입니다. 사용자가 AI 페르소나와 하루 최대 5턴의 대화를 나누고, 마지막 턴이 완료되면 AI가 오늘의 대화 내용을 분석하여 대화 요약을 생성합니다.
 
-### 1.2 문제 정의: 25.98초의 응답 시간
+서비스의 핵심 기능 대부분이 OpenAI API에 의존하고 있습니다.
 
-사용자가 메시지를 하나 보낼 때마다 서버에서는 다음과 같은 작업이 순차적으로 실행되고 있었습니다.
+| 기능 | OpenAI API 호출 | 설명 |
+|---|---|---|
+| 대화 응답 생성 | 매 턴마다 | 사용자 메시지에 대한 AI 후속 응답 생성 |
+| 대화 요약 생성 | 5턴 완료 시 | 오늘 전체 대화 내용 요약 |
+
+하루에 사용자 1명당 최소 4회(대화) + 1회(요약) = **5회의 OpenAI API 호출**이 발생합니다. 사용자 수가 증가하면 API 호출 빈도도 비례하여 늘어나므로, **외부 API 호출의 효율성과 안정성**이 서비스 전체의 성능을 좌우하는 구조입니다.
+
+### 1.2 초기 상태: gpt-5-nano + reasoning_effort: low
+
+서비스 초기에는 **gpt-5-nano** 모델을 `reasoning_effort: low`로 사용하고 있었고, WebClient는 별도 최적화 없이 기본 설정으로 OpenAI API를 호출하고 있었습니다.
+
+```kotlin
+// 초기 WebClient — 최적화 이전
+@Bean
+fun openAiWebClient(): WebClient {
+    return WebClient.builder()
+        .baseUrl(apiUrl)
+        .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer $apiKey")
+        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+        .build()
+}
+```
+
+```kotlin
+// 초기 모델 설정 — gpt-5-nano + reasoning_effort: low
+val request = ChatCompletionRequest(
+    model = "gpt-5-nano",
+    messages = openAiMessages,
+    maxCompletionTokens = 4000,
+    reasoningEffort = "low"
+)
+```
+
+테스트 서버에서 측정한 결과, 이 조합의 성능이 기대 이하였습니다.
+
+### 1.3 실측 데이터: 왜 최적화가 필요했는가
+
+테스트 서버 환경에서 OpenAI API 호출 시간을 `[OpenAI-Metrics]` 로그를 통해 측정했습니다.
+
+**gpt-5-nano (reasoning_effort: low) — 초기 설정**
+
+| 기능 | 평균 응답 시간 | 샘플 수 |
+|---|---|---|
+| 대화 응답 생성 | **4,325.2ms** | 5건 |
+| 대화 요약 생성 | **6,272ms** | 1건 |
+
+대화 응답에 4초 이상, 요약에 6초 이상이 걸리고 있었습니다. 사용자가 매 턴마다 4초 이상 기다려야 하는 것은 대화 경험에 큰 영향을 미칩니다.
+
+이 문제를 해결하기 위해 **모델/파라미터 최적화**와 **WebClient 최적화**를 동시에 진행했습니다.
+
+---
+
+## 2. OpenAI 모델 최적화
+
+### 2.1 reasoning_effort란?
+
+OpenAI의 reasoning 모델(gpt-5-nano 등)은 `reasoning_effort` 파라미터를 통해 **추론에 투입하는 연산량**을 조절할 수 있습니다.
+
+| reasoning_effort | 설명 | 특징 |
+|---|---|---|
+| `high` | 최대 추론 | 정확도 최고, 응답 속도 최저 |
+| `medium` | 균형 | 기본값 |
+| `low` | 제한적 추론 | 빠르지만 복잡한 추론에 약함 |
+| `minimal` | 최소 추론 | 속도 최고, 단순 작업에 적합 |
+
+`reasoning_effort`가 높을수록 모델이 내부적으로 더 많은 reasoning token을 생성하여 깊은 사고 과정을 거칩니다. 이 reasoning token은 API 응답에는 포함되지 않지만, **응답 시간과 토큰 비용**에 직접적인 영향을 줍니다.
+
+### 2.2 모델별 성능 비교
+
+다양한 모델과 `reasoning_effort` 조합을 프로덕션에서 측정했습니다.
+
+| 모델 | reasoning_effort | 대화 응답 평균 | 대화 요약 평균 |
+|---|---|---|---|
+| gpt-5-nano | low | 4,325.2ms (5건) | 6,272ms (1건) |
+| gpt-5-nano | minimal | **1,382.4ms** (5건) | **1,110ms** (1건) |
+| gpt-4o-mini | - | 1,819.8ms (10건) | 1,338.7ms (3건) |
 
 ```mermaid
-sequenceDiagram
-    participant Client as 클라이언트
-    participant API as API Server
-    participant AI as OpenAI API
-    participant DB as Database
+flowchart TD
+    Q["🔍 모델 + reasoning_effort 선택"] --> A
+    Q --> B
+    Q --> C
 
-    Client->>API: POST /conversations/{id}/messages
-    activate API
-    Note right of API: 메시지 저장 시작
+    A["gpt-5-nano, low<br>응답 <b>4,325ms</b><br>요약 <b>6,272ms</b>"]
+    B["gpt-5-nano, minimal<br>응답 <b>1,382ms</b> (3.1배↓)<br>요약 <b>1,110ms</b> (5.6배↓)"]
+    C["gpt-4o-mini<br>응답 <b>1,820ms</b> (2.4배↓)<br>요약 <b>1,339ms</b> (4.7배↓)"]
 
-    API->>DB: 메시지 저장
-    DB-->>API: 저장 완료 (50ms)
-
-    API->>AI: AI 응답 생성 요청
-    Note right of AI: GPT 모델 호출
-    AI-->>API: AI 응답 반환 (3,500ms)
-
-    API->>DB: AI 응답 저장
-    DB-->>API: 저장 완료 (50ms)
-
-    rect rgb(255, 230, 230)
-        Note over API,AI: 병목 구간 - 동기 처리
-        API->>AI: 대화 요약 생성 요청
-        Note right of AI: GPT 모델 호출 (대화 전체 컨텍스트)
-        AI-->>API: 대화 요약 반환 (18,000ms)
-
-        API->>DB: 대화 요약 저장
-        DB-->>API: 저장 완료 (80ms)
-    end
-
-    API-->>Client: 응답 반환
-    deactivate API
-    Note left of Client: 총 응답 시간: 약 25,980ms
+    style A fill:#FFCDD2,stroke:#C62828,color:#333
+    style B fill:#C8E6C9,stroke:#2E7D32,color:#333
+    style C fill:#C8E6C9,stroke:#2E7D32,color:#333
 ```
 
-**대화 요약 생성 구간이 전체 응답 시간의 약 69%를 차지**하고 있었습니다.
+핵심 발견:
+- **gpt-5-nano low → minimal**: 대화 응답 약 **3.1배**, 요약 약 **5.6배** 빨라짐
+- **gpt-4o-mini**: reasoning 모델이 아니므로 `reasoning_effort` 불필요. 안정적인 성능
 
-### 1.3 성능 측정 데이터
+`reasoning_effort`를 `low`에서 `minimal`로 한 단계만 낮춰도 응답 시간이 크게 줄어드는 이유는, `low`도 여전히 상당한 reasoning token을 생성하기 때문입니다. `minimal`은 reasoning을 거의 건너뛰고 바로 응답을 생성합니다.
 
-| 구간 | 소요 시간 | 비율 |
+### 2.3 대화 서비스에 적합한 모델 전략
+
+대화 응답 생성과 요약 생성은 **높은 수준의 추론이 필요한 작업이 아닙니다.** 이미 시스템 프롬프트와 대화 컨텍스트가 충분히 제공되므로, 모델은 주어진 컨텍스트를 바탕으로 자연스러운 대화를 이어가거나 내용을 요약하기만 하면 됩니다.
+
+반면 **수학 문제 풀이, 코드 작성, 논리적 분석** 같은 작업은 깊은 추론이 필요하므로 `reasoning_effort`를 높이는 것이 적합합니다.
+
+| 작업 유형 | 추론 필요도 | 적합한 설정 |
 |---|---|---|
-| 메시지 저장 | 50ms | 0.2% |
-| AI 응답 생성 (OpenAI API) | 3,500ms | 13.5% |
-| AI 응답 저장 | 50ms | 0.2% |
-| **대화 요약 생성 (OpenAI API)** | **18,000ms** | **69.3%** |
-| **대화 요약 저장** | **80ms** | **0.3%** |
-| 기타 (직렬화, 네트워크 등) | 4,300ms | 16.5% |
-| **전체** | **25,980ms** | **100%** |
+| 대화 응답 생성 | 낮음 | `minimal` 또는 non-reasoning 모델 |
+| 대화 요약 생성 | 낮음 | `minimal` 또는 non-reasoning 모델 |
+| 추천 설명 생성 | 중간 | `medium` |
+| 복잡한 분석 작업 | 높음 | `high` |
 
-### 1.4 핵심 인사이트
+### 2.4 동적 모델 설정: DB 기반 모델 관리
 
-여기서 중요한 점은, **대화 요약은 사용자에게 즉시 반환할 필요가 없는 작업**이라는 것입니다. 대화 요약은 매칭 알고리즘에서 사용되는 데이터이지, 사용자가 현재 대화 화면에서 바로 확인해야 하는 정보가 아닙니다. 즉, 대화 요약 생성은 **비동기로 처리해도 사용자 경험에 전혀 영향을 주지 않는 작업**이었습니다.
-
-이 인사이트를 바탕으로 크게 세 단계에 걸쳐 개선을 진행했습니다.
-
-| 단계 | 접근 방식 | 목표 |
-|---|---|---|
-| 1단계 | Kotlin Coroutines (fire-and-forget) | 빠른 비동기화 적용 |
-| 2단계 | Spring @Async + 인터페이스 분리 | Spring 생태계 통합, 안정성 확보 |
-| 3단계 | WebClient 최적화 | 외부 API 호출 성능 극대화 |
-
----
-
-## 2. 1단계: Kotlin Coroutines -- fire-and-forget의 유혹과 함정
-
-### 2.1 첫 번째 시도: CoroutineScope(Dispatchers.IO).launch
-
-비동기화의 첫 번째 시도로, Kotlin Coroutines의 fire-and-forget 패턴을 적용했습니다.
-
-**Before: 동기 처리 코드**
-
-```kotlin
-@Service
-class ConversationService(
-    private val messageCommandPort: MessageCommandPort,
-    private val aiClientPort: AiClientPort,
-    private val summaryCommandPort: SummaryCommandPort,
-    private val summaryQueryPort: SummaryQueryPort,
-) {
-    @Transactional
-    fun processMessage(
-        conversationId: Long,
-        userId: Long,
-        content: String,
-    ): MessageResponse {
-        // 1. 메시지 저장
-        val message = messageCommandPort.save(
-            Message(conversationId = conversationId, userId = userId, content = content)
-        )
-
-        // 2. AI 응답 생성
-        val aiResponse = aiClientPort.generateResponse(conversationId, content)
-        val aiMessage = messageCommandPort.save(
-            Message(conversationId = conversationId, userId = AI_USER_ID, content = aiResponse)
-        )
-
-        // 3. 대화 요약 생성 (병목!)
-        val previousSummary = summaryQueryPort.findLatest(conversationId)
-        val newSummary = aiClientPort.generateSummary(
-            conversationId = conversationId,
-            previousSummary = previousSummary?.content,
-            recentMessages = listOf(message, aiMessage),
-        )
-
-        // 4. 대화 요약 저장
-        summaryCommandPort.save(
-            Summary(conversationId = conversationId, content = newSummary)
-        )
-
-        // 5. 응답 반환 (대화 요약 완료 후에야 반환)
-        return MessageResponse(
-            messageId = aiMessage.id!!,
-            content = aiResponse,
-        )
-    }
-}
-```
-
-3번과 4번 단계가 완료될 때까지 사용자는 응답을 받지 못합니다. 이를 Coroutines로 비동기화했습니다.
-
-**After: Kotlin Coroutines fire-and-forget**
-
-```kotlin
-@Service
-class ConversationService(
-    private val messageCommandPort: MessageCommandPort,
-    private val aiClientPort: AiClientPort,
-    private val summaryCommandPort: SummaryCommandPort,
-    private val summaryQueryPort: SummaryQueryPort,
-) {
-    @Transactional
-    fun processMessage(
-        conversationId: Long,
-        userId: Long,
-        content: String,
-    ): MessageResponse {
-        // 1. 메시지 저장
-        val message = messageCommandPort.save(
-            Message(conversationId = conversationId, userId = userId, content = content)
-        )
-
-        // 2. AI 응답 생성
-        val aiResponse = aiClientPort.generateResponse(conversationId, content)
-        val aiMessage = messageCommandPort.save(
-            Message(conversationId = conversationId, userId = AI_USER_ID, content = aiResponse)
-        )
-
-        // 3. 대화 요약 생성 -- 비동기로 분리! (fire-and-forget)
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val previousSummary = summaryQueryPort.findLatest(conversationId)
-                val newSummary = aiClientPort.generateSummary(
-                    conversationId = conversationId,
-                    previousSummary = previousSummary?.content,
-                    recentMessages = listOf(message, aiMessage),
-                )
-                summaryCommandPort.save(
-                    Summary(conversationId = conversationId, content = newSummary)
-                )
-            } catch (e: Exception) {
-                log.error("대화 요약 생성 실패: conversationId=$conversationId", e)
-            }
-        }
-
-        // 4. 대화 요약 완료를 기다리지 않고 즉시 응답 반환
-        return MessageResponse(
-            messageId = aiMessage.id!!,
-            content = aiResponse,
-        )
-    }
-
-    companion object {
-        private val log = LoggerFactory.getLogger(ConversationService::class.java)
-    }
-}
-```
-
-응답 시간이 눈에 띄게 줄었지만, 프로덕션에 배포한 후 여러 가지 문제가 드러났습니다.
-
-### 2.2 문제점 발견: 왜 Coroutines fire-and-forget이 위험한가
-
-#### 문제 1: 생명주기(Lifecycle) 관리 부재
-
-`CoroutineScope(Dispatchers.IO).launch`로 생성된 코루틴은 **Spring의 생명주기와 독립적**으로 동작합니다. Spring 애플리케이션이 종료(shutdown)될 때 진행 중인 코루틴이 정상적으로 완료되리라는 보장이 없습니다.
-
-```kotlin
-CoroutineScope(Dispatchers.IO).launch {
-    // Spring ApplicationContext와 무관하게 실행
-    // 애플리케이션 종료 시 작업이 갑자기 중단될 수 있음
-    val summary = aiClientPort.generateSummary(...)
-    summaryCommandPort.save(summary) // 종료 시점에 실행되면 유실
-}
-```
-
-실제로 배포 시 graceful shutdown 과정에서 약 2~3%의 대화 요약이 유실되는 현상이 발생했습니다.
-
-#### 문제 2: Spring 트랜잭션 컨텍스트 전파 불가
-
-`CoroutineScope(Dispatchers.IO).launch` 블록 내부는 새로운 스레드에서 실행되므로, `@Transactional` 컨텍스트가 전파되지 않습니다.
-
-```kotlin
-@Transactional  // 이 트랜잭션은 launch 블록 안에 전파되지 않음!
-fun processMessage(...): MessageResponse {
-    CoroutineScope(Dispatchers.IO).launch {
-        // ThreadLocal 기반의 TransactionSynchronizationManager에서
-        // 트랜잭션 컨텍스트를 찾을 수 없음
-        summaryCommandPort.save(summary) // 트랜잭션 없이 실행!
-    }
-}
-```
-
-Spring의 `@Transactional`은 `ThreadLocal`에 트랜잭션 정보를 저장하므로, `Dispatchers.IO`의 새 스레드에서는 트랜잭션 컨텍스트가 완전히 유실됩니다.
-
-#### 문제 3: 예외 처리의 어려움
-
-fire-and-forget 패턴에서는 코루틴 내부에서 발생한 예외가 호출자에게 전파되지 않습니다.
-
-```kotlin
-CoroutineScope(Dispatchers.IO).launch {
-    try {
-        val summary = aiClientPort.generateSummary(...)
-        summaryCommandPort.save(summary)
-    } catch (e: Exception) {
-        // 1. 이 예외는 processMessage() 호출자에게 전파되지 않음
-        // 2. Spring의 @Retryable, ExceptionHandler 등을 활용할 수 없음
-        // 3. 재시도 로직을 코루틴 내부에서 직접 구현해야 함
-        log.error("대화 요약 실패", e)
-    }
-}
-```
-
-### 2.3 Kotlin Coroutines 한계점 정리
-
-| 항목 | Coroutines fire-and-forget | 바람직한 상태 |
-|---|---|---|
-| 생명주기 관리 | Spring과 독립적, 종료 시 유실 가능 | Spring 생명주기와 통합 |
-| 트랜잭션 전파 | ThreadLocal 유실로 불가능 | 독립 트랜잭션 보장 |
-| 예외 처리 | 호출자에게 전파 불가, 구조적 처리 어려움 | 구조적 예외 처리, 모니터링 통합 |
-| 스레드 풀 관리 | Dispatchers.IO 공유, 튜닝 어려움 | 전용 ThreadPoolTaskExecutor |
-
-이러한 한계점들을 종합적으로 고려했을 때, **Kotlin Coroutines의 fire-and-forget 패턴은 Spring 기반 애플리케이션에서 안정적인 비동기 처리 전략이 되기 어렵다**는 결론에 도달했습니다.
-
----
-
-## 3. 2단계: Spring @Async — Spring 생태계와의 통합
-
-### 3.1 설계 원칙
-
-비동기 처리 메커니즘의 변경이 비즈니스 로직에 영향을 주지 않도록, **인터페이스를 두고 구현체를 교체하는 방식**을 적용했습니다. `ConversationService`는 비동기/동기 여부를 모르고, 인터페이스만 의존합니다. 비동기 전략을 변경할 때 비즈니스 로직은 수정할 필요가 없습니다.
-
-### 3.2 Port 인터페이스 정의
-
-도메인 레이어에 "대화 턴 이후 후처리"라는 비즈니스 의도만을 표현하는 인터페이스를 정의합니다.
-
-```kotlin
-interface ProcessConversationPostTurnPort {
-    fun processPostTurn(
-        conversationId: Long,
-        messages: List<Message>,
-    )
-}
-```
-
-### 3.3 비즈니스 로직: ConversationService
-
-`ConversationService`는 `ProcessConversationPostTurnPort`만 의존합니다. 대화 요약이 어떻게 생성되는지, 비동기인지 동기인지는 관심사가 아닙니다.
-
-```kotlin
-@Service
-class ConversationService(
-    private val messageCommandPort: MessageCommandPort,
-    private val aiClientPort: AiClientPort,
-    private val processConversationPostTurnPort: ProcessConversationPostTurnPort,
-) {
-    @Transactional
-    fun processMessage(
-        conversationId: Long,
-        userId: Long,
-        content: String,
-    ): MessageResponse {
-        // 1. 메시지 저장
-        val message = messageCommandPort.save(
-            Message(conversationId = conversationId, userId = userId, content = content)
-        )
-
-        // 2. AI 응답 생성
-        val aiResponse = aiClientPort.generateResponse(conversationId, content)
-        val aiMessage = messageCommandPort.save(
-            Message(conversationId = conversationId, userId = AI_USER_ID, content = aiResponse)
-        )
-
-        // 3. 후처리 위임 (비동기/동기 여부를 모름)
-        processConversationPostTurnPort.processPostTurn(
-            conversationId = conversationId,
-            messages = listOf(message, aiMessage),
-        )
-
-        // 4. 즉시 응답 반환
-        return MessageResponse(
-            messageId = aiMessage.id!!,
-            content = aiResponse,
-        )
-    }
-}
-```
-
-### 3.4 @Async 어댑터 구현
-
-핵심인 `@Async` 기반 어댑터입니다.
+모델 변경 시마다 코드를 수정하고 재배포하는 것은 비효율적입니다. `AiModelResolver`를 통해 **DB에서 모델명을 동적으로 조회**하고, DB에 없으면 환경변수를 fallback으로 사용합니다.
 
 ```kotlin
 @Component
-class AsyncConversationPostTurnAdapter(
-    private val aiClientPort: AiClientPort,
-    private val summaryCommandPort: SummaryCommandPort,
-    private val summaryQueryPort: SummaryQueryPort,
-) : ProcessConversationPostTurnPort {
+class AiModelResolver(
+    private val queryAiModelPort: QueryAiModelPort,
+    private val openAiClientPort: OpenAiClientPort,
+) {
 
-    @Async("conversationPostTurnExecutor")
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    override fun processPostTurn(
-        conversationId: Long,
-        messages: List<Message>,
-    ) {
-        log.info("[PostTurn] 대화 후처리 시작: conversationId=$conversationId")
-
-        try {
-            // 1. 이전 대화 요약 조회
-            val previousSummary = summaryQueryPort.findLatest(conversationId)
-
-            // 2. 새로운 대화 요약 생성 (OpenAI API 호출)
-            val newSummaryContent = aiClientPort.generateSummary(
-                conversationId = conversationId,
-                previousSummary = previousSummary?.content,
-                recentMessages = messages,
-            )
-
-            // 3. 대화 요약 저장
-            summaryCommandPort.save(
-                Summary(
-                    conversationId = conversationId,
-                    content = newSummaryContent,
-                    messageCount = messages.size,
-                )
-            )
-
-            log.info("[PostTurn] 대화 후처리 완료: conversationId=$conversationId")
-        } catch (e: Exception) {
-            log.error("[PostTurn] 대화 후처리 실패: conversationId=$conversationId", e)
-            throw e
+    fun resolve(aiModelId: UUID?): String {
+        // 1) DB에서 프롬프트에 연결된 모델 조회
+        if (aiModelId != null) {
+            val model = queryAiModelPort.findById(aiModelId)
+            if (model != null) return model.name
         }
-    }
 
-    companion object {
-        private val log = LoggerFactory.getLogger(AsyncConversationPostTurnAdapter::class.java)
+        // 2) 환경변수 fallback
+        val defaultModel = openAiClientPort.getDefaultModel()
+        if (!defaultModel.isNullOrBlank()) return defaultModel
+
+        // 3) 둘 다 없으면 에러
+        throw NotFoundAiModelException()
     }
 }
 ```
 
-주목할 부분:
+이 구조의 장점:
+- **재배포 없이 모델 변경**: DB의 프롬프트-모델 매핑을 변경하면 즉시 반영
+- **프롬프트별 모델 지정**: 대화 응답은 gpt-5-nano minimal, 요약은 gpt-4o-mini 등 용도에 맞는 모델 배정 가능
+- **환경변수 fallback**: DB에 매핑이 없어도 기본 모델로 동작
 
-1. **`@Async("conversationPostTurnExecutor")`**: 전용 ThreadPoolTaskExecutor를 지정하여 다른 비동기 작업과 격리합니다.
-2. **`@Transactional(propagation = Propagation.REQUIRES_NEW)`**: 별도 스레드에서 독립적인 트랜잭션으로 실행됩니다.
-3. `@Async` 어노테이션은 반드시 **다른 Bean에서 호출**되어야 프록시를 거쳐 비동기로 실행됩니다.
-
-### 3.5 ThreadPoolTaskExecutor 설정
+### 2.5 reasoning_effort 적용 코드
 
 ```kotlin
-@Configuration
-@EnableAsync
-class AsyncConfig : AsyncConfigurer {
+@Component
+class OpenAiClientAdapter(
+    @param:Qualifier("openAiWebClient")
+    private val webClient: WebClient,
+    private val openAiProperties: OpenAiProperties
+) : OpenAiClientPort {
 
-    @Bean("conversationPostTurnExecutor")
-    fun conversationPostTurnExecutor(): ThreadPoolTaskExecutor {
-        return ThreadPoolTaskExecutor().apply {
-            corePoolSize = 5
-            maxPoolSize = 20
-            queueCapacity = 100
-            setThreadNamePrefix("post-turn-")
-            setWaitForTasksToCompleteOnShutdown(true)  // 종료 시 작업 완료 대기
-            setAwaitTerminationSeconds(60)             // 최대 60초 대기
-            setRejectedExecutionHandler(
-                ThreadPoolExecutor.CallerRunsPolicy()  // 큐가 가득 차면 호출 스레드에서 실행
-            )
-            initialize()
-        }
+    override fun chatCompletion(
+        messages: List<ConversationMessage>,
+        model: String?, temperature: Double?, maxTokens: Int?
+    ): String {
+        val actualModel = model
+            ?: openAiProperties.model
+            ?: throw IllegalStateException("OpenAI 모델이 설정되지 않았습니다.")
+
+        // gpt-5-nano일 때만 reasoning_effort 적용
+        val reasoningEffort = if (actualModel == "gpt-5-nano") "low" else null
+
+        val request = ChatCompletionRequest(
+            model = actualModel,
+            messages = openAiMessages,
+            maxCompletionTokens = openAiProperties.maxTokens,
+            stream = false,
+            reasoningEffort = reasoningEffort
+        )
+        // ...
     }
 }
 ```
 
-`waitForTasksToCompleteOnShutdown = true`로 배포 시 작업 유실을 방지하고, `CallerRunsPolicy`로 큐 초과 시에도 작업이 유실되지 않습니다.
+`reasoning_effort`는 reasoning 모델에만 의미가 있으므로, gpt-5-nano일 때만 설정하고 다른 모델에서는 null(미포함)로 처리합니다. DTO에 `@JsonInclude(JsonInclude.Include.NON_NULL)`이 적용되어 있어, null 필드는 요청 JSON에서 자동 제거됩니다.
 
-### 3.6 비동기 처리 흐름
-
-```mermaid
-sequenceDiagram
-    participant Client as 클라이언트
-    participant API as API Server - Thread-http-1
-    participant Async as AsyncAdapter - Thread-post-turn-1
-    participant AI as OpenAI API
-    participant DB as Database
-
-    Client->>API: POST /conversations/{id}/messages
-    activate API
-    Note right of API: 메시지 처리 시작
-
-    API->>DB: 메시지 저장
-    DB-->>API: 저장 완료 (50ms)
-
-    API->>AI: AI 응답 생성 요청
-    AI-->>API: AI 응답 반환 (3,500ms)
-
-    API->>DB: AI 응답 저장
-    DB-->>API: 저장 완료 (50ms)
-
-    API->>Async: processPostTurn() 호출 (@Async)
-    Note over API,Async: 즉시 반환 (비동기 위임)
-
-    API-->>Client: 응답 반환 (약 7,560ms)
-    deactivate API
-    Note left of Client: 사용자는 여기서 응답 수신
-
-    activate Async
-    Note right of Async: 별도 스레드에서 실행 - 독립 트랜잭션 (REQUIRES_NEW)
-
-    Async->>DB: 이전 대화 요약 조회
-    DB-->>Async: 이전 요약 반환 (30ms)
-
-    Async->>AI: 대화 요약 생성 요청
-    AI-->>Async: 대화 요약 반환 (18,000ms)
-
-    Async->>DB: 대화 요약 저장
-    DB-->>Async: 저장 완료 (80ms)
-
-    deactivate Async
-    Note right of Async: 후처리 완료 (사용자 응답과 무관)
+```kotlin
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class ChatCompletionRequest(
+    val model: String,
+    val messages: List<ChatMessage>,
+    @field:JsonProperty("max_completion_tokens")
+    val maxCompletionTokens: Int? = null,
+    val stream: Boolean = false,
+    val temperature: Double? = null,
+    @field:JsonProperty("reasoning_effort")
+    val reasoningEffort: String? = null  // "minimal", "low", "medium", "high"
+)
 ```
-
-**사용자 응답 시간에서 대화 요약 생성 구간이 완전히 제거**되었습니다.
-
-### 3.7 Coroutines vs Spring @Async 비교
-
-| 항목 | Kotlin Coroutines (fire-and-forget) | Spring @Async |
-|---|---|---|
-| Spring 생명주기 통합 | 불가능 | `waitForTasksToCompleteOnShutdown` 지원 |
-| 트랜잭션 관리 | ThreadLocal 유실 | `@Transactional(REQUIRES_NEW)` 자동 관리 |
-| 예외 처리 | 호출자 전파 불가 | `AsyncUncaughtExceptionHandler` 제공 |
-| Graceful Shutdown | 보장 안 됨 | `awaitTerminationSeconds`로 보장 |
-| 구현 복잡도 | 낮음 (한 줄) | 중간 (설정 + 어댑터 클래스) |
 
 ---
 
-## 4. 3단계: WebClient 최적화 -- 마지막 퍼즐 조각
+## 3. WebClient 최적화
 
-### 4.1 왜 WebClient 최적화가 필요했는가
+모델 최적화로 API 응답 속도를 개선했다면, WebClient 최적화는 **네트워크 계층의 효율성과 안정성**을 높이는 작업입니다.
 
-비동기 분리로 사용자 응답 시간은 개선되었지만, **OpenAI API 호출 자체의 효율성**에 문제가 있었습니다.
+### 3.1 기존 WebClient의 문제
 
-| 문제 | 설명 | 영향 |
+```mermaid
+graph LR
+    subgraph problem["기본 WebClient의 문제점"]
+        B["커넥션 풀 부재"]
+        C["타임아웃 미설정"]
+        D["재시도 로직 부재"]
+        E["압축 미적용"]
+    end
+
+    subgraph impact["서비스에 미치는 영향"]
+        F["매 요청마다<br>TCP/TLS handshake 반복<br>→ 150~450ms 지연 추가"]
+        G["응답 지연 시 무한 대기<br>→ 스레드 풀 고갈<br>→ 서비스 전체 장애"]
+        H["Rate Limit 429 시 즉시 실패<br>→ 사용자에게 에러 노출<br>→ 일시적 장애에 취약"]
+        I["대용량 JSON 원본 전송<br>→ 네트워크 대역폭 낭비<br>→ 응답 수신 시간 증가"]
+    end
+
+    B --> F
+    C --> G
+    D --> H
+    E --> I
+
+    style problem fill:#FFF3E0,stroke:#E74C3C,stroke-width:2px
+    style impact fill:#FFEBEE,stroke:#C62828,stroke-width:2px
+    style B fill:#E74C3C,stroke:#333,color:#fff
+    style C fill:#E74C3C,stroke:#333,color:#fff
+    style D fill:#E74C3C,stroke:#333,color:#fff
+    style E fill:#E74C3C,stroke:#333,color:#fff
+    style F fill:#FADBD8,stroke:#333
+    style G fill:#FADBD8,stroke:#333
+    style H fill:#FADBD8,stroke:#333
+    style I fill:#FADBD8,stroke:#333
+```
+
+### 3.2 Connection Pool 설계
+
+Reactor Netty의 `ConnectionProvider`를 사용하여 커넥션 풀을 구성합니다.
+
+```kotlin
+val connectionProvider = ConnectionProvider.builder("openai-pool")
+    .maxConnections(50)                            // 최대 커넥션 수
+    .maxIdleTime(Duration.ofSeconds(20))           // 유휴 커넥션 유지 시간
+    .maxLifeTime(Duration.ofMinutes(5))            // 커넥션 최대 생존 시간
+    .pendingAcquireTimeout(Duration.ofSeconds(60)) // 커넥션 획득 대기 시간
+    .evictInBackground(Duration.ofSeconds(120))    // 유휴 커넥션 백그라운드 제거 주기
+    .build()
+```
+
+커넥션 풀의 핵심은 **커넥션 재사용**입니다.
+
+```
+[기본 설정 — 커넥션 풀 없음]
+요청 1: TCP 연결 → TLS 핸드셰이크 → 요청/응답 → 연결 종료
+요청 2: TCP 연결 → TLS 핸드셰이크 → 요청/응답 → 연결 종료  ← 동일한 과정 반복
+
+[커넥션 풀 적용]
+요청 1: TCP 연결 → TLS 핸드셰이크 → 요청/응답 → 풀에 반환
+요청 2: 풀에서 커넥션 획득 → 요청/응답 → 풀에 반환              ← handshake 생략
+```
+
+실측 결과, 커넥션 재사용으로 두 번째 이후 요청에서 **150~450ms의 지연을 절감**할 수 있었습니다.
+
+각 설정값의 설계 의도:
+
+| 설정 | 값 | 설계 의도 |
 |---|---|---|
-| 커넥션 풀 부재 | 매 요청마다 새로운 TCP 커넥션 생성 | handshake 오버헤드 |
-| 타임아웃 미설정 | 응답 지연 시 무한 대기 | 스레드 풀 고갈 위험 |
-| 재시도 로직 부재 | 일시적 장애 시 바로 실패 | 불필요한 에러 발생 |
-| 압축 미적용 | 대용량 JSON 페이로드 그대로 전송 | 네트워크 대역폭 낭비 |
+| `maxConnections` | 50 | 동시 OpenAI API 호출 상한. 서비스 규모에 맞게 설정 |
+| `maxIdleTime` | 20초 | 유휴 커넥션을 너무 오래 유지하면 서버 측에서 끊을 수 있음 |
+| `maxLifeTime` | 5분 | 오래된 커넥션을 주기적으로 갱신하여 stale connection 방지 |
+| `pendingAcquireTimeout` | 60초 | 풀이 가득 찼을 때 커넥션 획득 대기 상한. OpenAI API의 긴 응답 시간을 고려 |
+| `evictInBackground` | 120초 | 유휴 커넥션을 2분마다 정리. 리소스 누수 방지 |
 
-### 4.2 최적화된 WebClient 설정
+### 3.3 Timeout 계층화
+
+타임아웃을 **네트워크 계층별로 세분화**하여 설정합니다.
+
+```kotlin
+val httpClient = HttpClient.create(connectionProvider)
+    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5_000) // 1. TCP 연결 타임아웃
+    .responseTimeout(Duration.ofSeconds(60))              // 2. 응답 타임아웃
+    .doOnConnected { conn ->
+        conn.addHandlerLast(
+            ReadTimeoutHandler(60, TimeUnit.SECONDS)      // 3. 읽기 타임아웃
+        )
+        conn.addHandlerLast(
+            WriteTimeoutHandler(10, TimeUnit.SECONDS)     // 4. 쓰기 타임아웃
+        )
+    }
+    .compress(true)                                       // gzip 압축 활성화
+```
+
+```mermaid
+graph LR
+    A["TCP 연결\n5초"] --> B["요청 쓰기\n10초"]
+    B --> C["응답 대기\n60초"]
+    C --> D["응답 읽기\n60초"]
+
+    style A fill:#3498DB,stroke:#333,color:#fff
+    style B fill:#2ECC71,stroke:#333,color:#fff
+    style C fill:#F39C12,stroke:#333,color:#fff
+    style D fill:#E74C3C,stroke:#333,color:#fff
+```
+
+| 타임아웃 | 값 | 역할 |
+|---|---|---|
+| Connect Timeout | 5초 | TCP 연결 수립 실패를 빠르게 감지 |
+| Write Timeout | 10초 | 요청 전송 중 네트워크 문제 감지 |
+| Response Timeout | 60초 | OpenAI API 응답 대기 상한. 모델에 따라 수초~10초 이상 걸릴 수 있어 여유있게 설정 |
+| Read Timeout | 60초 | 응답 수신 중 네트워크 지연 감지 |
+
+### 3.4 gzip 압축
+
+```kotlin
+// HttpClient 레벨에서 압축 활성화
+.compress(true)
+
+// WebClient 헤더에서 Accept-Encoding 명시
+.defaultHeader(HttpHeaders.ACCEPT_ENCODING, "gzip, deflate")
+```
+
+`compress(true)`로 Reactor Netty 클라이언트 수준에서 gzip을 활성화하고, `Accept-Encoding` 헤더를 명시하여 서버에 압축 응답을 요청합니다. 실측 결과 응답 데이터 크기를 약 **70% 줄일** 수 있었습니다.
+
+### 3.5 메모리 버퍼 크기 설정
+
+```kotlin
+val exchangeStrategies = ExchangeStrategies.builder()
+    .codecs { configurer ->
+        configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024) // 10MB
+    }
+    .build()
+```
+
+WebClient의 기본 메모리 버퍼 크기는 256KB입니다. OpenAI API의 응답은 긴 텍스트를 포함할 수 있으므로 **10MB**로 확보합니다. 이 설정이 없으면 긴 응답에서 `DataBufferLimitException`이 발생합니다.
+
+### 3.6 전체 WebClient 설정 코드
 
 ```kotlin
 @Configuration
-class WebClientConfig(
-    @Value("\${openai.api.key}") private val apiKey: String,
-    @Value("\${openai.api.base-url:https://api.openai.com/v1}") private val baseUrl: String,
+@EnableConfigurationProperties(OpenAiProperties::class)
+class OpenAiConfig(
+    private val openAiProperties: OpenAiProperties
 ) {
 
-    @Bean("openAiWebClient")
+    @Bean(name = ["openAiWebClient"])
     fun openAiWebClient(): WebClient {
         // 1. Connection Pool 설정
         val connectionProvider = ConnectionProvider.builder("openai-pool")
-            .maxConnections(50)                            // 최대 커넥션 수
-            .maxIdleTime(Duration.ofSeconds(20))           // 유휴 커넥션 유지 시간
-            .maxLifeTime(Duration.ofMinutes(5))            // 커넥션 최대 생존 시간
-            .pendingAcquireTimeout(Duration.ofSeconds(10)) // 커넥션 획득 대기 시간
-            .evictInBackground(Duration.ofSeconds(30))     // 유휴 커넥션 제거 주기
-            .metrics(true)                                 // Micrometer 메트릭 활성화
+            .maxConnections(50)
+            .maxIdleTime(Duration.ofSeconds(20))
+            .maxLifeTime(Duration.ofMinutes(5))
+            .pendingAcquireTimeout(Duration.ofSeconds(60))
+            .evictInBackground(Duration.ofSeconds(120))
             .build()
 
         // 2. HttpClient 설정 (타임아웃, 압축)
         val httpClient = HttpClient.create(connectionProvider)
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5_000) // TCP 연결 타임아웃
-            .compress(true)                                       // gzip 압축 요청
-            .doOnConnected { connection ->
-                connection.addHandlerLast(
-                    ReadTimeoutHandler(60, TimeUnit.SECONDS)      // 읽기 타임아웃
-                )
-                connection.addHandlerLast(
-                    WriteTimeoutHandler(10, TimeUnit.SECONDS)     // 쓰기 타임아웃
-                )
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5_000)
+            .responseTimeout(Duration.ofSeconds(60))
+            .doOnConnected { conn ->
+                conn.addHandlerLast(ReadTimeoutHandler(60, TimeUnit.SECONDS))
+                conn.addHandlerLast(WriteTimeoutHandler(10, TimeUnit.SECONDS))
             }
-            .responseTimeout(Duration.ofSeconds(60))              // 응답 타임아웃
+            .compress(true)
 
-        // 3. WebClient 빌드
-        return WebClient.builder()
-            .clientConnector(ReactorClientHttpConnector(httpClient))
-            .baseUrl(baseUrl)
-            .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer $apiKey")
-            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            .defaultHeader(HttpHeaders.ACCEPT_ENCODING, "gzip")
+        // 3. 버퍼 크기 설정
+        val exchangeStrategies = ExchangeStrategies.builder()
             .codecs { configurer ->
-                configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024) // 10MB
+                configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024)
             }
+            .build()
+
+        // 4. WebClient 빌드
+        return WebClient.builder()
+            .baseUrl(openAiProperties.apiUrl)
+            .clientConnector(ReactorClientHttpConnector(httpClient))
+            .exchangeStrategies(exchangeStrategies)
+            .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer ${openAiProperties.apiKey}")
+            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .defaultHeader(HttpHeaders.ACCEPT_ENCODING, "gzip, deflate")
             .build()
     }
 }
 ```
 
-### 4.3 지수 백오프 재시도 전략
-
-OpenAI API의 Rate Limit(429)이나 일시적 서버 오류(5xx)에 대비한 재시도 전략입니다.
+설정값들은 `@ConfigurationProperties`를 통해 외부화합니다.
 
 ```kotlin
-// OpenAiClientAdapter.kt
-private val retrySpec: Retry = Retry
-    .backoff(3, Duration.ofSeconds(2))
-    .maxBackoff(Duration.ofSeconds(30))
-    .jitter(0.5)  // 50% jitter 적용 (Thundering Herd 방지)
-    .filter { throwable ->
-        when (throwable) {
-            is WebClientResponseException -> {
-                val statusCode = throwable.statusCode.value()
-                statusCode == 429 || statusCode in 500..599
-            }
-            is ConnectTimeoutException -> true
-            else -> false
-        }
-    }
-    .doBeforeRetry { retrySignal ->
-        log.warn(
-            "[OpenAI] 재시도 #{}: {}",
-            retrySignal.totalRetries() + 1,
-            retrySignal.failure().message,
-        )
-    }
+@Component
+@ConfigurationProperties(prefix = "openai")
+class OpenAiProperties {
+    lateinit var apiKey: String
+    lateinit var apiUrl: String
+    lateinit var model: String
+    var maxTokens: Int = 4000
+    var temperature: Double = 0.7
+}
 ```
+
+`@Value` 대신 `@ConfigurationProperties`를 사용한 이유:
+- **타입 안전성**: 컴파일 타임에 타입 검증
+- **그룹화**: 관련 설정을 하나의 클래스로 묶어 관리
+- **IDE 지원**: 자동완성, 리팩토링 지원
+
+---
+
+## 4. 지수 백오프 재시도 전략
+
+### 4.1 왜 재시도가 필요한가
+
+OpenAI API에서 가장 빈번하게 발생하는 오류 두 가지는 **429 Too Many Requests**(Rate Limit)와 **503 Service Unavailable**(일시적 서버 장애)입니다. 이 두 오류는 일정 시간이 지나면 자연히 해소되는 **일시적 오류(transient error)** 입니다.
+
+재시도 전략 없이 이런 오류를 바로 사용자에게 전달하면 불필요한 실패가 됩니다. 반대로 모든 오류를 무분별하게 재시도하면, 400 Bad Request나 401 Unauthorized 같이 **재시도해도 절대 성공하지 않는 오류**까지 반복 호출하게 됩니다.
+
+### 4.2 Reactor Retry.backoff 적용
+
+```kotlin
+webClient.post()
+    .uri("/chat/completions")
+    .bodyValue(request)
+    .retrieve()
+    .bodyToMono<ChatCompletionResponse>()
+    .timeout(Duration.ofSeconds(60))
+    .retryWhen(
+        Retry.backoff(10, Duration.ofSeconds(1))       // 최대 10회, 초기 1초 백오프
+            .filter { e ->
+                e is WebClientResponseException.TooManyRequests ||   // 429만
+                e is WebClientResponseException.ServiceUnavailable   // 503만
+            }
+            .maxBackoff(Duration.ofSeconds(100))        // 최대 100초 백오프
+            .doBeforeRetry { signal ->
+                log.warn {
+                    "OpenAI API 재시도 ${signal.totalRetries() + 1}회: " +
+                    "${signal.failure().message}"
+                }
+            }
+    )
+```
+
+| 항목 | 설정값 | 이유 |
+|---|---|---|
+| 최대 재시도 | 10회 | OpenAI Rate Limit은 분 단위로 리셋되므로, 충분한 횟수 확보 |
+| 초기 백오프 | 1초 | 일시적 오류는 곧바로 해소될 수 있으므로, 첫 재시도는 빠르게 |
+| 최대 백오프 | 100초 | Rate Limit 상황에서 충분한 대기 시간 |
+| 재시도 대상 | 429, 503 | 재시도로 복구 가능한 일시적 오류만. 다른 4xx/5xx는 재시도 무의미 |
+
+### 4.3 지수 백오프의 동작 원리
+
+`Retry.backoff`은 **지수적으로 증가하는 대기 시간 + jitter(무작위 변동)** 을 적용합니다.
+
+```
+재시도 1: ~1초 대기    (초기 백오프)
+재시도 2: ~2초 대기    (x2)
+재시도 3: ~4초 대기    (x2)
+재시도 4: ~8초 대기    (x2)
+재시도 5: ~16초 대기   (x2)
+재시도 6: ~32초 대기   (x2)
+재시도 7: ~64초 대기   (x2)
+재시도 8: ~100초 대기  (maxBackoff 도달)
+재시도 9: ~100초 대기  (maxBackoff 유지)
+재시도 10: ~100초 대기 (maxBackoff 유지)
+```
+
+Reactor의 `Retry.backoff`은 기본적으로 **jitter factor 0.5**를 적용하여, 대기 시간에 ±50%의 무작위 변동을 줍니다. 이는 여러 요청이 동시에 Rate Limit에 걸렸을 때, 모두 같은 시점에 재시도하여 **thundering herd** 문제를 일으키는 것을 방지합니다.
+
+### 4.4 재시도 흐름도
 
 ```mermaid
 flowchart TD
     A[OpenAI API 호출] --> B{응답 확인}
     B -->|200 OK| C[성공 - 결과 반환]
     B -->|429 Rate Limit| D{재시도 횟수 확인}
-    B -->|5xx Server Error| D
-    B -->|4xx 기타 에러| E[즉시 실패 - 재시도 없음]
-    B -->|ConnectTimeout| D
+    B -->|503 Service Unavailable| D
+    B -->|기타 에러 400, 401, 500 등| E[즉시 실패 - 재시도 없음]
 
-    D -->|재시도 3회 이하| F[지수 백오프 대기]
-    D -->|재시도 3회 초과| G[최종 실패 - 예외 발생]
+    D -->|10회 이하| F["지수 백오프 대기\n1s → 2s → 4s → ... → 100s"]
+    D -->|10회 초과| G[최종 실패 - 예외 발생]
 
     F --> A
 
@@ -594,95 +515,201 @@ flowchart TD
     style F fill:#F39C12,stroke:#333,color:#fff
 ```
 
-### 4.4 WebClient 최적화 효과 요약
+---
 
-| 최적화 항목 | 효과 |
-|---|---|
-| Connection Pool (50개) | 커넥션 재사용으로 TCP/TLS handshake 제거, 평균 300ms 절감 |
-| 타임아웃 계층화 | 무한 대기 방지, 장애 전파 차단 |
-| gzip 압축 | 네트워크 전송량 약 60% 감소 |
-| 지수 백오프 재시도 | Rate Limit 대응, 일시적 장애 자동 복구율 95% |
+## 5. 에러 처리와 응답 매핑
+
+### 5.1 에러 타입별 매핑
+
+외부 API의 다양한 오류를 **도메인 레이어의 예외 타입으로 변환**합니다.
+
+```kotlin
+.onErrorMap { e ->
+    when (e) {
+        is TimeoutException -> OpenAiTimeoutException()
+        is WebClientResponseException.TooManyRequests -> OpenAiRateLimitException()
+        is OpenAiEmptyResponseException -> e
+        else -> OpenAiApiException()
+    }
+}
+```
+
+| WebClient 예외 | 도메인 예외 | 의미 |
+|---|---|---|
+| `TimeoutException` | `OpenAiTimeoutException` | 60초 내 응답 없음 |
+| `TooManyRequests` (429) | `OpenAiRateLimitException` | Rate Limit 초과 (10회 재시도 후에도 실패) |
+| `OpenAiEmptyResponseException` | 그대로 전파 | API는 200이지만 응답 내용이 없음 |
+| 기타 모든 예외 | `OpenAiApiException` | 알 수 없는 API 오류 |
+
+### 5.2 응답 메트릭 로깅
+
+모든 API 호출에 대해 응답 시간과 토큰 사용량을 구조화하여 로깅합니다.
+
+```kotlin
+.map { response ->
+    val elapsedTime = System.currentTimeMillis() - startTime
+
+    response.usage?.let { usage ->
+        log.info {
+            "[OpenAI-Metrics] " +
+                "responseTime=${elapsedTime}ms, " +
+                "promptTokens=${usage.promptTokens}, " +
+                "completionTokens=${usage.completionTokens}, " +
+                "totalTokens=${usage.totalTokens}, " +
+                "model=${response.model} "
+        }
+    }
+    // ...
+}
+```
+
+`[OpenAI-Metrics]` 태그로 구조화된 로그를 남기면 모델별/기능별 응답 시간을 모니터링할 수 있습니다. 앞서 제시한 모델별 실측 데이터도 이 로그를 기반으로 수집한 것입니다.
+
+### 5.3 빈 응답 및 reasoning 모델 응답 처리
+
+OpenAI API는 200 OK를 반환하면서도 content가 비어 있을 수 있고, reasoning 모델은 `content` 대신 `reasoningContent` 필드에 응답을 담을 수 있습니다.
+
+```kotlin
+val choice = response.choices?.firstOrNull()
+val message = choice?.message
+
+// content 또는 reasoningContent 중 하나를 사용
+val content = message?.content?.takeIf { it.isNotBlank() }
+    ?: message?.reasoningContent?.takeIf { it.isNotBlank() }
+
+if (content.isNullOrBlank()) {
+    log.warn {
+        "OpenAI API 응답에 content가 없습니다: " +
+        "id=${response.id}, " +
+        "finishReason=${choice?.finishReason}, " +
+        "refusal=${message?.refusal}"
+    }
+    throw OpenAiEmptyResponseException()
+}
+```
+
+`content` → `reasoningContent` 순서로 fallback하는 이유는, gpt-5-nano 같은 reasoning 모델이 `reasoning_effort` 설정에 따라 응답을 다른 필드에 담을 수 있기 때문입니다.
 
 ---
 
-## 5. 결과: 25.98초에서 7.56초로
+## 6. Hexagonal Architecture에서의 통합
 
-### 5.1 전체 성능 개선 결과
+### 6.1 아키텍처 구조
 
-**단계별 응답 시간 변화**
+모델 설정과 WebClient 관련 코드는 **Hexagonal Architecture(포트 & 어댑터 패턴)** 에 따라 분리되어 있습니다.
 
-| 단계 | 구성 | 평균 응답 시간 | 개선율 |
+```
+프로젝트 구조
+├── core/                      (비즈니스 로직)
+│   ├── port/out/
+│   │   └── OpenAiClientPort   ← 인터페이스 정의 (Port)
+│   └── support/
+│       └── AiModelResolver    ← DB 기반 모델 조회
+│
+├── domain/                    (도메인 모델)
+│   ├── error/
+│   │   ├── OpenAiApiException
+│   │   ├── OpenAiTimeoutException
+│   │   ├── OpenAiRateLimitException
+│   │   └── OpenAiEmptyResponseException
+│   └── model/
+│       └── AiModelRequest     ← 모델 요청 메타 (model, reasoningEffort)
+│
+└── infrastructure/openai/     (외부 API 통합)
+    ├── config/
+    │   ├── OpenAiConfig       ← WebClient Bean 설정
+    │   └── OpenAiProperties   ← 설정값 외부화
+    ├── adapter/
+    │   └── OpenAiClientAdapter ← Port 구현체 (Adapter)
+    └── dto/
+        ├── ChatCompletionRequest
+        └── ChatCompletionResponse
+```
+
+### 6.2 Port 인터페이스
+
+```kotlin
+// core 모듈 — 외부 API 구현에 의존하지 않음
+interface OpenAiClientPort {
+    fun chatCompletion(
+        messages: List<ConversationMessage>,
+        model: String? = null,
+        temperature: Double? = null,
+        maxTokens: Int? = null
+    ): String
+
+    fun getDefaultTemperature(): Double
+    fun getDefaultMaxTokens(): Int
+    fun getDefaultModel(): String?
+}
+```
+
+비즈니스 로직은 WebClient, Connection Pool, Retry 전략, `reasoning_effort` 등의 구현 세부사항을 전혀 알지 못합니다. `OpenAiClientPort`만 의존합니다.
+
+이 구조의 장점:
+- **교체 용이성**: OpenAI API를 다른 LLM API로 교체해도 core 모듈 수정 없음
+- **테스트 용이성**: `OpenAiClientPort`를 mock하여 비즈니스 로직을 단위 테스트 가능
+- **관심사 분리**: 모델 설정과 WebClient 최적화는 infrastructure 모듈에서만 수행
+
+---
+
+## 7. 결과
+
+### 7.1 모델 최적화 효과
+
+| 항목 | gpt-5-nano (low) | gpt-5-nano (minimal) | gpt-4o-mini |
 |---|---|---|---|
-| 개선 전 | 동기 처리 | 25,980ms | - |
-| 1단계 | Kotlin Coroutines (fire-and-forget) | 7,800ms | 70% 감소 |
-| 2단계 | Spring @Async + 인터페이스 분리 | 7,650ms | 71% 감소 |
-| 3단계 | + WebClient 최적화 | **7,560ms** | **71% 감소** |
+| 대화 응답 평균 | 4,325.2ms | **1,382.4ms** | 1,819.8ms |
+| 대화 요약 평균 | 6,272ms | **1,110ms** | 1,338.7ms |
+| reasoning 지원 | O | O | X |
 
-> **참고**: 1단계(Coroutines)와 2단계(@Async)의 응답 시간 차이가 크지 않은 이유는, 비동기 분리 자체의 효과가 동일하기 때문입니다. 2단계의 핵심 개선은 응답 시간이 아닌 **안정성, 관리 용이성, 테스트 용이성**입니다.
+`reasoning_effort`를 `low` → `minimal`로 변경하는 것만으로 대화 응답 약 **3.1배**, 요약 약 **5.6배** 빨라졌습니다.
 
-**구간별 상세 비교**
+### 7.2 WebClient 최적화 효과
 
-| 구간 | 개선 전 | 개선 후 | 변화 |
+| 최적화 항목 | 적용 전 | 적용 후 | 개선 |
 |---|---|---|---|
-| 메시지 저장 | 50ms | 50ms | 변화 없음 |
-| AI 응답 생성 (OpenAI API) | 3,500ms | 3,200ms | WebClient 최적화로 300ms 절감 |
-| AI 응답 저장 | 50ms | 50ms | 변화 없음 |
-| 대화 요약 생성 | 18,000ms | **비동기 분리** | 응답 시간에서 제외 |
-| 대화 요약 저장 | 80ms | **비동기 분리** | 응답 시간에서 제외 |
-| 기타 (직렬화, 네트워크 등) | 4,300ms | 4,260ms | 미미한 개선 |
-| **합계** | **25,980ms** | **7,560ms** | **71% 감소** |
+| 커넥션 재사용 | 매번 TCP/TLS handshake | 풀에서 즉시 획득 | 두 번째 이후 요청 150~450ms 절감 |
+| 응답 데이터 크기 | 원본 100% | gzip 압축 ~30% | **70% 감소** |
+| 요청 페이로드 | null 필드 포함 | null 필드 제외 | **약 40% 감소** |
+| 타임아웃 | 무한 대기 | 계층별 타임아웃 | 장애 전파 차단 |
+| Rate Limit 처리 | 즉시 실패 | 10회 지수 백오프 | 자동 복구 |
 
-### 5.2 비동기 후처리 성능
-
-| 지표 | 개선 전 (동기 처리 시) | 개선 후 (비동기 + 최적화) | 변화 |
-|---|---|---|---|
-| 대화 요약 생성 시간 | 18,000ms | 15,200ms | 15.6% 감소 |
-| 재시도 성공률 | - (재시도 없음) | 95.3% | 일시적 장애 자동 복구 |
-| 요약 유실률 | 2~3% (배포 시) | 0.01% 미만 | Graceful Shutdown 적용 |
-| 트랜잭션 정합성 | 미보장 | 100% 보장 | REQUIRES_NEW 적용 |
-
-### 5.3 시스템 안정성 개선
+### 7.3 안정성 개선
 
 | 항목 | 개선 전 | 개선 후 |
 |---|---|---|
-| 배포 시 데이터 유실 | 2~3% 발생 | 0.01% 미만 |
-| 비동기 작업 모니터링 | 불가능 | ThreadPool 메트릭, 로그 추적 가능 |
-| 장애 격리 | 대화 요약 실패 시 전체 API 실패 | 대화 요약 실패해도 API 응답은 정상 |
-| 테스트 커버리지 | 비동기 로직 테스트 불가능 | 인터페이스 분리로 동기 어댑터 교체하여 테스트 가능 |
+| 무한 대기 | 발생 가능 | 타임아웃으로 방지 |
+| Rate Limit | 사용자에게 즉시 에러 | 자동 재시도 후 복구 |
+| 서버 일시 장애 | 사용자에게 즉시 에러 | 503 자동 재시도 |
+| 모델 변경 | 코드 수정 + 재배포 | DB 변경으로 즉시 반영 |
+| 커넥션 누수 | 관리 부재 | `maxIdleTime`, `maxLifeTime`, `evictInBackground`로 관리 |
 
 ---
 
-## 6. 결론 및 회고
+## 8. 결론
 
-### 6.1 개선 여정 요약
+### 8.1 배운 점
 
-```mermaid
-graph LR
-    A["동기 처리\n25.98초"] -->|1단계: Coroutines| B["fire-and-forget\n7.80초"]
-    B -->|한계 인식| C{"생명주기 X\n트랜잭션 X\nAOP X\n테스트 어려움"}
-    C -->|2단계: @Async| D["@Async 어댑터\n7.65초"]
-    D -->|안정성 확보| E{"생명주기 O\n트랜잭션 O\nAOP O\n테스트 용이"}
-    E -->|3단계: WebClient 최적화| F["최종 결과\n7.56초"]
+**1. API 응답 시간의 가장 큰 변수는 모델과 파라미터입니다.**
 
-    style A fill:#E74C3C,stroke:#333,color:#fff
-    style B fill:#F39C12,stroke:#333,color:#fff
-    style D fill:#27AE60,stroke:#333,color:#fff
-    style F fill:#2ECC71,stroke:#333,color:#fff
-```
+WebClient를 아무리 최적화해도, 모델 자체가 느리면 한계가 있습니다. gpt-5-nano의 `reasoning_effort`를 `low`에서 `minimal`로 한 단계 낮추는 것만으로 응답 시간이 3~5배 빨라졌습니다. 작업의 복잡도에 맞는 `reasoning_effort`를 선택하는 것이 성능 최적화의 첫 번째 단계입니다.
 
-### 6.2 배운 점
+**2. 기본 설정은 프로덕션 설정이 아닙니다.**
 
-**1. "빠른 구현"보다 "올바른 구현"이 중요합니다.**
+WebClient의 기본 설정은 빠른 개발을 위한 것이지, 프로덕션 환경에서의 안정성과 성능을 보장하지 않습니다. 커넥션 풀, 타임아웃, 재시도, 압축 — 이 네 가지는 외부 API를 호출하는 모든 서비스에서 기본적으로 구성해야 합니다.
 
-Kotlin Coroutines의 `CoroutineScope(Dispatchers.IO).launch`는 한 줄로 비동기화를 달성할 수 있어 매력적이었습니다. 하지만 Spring 생태계와의 통합 문제, 생명주기 관리 부재, 트랜잭션 컨텍스트 유실 등 프로덕션 환경에서 치명적인 문제들이 숨어 있었습니다.
+**3. 재시도 대상을 정확히 필터링해야 합니다.**
 
-**2. 성능 최적화는 측정에서 시작합니다.**
+429(Rate Limit)와 503(일시적 장애)만 재시도 대상으로 한정해야 합니다. 400(잘못된 요청)이나 401(인증 실패)을 재시도하면 서버 부하만 가중됩니다.
 
-"느리다"는 감각적 판단이 아닌, 구간별 정확한 측정 데이터를 바탕으로 병목 지점을 식별해야 합니다. 대화 요약 생성이 전체 응답 시간의 69.3%를 차지한다는 사실을 데이터로 확인한 것이 비동기화 결정의 근거가 되었습니다.
+**4. 성능 최적화는 측정에서 시작합니다.**
 
-### 6.3 마무리
+"느리다"는 감각적 판단이 아닌, 구간별 정확한 측정 데이터를 바탕으로 병목 지점을 식별해야 합니다. `[OpenAI-Metrics]` 로그를 통해 모델별 응답 시간을 실측하고, 이 데이터를 기반으로 `reasoning_effort` 조정과 WebClient 최적화를 결정한 것이 효과적인 개선의 출발점이었습니다.
 
-"성능 최적화"라고 하면 흔히 캐싱이나 인덱스 최적화를 떠올리지만, 때로는 **"이 작업을 사용자가 기다릴 필요가 있는가?"** 라는 근본적인 질문에서 가장 큰 개선이 시작됩니다. 대화 요약 생성이라는 18초짜리 작업을 비동기로 분리하는 것만으로 API 응답 시간을 71% 줄일 수 있었습니다.
+### 8.2 마무리
+
+외부 API 호출 최적화는 **"어떤 모델을 어떤 설정으로 호출하는가"** 와 **"어떻게 호출하는가"** 두 축으로 나뉩니다. 전자는 모델 선택과 `reasoning_effort` 같은 파라미터 튜닝이고, 후자는 Connection Pool, 타임아웃, 재시도, 압축 같은 네트워크 계층 최적화입니다. 둘 다 놓치지 않아야 외부 API에 의존하는 서비스의 성능과 안정성을 동시에 확보할 수 있습니다.
 
 이 글이 비슷한 문제를 겪고 계신 분들에게 도움이 되었으면 합니다. 궁금한 점이나 개선할 부분이 있다면 언제든지 댓글로 남겨주세요.
 
@@ -690,9 +717,9 @@ Kotlin Coroutines의 `CoroutineScope(Dispatchers.IO).launch`는 한 줄로 비�
 
 ## 참고 자료
 
-- [Spring @Async 공식 문서](https://docs.spring.io/spring-framework/reference/integration/scheduling.html#scheduling-annotation-support-async)
-- [Kotlin Coroutines 공식 가이드](https://kotlinlang.org/docs/coroutines-guide.html)
 - [Spring WebFlux WebClient 공식 문서](https://docs.spring.io/spring-framework/reference/web/webflux-webclient.html)
 - [Reactor Netty Connection Pool](https://projectreactor.io/docs/netty/release/reference/index.html#connection-pool)
+- [Reactor Retry 가이드](https://projectreactor.io/docs/core/release/reference/#_retrying)
 - [Exponential Backoff and Jitter (AWS Architecture Blog)](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/)
-- [Baeldung - Spring Asynchronous Methods](https://www.baeldung.com/spring-async)
+- [OpenAI API Rate Limits](https://platform.openai.com/docs/guides/rate-limits)
+- [OpenAI Reasoning Models](https://platform.openai.com/docs/guides/reasoning)
