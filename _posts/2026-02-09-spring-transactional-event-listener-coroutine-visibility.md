@@ -287,6 +287,7 @@ sequenceDiagram
 | `AFTER_COMMIT` | 트랜잭션 커밋 성공 후 **(가장 많이 사용)** |
 | `AFTER_ROLLBACK` | 트랜잭션 롤백 후 |
 | `AFTER_COMPLETION` | 커밋 또는 롤백 후 (항상 실행) |
+
 </div>
 
 ### 3.2 구현: Before → After
