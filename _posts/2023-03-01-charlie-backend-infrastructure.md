@@ -92,6 +92,26 @@ flowchart LR
 | **모바일 앱** | 쿠키 관리 번거로움 | **Authorization 헤더로 간편** |
 | **확장성** | 서버 간 세션 동기화 필요 | 토큰 자체가 인증 정보 |
 
+<div class="notice--info" markdown="1">
+**📘 Stateless vs Stateful 인증**
+
+**Stateful(세션)**: 서버가 세션 객체를 메모리/DB에 저장하고, 클라이언트에게 세션 ID를 발급합니다. 모든 요청 시 서버가 세션을 조회해야 합니다. **Stateless(JWT)**: 사용자 정보를 서명된 토큰에 직접 포함합니다. 서버는 서명 검증만으로 인증을 완료하며, 별도 저장소가 불필요합니다. 수평 확장(여러 서버 인스턴스)에 유리합니다.
+</div>
+
+```mermaid
+flowchart LR
+    subgraph "Stateful (세션)"
+        C1["Client"] -->|"Session ID"| S1["Server"]
+        S1 -->|"조회"| DB1["Session Store"]
+    end
+    subgraph "Stateless (JWT)"
+        C2["Client"] -->|"JWT Token"| S2["Server"]
+        S2 -->|"서명 검증만"| S2
+    end
+    style DB1 fill:#FFCDD2
+    style S2 fill:#C8E6C9
+```
+
 PM2 클러스터 모드에서 여러 워커 프로세스가 요청을 분산 처리하기 때문에, 세션 기반이면 모든 워커가 세션 스토어를 공유해야 합니다. JWT는 토큰 자체에 사용자 정보가 포함되어 있어서 이 문제가 없었습니다. 또한 iOS 앱이 클라이언트였기 때문에 브라우저 쿠키 대신 `Authorization` 헤더로 토큰을 전달하는 방식이 훨씬 자연스러웠습니다.
 
 ### AuthService — JWT 생성과 검증
@@ -134,7 +154,32 @@ export class AuthService {
 **설계 결정 포인트들:**
 
 - **비밀번호 해싱**: `bcrypt`의 salt rounds를 `10`으로 설정했습니다. 보안성과 성능 사이의 트레이드오프인데, 10이면 해싱에 약 100ms 정도 걸립니다. 회원가입/로그인 시에만 실행되므로 충분히 감당 가능한 수준이었습니다.
+
+<div class="notice--info" markdown="1">
+**📘 bcrypt와 Salt Rounds**
+
+bcrypt는 **의도적으로 느린** 해시 함수로, brute-force 공격을 어렵게 만듭니다. Salt Rounds(cost factor)가 1 증가할 때마다 연산 시간이 2배가 됩니다. Salt는 각 비밀번호에 추가되는 랜덤 값으로, 같은 비밀번호라도 다른 해시값이 나오게 합니다.
+
+| Salt Rounds | 소요 시간 | 용도 |
+|---|---|---|
+| 10 | ~100ms | 웹 애플리케이션 (권장) |
+| 12 | ~400ms | 높은 보안 요구 |
+| 14 | ~1.6s | 오프라인 시스템 |
+</div>
+
 - **페이로드 최소화**: `{ id: userId }`만 담았습니다. JWT는 Base64 인코딩이라 누구나 디코딩할 수 있기 때문에, 민감 정보(이메일, 닉네임 등)는 넣지 않았습니다.
+
+<div class="notice--info" markdown="1">
+**📘 Base64 Encoding과 JWT 구조**
+
+JWT는 `Header.Payload.Signature` 3개 파트를 `.`으로 연결한 문자열입니다. Header와 Payload는 Base64로 **인코딩**(암호화가 아님!)되어 있어 누구나 디코딩할 수 있습니다. Signature만이 토큰 위변조를 방지합니다.
+
+| 파트 | 역할 | 예시 내용 |
+|---|---|---|
+| Header | 알고리즘, 토큰 타입 | `{"alg":"HS256","typ":"JWT"}` |
+| Payload | 사용자 정보 (Claims) | `{"id":"user123","exp":1700000000}` |
+| Signature | 위변조 검증 | HMAC-SHA256(header + payload, secret) |
+</div>
 
 ### JWT 만료 기간 1년, Refresh Token 없는 구조의 선택과 한계
 
@@ -190,6 +235,26 @@ flowchart TD
 | **토큰 갱신** | 없음 | **iOS 인터셉터에서 401 시 자동 갱신** |
 | **토큰 무효화** | 불가 (DB 조회로 우회) | **Redis에서 Refresh Token 삭제** |
 | **Rotation** | 없음 | **갱신 시 Refresh Token도 재발급** |
+
+<div class="notice--warning" markdown="1">
+**⚠️ Refresh Token과 Token Rotation**
+
+Access Token을 짧게(15분~1시간) 설정하고, Refresh Token으로 갱신하는 구조입니다. Token Rotation은 Refresh Token 사용 시마다 새 Refresh Token을 발급하고 이전 것을 폐기합니다. 공격자가 탈취한 이전 Refresh Token을 사용하면 reuse detection이 작동하여 모든 토큰을 강제 폐기합니다.
+</div>
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+    Note over C,S: 정상 갱신
+    C->>S: Refresh Token (RT-1)
+    S->>C: 새 Access Token + 새 RT-2 (RT-1 폐기)
+    Note over C,S: 탈취 감지
+    C->>S: 탈취된 RT-1 (이미 폐기됨)
+    S->>S: Reuse Detection!
+    S->>S: 해당 사용자의 모든 토큰 강제 폐기
+    S->>C: 401 Unauthorized → 재로그인 필요
+```
 
 Refresh Token 방식이면 사용자 경험은 동일하게 유지하면서 토큰 탈취 피해를 15분~1시간으로 제한할 수 있습니다. 서비스 초기라도 인증은 처음부터 제대로 설계하는 게 맞았다고 생각합니다. "나중에 개선하자"는 판단은 결국 제 참여 기간 내에 실행되지 못했습니다.
 
@@ -392,6 +457,12 @@ sequenceDiagram
     S-->>C: 인증 완료
 ```
 
+<div class="notice--info" markdown="1">
+**📘 OAuth / Authorization Code Flow**
+
+OAuth 2.0의 Authorization Code Flow는 가장 안전한 인증 흐름입니다: 1) 사용자가 인증 서버(Apple)에서 로그인 → 2) Authorization Code 발급 → 3) 서버가 Code + Client Secret으로 토큰 교환 → 4) ID Token으로 사용자 신원 확인. Client Secret이 서버에만 존재하므로 클라이언트 앱에서 직접 토큰을 발급받는 것보다 안전합니다.
+</div>
+
 Apple Sign-In 구현에서 고민했던 점들:
 
 - **`ignoreExpiration: true`**: ID Token 검증 시 만료 시간을 무시하도록 설정했습니다. 네트워크 지연이나 시간차로 인해 검증 시점에 이미 만료되는 경우가 있었기 때문입니다.
@@ -424,6 +495,12 @@ model Log {
   @@index([userId], map: "Log_userId_fkey")
 }
 ```
+
+<div class="notice--info" markdown="1">
+**📘 upsert와 멱등성(Idempotency)**
+
+**upsert**는 INSERT + UPDATE를 합친 연산으로, 레코드가 없으면 생성하고 있으면 갱신합니다. **멱등성(Idempotency)**은 동일한 요청을 여러 번 보내도 결과가 같은 성질입니다. `@@unique([date, userId])`로 유일성을 보장하면 같은 날짜의 데이터가 중복 생성되지 않아, 네트워크 재시도나 클라이언트 중복 전송에 안전하게 대응할 수 있습니다.
+</div>
 
 이 Log 데이터를 기반으로 사용자 통계를 계산해야 했는데, 여기서 문제가 시작됐습니다.
 
@@ -702,6 +779,12 @@ flowchart TD
 | **장애 복구** | 스냅샷 유실 시 복구 불가 | **Log만 있으면 언제든 복구** |
 | **실측 성능** | — | **200ms 이내** |
 
+<div class="notice--info" markdown="1">
+**📘 시간 복잡도: O(1) vs O(N)**
+
+**O(1)**: 입력 크기와 무관하게 일정한 시간이 걸립니다. 증분 통계 업데이트는 새 데이터 1건만 처리하므로 O(1)입니다. **O(N)**: 입력 크기에 비례합니다. 전체 재계산은 모든 로그를 순회하므로 O(N)입니다. 하지만 O(N)이라고 반드시 느린 것은 아닙니다. N=365(1년 데이터)이고 각 연산이 메모리 내 단순 합산이면 수 ms에 끝납니다.
+</div>
+
 "O(N)이면 너무 느리지 않을까?"라는 걱정이 가장 컸는데, 실측해보니:
 - 1년 활동 사용자: 하루 1건 × 365일 = **365건** 순회
 - `forEach` + 단순 합산/비교 = 메모리 내 연산 → **수 ms**
@@ -845,6 +928,12 @@ sequenceDiagram
     Server-->>Client: 랭킹 결과 반환
 ```
 
+<div class="notice--warning" markdown="1">
+**⚠️ N+1 Query Problem**
+
+리스트 조회(1번 쿼리) 후, 각 항목에 대해 추가 쿼리를 실행하면(N번) 총 1+N번의 쿼리가 발생합니다. DB 쿼리의 병목은 네트워크 왕복 시간이므로, 쿼리 수가 늘어날수록 응답 시간이 선형 증가합니다. JOIN, batch loading(IN 절), 또는 캐싱으로 해결합니다.
+</div>
+
 사용자가 적을 때는 괜찮았지만, App Store 1위를 달성하면서 피크 시간에 응답이 **수 초까지 느려지기 시작**했습니다. NewRelic APM에서 하우스 조회 API의 DB 쿼리 시간이 비정상적으로 높은 것을 확인할 수 있었습니다.
 
 ### 기술 선정: 왜 Redis + Cache-Aside인가
@@ -873,6 +962,18 @@ flowchart TD
     style C fill:#e8f5e9
     style D fill:#fff3e0
 ```
+
+<div class="notice--success" markdown="1">
+**✅ Cache-Aside Pattern**
+
+가장 널리 사용되는 캐싱 전략입니다. 
+
+**읽기**: 캐시 확인 → 히트면 반환, 미스면 DB 조회 후 캐시에 저장. 
+
+**쓰기**: DB에 직접 쓰기 → 캐시 무효화(또는 TTL로 자동 만료). 
+
+-> Write-Through(쓰기 시 캐시 동시 갱신)이나 Write-Behind(캐시에 먼저 쓰고 비동기로 DB 반영)보다 구현이 단순하고, 읽기 중심 워크로드에 적합합니다.
+</div>
 
 ### Redis OM 스키마 설계
 
@@ -973,8 +1074,7 @@ async initHouseUsers(houseId, houseUsers) {
 - 하우스 랭킹이 몇 분 지연되는 건 UX에 큰 영향이 없다고 판단했고
 - 캐시 무효화를 하려면 쓰기 경로에 Redis 의존성이 추가되어 복잡도가 크게 올라갔습니다
 
-"나중에 추가하자"고 미뤘는데, 결국 제 참여 기간 내에는 추가하지 못했습니다. 또한 원본 TypeScript 소스가 어느 시점에 삭제되어 `dist/` 빌드 결과만 남아있는 것도 반성할 부분입니다.
-
+"나중에 추가하자"고 미뤘는데, 결국 제 참여 기간 내에는 추가하지 못했습니다.
 ---
 
 ## 6. 인프라 자동화: Docker + GitHub Actions CI/CD 파이프라인 구성
@@ -1011,6 +1111,12 @@ ENV NODE_ENV=$NODE_ENV_ARG
 | **이미지에 남는가** | 아니오 | 예 |
 | **용도** | 외부에서 값 주입 | 컨테이너 내 환경변수 |
 
+<div class="notice--info" markdown="1">
+**📘 Docker ARG vs ENV**
+
+**ARG**: `docker build` 시점에만 존재하며, 빌드 후 이미지에 남지 않습니다. 빌드 결정(베이스 이미지 선택, 의존성 버전)에 사용합니다. **ENV**: 빌드 + 런타임 모두 존재하며, 이미지 레이어에 기록됩니다. `docker inspect`로 볼 수 있으므로 진정한 비밀(secret)은 런타임에 `-e` 옵션이나 Docker Secrets로 주입해야 합니다.
+</div>
+
 이 둘을 연결해서 "빌드할 때 외부에서 주입 → 런타임에서 사용"하는 패턴을 적용했습니다.
 
 **이슈 2: PM2 CMD 실행 방식**
@@ -1024,6 +1130,17 @@ CMD ["sh", "-c", "pm2-runtime start ecosystem.config.js --env ${NODE_ENV}"]
 ```
 
 Docker의 exec form(`["cmd", "arg"]`)에서는 쉘 변수 치환이 되지 않습니다. `sh -c`로 감싸야 `${NODE_ENV}` 같은 환경변수가 런타임에 치환됩니다. 처음에 이걸 몰라서 PM2가 항상 development 모드로 실행되는 문제를 한참 디버깅했습니다.
+
+<div class="notice--info" markdown="1">
+**📘 Docker exec form vs shell form**
+
+| 형식 | 예시 | 특징 |
+|---|---|---|
+| exec form | `["pm2-runtime", "start"]` | 쉘 미경유, PID 1로 실행, 환경변수 치환 불가 |
+| shell form | `pm2-runtime start` | `/bin/sh -c`로 실행, 환경변수 치환 가능 |
+
+exec form은 SIGTERM을 프로세스에 직접 전달하지만, shell form은 쉘이 시그널을 가로채는 부작용이 있습니다. `sh -c`로 감싸면 환경변수를 치환할 수 있지만 graceful shutdown에 주의가 필요합니다.
+</div>
 
 ### GitHub Actions CI/CD 파이프라인
 
@@ -1094,6 +1211,12 @@ module.exports = {
 
 **겪었던 문제**: 처음에 `instances`를 고정 숫자로 설정했는데, ECS 인스턴스 타입을 변경할 때마다 수동으로 수정해야 하는 문제가 있었습니다. `0`으로 바꾸면서 해결했습니다.
 
+<div class="notice--info" markdown="1">
+**📘 PM2 Cluster Mode와 Node.js 프로세스 모델**
+
+Node.js는 싱글 스레드로 CPU 코어 1개만 사용합니다. PM2 Cluster Mode는 Node.js의 `cluster` 모듈을 활용해 코어 수만큼 워커 프로세스를 생성하고 요청을 round-robin으로 분배합니다. 각 워커는 독립된 프로세스이므로 메모리를 공유하지 않습니다 — JavaScript `Map` 캐시는 워커 간 공유 불가하며, Redis 같은 외부 저장소가 필요합니다.
+</div>
+
 | 설정 | Before | After |
 |:---|:---|:---|
 | `instances` | 고정 숫자 (예: 2) | `0` (자동 감지) |
@@ -1140,6 +1263,12 @@ flowchart LR
 | **인프라 모니터링** | 없음 | CPU, 메모리, 디스크 I/O |
 | **무료 티어** | 5K errors/month | 100GB data ingest/month |
 
+<div class="notice--info" markdown="1">
+**📘 APM (Application Performance Monitoring)**
+
+APM은 애플리케이션의 성능을 실시간으로 모니터링하는 도구입니다. 에러 추적(Error Tracking)은 "어떤 에러가 발생했는가"에 집중하고, APM은 "왜 느린가", "어떤 DB 쿼리가 병목인가"까지 분석합니다. NewRelic, Datadog, Elastic APM 등이 대표적이며, 에이전트를 설치하면 코드 변경 없이 자동으로 메트릭을 수집합니다.
+</div>
+
 NewRelic APM은 Docker 환경변수만 추가하면 자동으로 에이전트가 동작합니다:
 
 ```dockerfile
@@ -1176,6 +1305,12 @@ export class NewrelicInterceptor implements NestInterceptor {
 ```
 
 `newrelic.startWebTransaction()`으로 각 요청을 트랜잭션으로 래핑하고, RxJS `tap()` 연산자로 응답이 완료되면 트랜잭션을 종료합니다. `context.getHandler().name`으로 트랜잭션 이름을 컨트롤러 핸들러 이름(예: `getHouseInfo`, `calcUserStats`)으로 설정해서, NewRelic 대시보드에서 **API별 성능을 바로 확인**할 수 있었습니다. 이 덕분에 나중에 하우스 랭킹 API가 느리다는 걸 빠르게 발견할 수 있었습니다.
+
+<div class="notice--success" markdown="1">
+**✅ Interceptor 패턴과 AOP**
+
+Interceptor 패턴은 요청 처리 파이프라인에 횡단 관심사(cross-cutting concern)를 삽입하는 방식입니다. 트랜잭션 관리, 로깅, 인증, 성능 측정 같은 로직을 비즈니스 로직과 분리할 수 있습니다. Spring의 `@Transactional`, `@Cacheable`, `@PreAuthorize`는 이 원칙을 선언적 어노테이션으로 제공하는 AOP의 구현입니다.
+</div>
 
 **LoggingInterceptor — 요청 메타데이터 기록:**
 
@@ -1305,6 +1440,17 @@ Sentry로 에러를 잡기 시작하고 나서야 "이렇게 많은 에러가 �
 **객체지향의 부재가 가장 큰 갈증이었습니다.** 예를 들어, `calcUserStats()`는 로그 배열을 받아서 7개 값을 계산하는 절차적 함수입니다. 레벨 계산도 `Object.keys(Level).indexOf()`로 enum 인덱스를 직접 조작하는 방식이었습니다. 기능이 추가될 때마다 서비스 클래스에 메서드가 계속 쌓이고, "이 로직이 어디에 속해야 하는가"에 대한 기준이 없었습니다.
 
 TypeScript에서도 객체지향은 가능하지만, NestJS + Prisma 조합에서는 서비스 클래스가 비즈니스 로직과 인프라 로직을 모두 담당하는 **트랜잭션 스크립트 패턴**에 자연스럽게 빠지게 됐습니다. 레이어 간 경계가 모호해지면서, 코드가 커질수록 "어디를 고쳐야 하는지" 찾는 시간이 늘어갔습니다.
+
+<div class="notice--info" markdown="1">
+**📘 Transaction Script vs Layered Architecture**
+
+**Transaction Script**: 하나의 서비스 메서드가 비즈니스 로직 + 인프라 로직(DB 호출, 외부 API)을 모두 포함합니다. 초기에는 단순하지만, 기능이 커질수록 메서드가 비대해집니다.
+
+| 패턴 | 구조 | 장점 | 단점 |
+|---|---|---|---|
+| Transaction Script | 서비스 메서드에 모든 로직 | 초기 단순함 | 비대해지는 메서드, 로직 위치 불명확 |
+| Layered Architecture | Controller → Service → Repository | 책임 분리 명확 | 초기 구조화 비용 |
+</div>
 
 Java/Spring 생태계로 전환하면서 이런 고민들에 대한 답을 찾을 수 있었습니다:
 

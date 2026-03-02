@@ -81,6 +81,18 @@ override fun handleAfterLastTurn(userId: UUID) {
 }
 ```
 
+<div class="notice--info" markdown="1">
+**📘 fire-and-forget (Coroutine launch)**
+
+`launch`는 결과를 반환하지 않는 코루틴 빌더입니다. 호출자는 즉시 다음 코드로 진행하고, 코루틴은 별도로 실행됩니다. `Dispatchers.IO`와 결합하면 별도 스레드에서 새 트랜잭션으로 실행되어, 부모 트랜잭션의 미커밋 데이터를 읽지 못하는 원인이 됩니다.
+</div>
+
+<div class="notice--info" markdown="1">
+**📘 CoroutineScope와 Structured Concurrency**
+
+Kotlin 코루틴의 **Structured Concurrency**는 코루틴이 특정 스코프 안에서 실행되어, 스코프가 종료되면 모든 하위 코루틴도 취소되는 원칙입니다. 커스텀 `CoroutineScope`를 사용하면 백그라운드 작업의 생명주기를 애플리케이션 수준에서 관리할 수 있습니다.
+</div>
+
 보상 생성 로직에서는 연속 대화 일수를 확인합니다.
 
 ```kotlin
@@ -98,6 +110,12 @@ override fun createConversationReward(command: CreateRewardCommand): List<Comman
     }
 }
 ```
+
+<div class="notice--info" markdown="1">
+**📘 Early Return 패턴**
+
+Early Return은 함수 시작 부분에서 유효하지 않은 조건을 먼저 걸러내고 즉시 반환하는 패턴입니다. 중첩된 if-else를 줄이고 코드 가독성을 높이지만, 이 포스트처럼 중요한 로직이 early return 뒤에 있으면 **전체 로직이 실행되지 않는** 함정이 될 수 있습니다. `consecutiveDays`가 잘못 계산되면 보상 로직 전체가 건너뛰어집니다.
+</div>
 
 ### 1.3 증상 정리
 
@@ -144,6 +162,35 @@ sequenceDiagram
 ### 2.2 PostgreSQL의 READ_COMMITTED 격리 수준
 
 PostgreSQL의 기본 격리 수준은 `READ_COMMITTED`입니다. 이 격리 수준에서는 **다른 트랜잭션이 커밋한 데이터만** 읽을 수 있습니다.
+
+<div class="notice--info" markdown="1">
+**📘 READ_COMMITTED 격리 수준**
+
+PostgreSQL의 기본 격리 수준은 `READ_COMMITTED`입니다. 다른 트랜잭션이 아직 커밋하지 않은 데이터(dirty data)는 읽을 수 없습니다.
+
+| 격리 수준 | Dirty Read | Non-Repeatable Read | Phantom Read |
+|---|---|---|---|
+| `READ_UNCOMMITTED` | 가능 | 가능 | 가능 |
+| **`READ_COMMITTED`** (PostgreSQL 기본) | **방지** | 가능 | 가능 |
+| `REPEATABLE_READ` (MySQL InnoDB 기본) | 방지 | 방지 | 가능 |
+| `SERIALIZABLE` | 방지 | 방지 | 방지 |
+
+**Non-Repeatable Read (반복 읽기 불가능)**
+
+한 트랜잭션 내에서 동일한 행을 두 번 조회했을 때, 그 사이 다른 트랜잭션이 데이터를 **수정(UPDATE)**하거나 **삭제(DELETE)**하여 결과가 다르게 나타나는 현상
+원인: 기존 레코드의 데이터 변경.
+예시: A가 사용자 정보를 조회(나이: 20) → B가 해당 사용자의 나이를 21로 수정 후 커밋 → A가 다시 조회 시 나이가 21로 바뀜.
+
+**Phantom Read (유령 읽기)**
+
+한 트랜잭션 내에서 일정 범위의 데이터를 두 번 조회했을 때, 그 사이 다른 트랜잭션이 데이터를 **삽입(INSERT)**하여 첫 번째 조회에는 없던 '유령' 레코드가 나타나는 현상
+원인: 새로운 레코드의 삽입으로 인해 결과 셋(Result Set)의 행 수가 달라짐.
+예시: A가 나이 20세 이상 목록 조회(2명) → B가 25세 신규 사용자 삽입 후 커밋 → A가 다시 조회 시 3명이 검색됨.
+
+**⚠️ Dirty Read / Uncommitted Data**
+
+**Dirty Data**는 아직 커밋되지 않은 트랜잭션이 기록한 데이터입니다. 이 데이터를 다른 트랜잭션이 읽는 것을 **Dirty Read**라 합니다. `READ_COMMITTED`는 dirty read를 방지하지만, 그로 인해 비동기 작업이 부모 트랜잭션의 쓰기를 볼 수 없는 **타이밍 문제**를 만듭니다 — 이것이 바로 이 포스트의 핵심 문제입니다.
+</div>
 
 ```mermaid
 flowchart TD
@@ -229,6 +276,19 @@ sequenceDiagram
     Note over Coroutine: consecutiveDays >= 1 → 보상 정상 지급 ✅
 ```
 
+<div class="notice--info" markdown="1">
+**📘 @TransactionalEventListener와 TransactionPhase**
+
+`@EventListener`와 달리 `@TransactionalEventListener`는 이벤트 실행을 트랜잭션 생명주기에 연결합니다. `publishEvent()` 호출 시 이벤트는 큐에 저장되고, 지정된 phase에 도달해야 실행됩니다.
+
+| TransactionPhase | 실행 시점 |
+|---|---|
+| `BEFORE_COMMIT` | 트랜잭션 커밋 직전 |
+| `AFTER_COMMIT` | 트랜잭션 커밋 성공 후 **(가장 많이 사용)** |
+| `AFTER_ROLLBACK` | 트랜잭션 롤백 후 |
+| `AFTER_COMPLETION` | 커밋 또는 롤백 후 (항상 실행) |
+</div>
+
 ### 3.2 구현: Before → After
 
 **Before** - Port 인터페이스로 직접 호출
@@ -301,6 +361,28 @@ class ProcessConversationService(
 }
 ```
 
+<div class="notice--success" markdown="1">
+**✅ ApplicationEventPublisher (Event-Driven Architecture)**
+
+이벤트 기반 아키텍처는 컴포넌트 간 직접 메서드 호출 대신 이벤트를 발행/구독하는 방식으로 결합도를 낮춥니다. Spring의 `ApplicationEventPublisher`는 프로세스 내(in-process) 이벤트 버스입니다. 마이크로서비스 간 이벤트에는 Kafka, RabbitMQ 같은 메시지 브로커를 사용합니다.
+</div>
+
+```mermaid
+flowchart LR
+    subgraph "직접 호출 (강결합)"
+        A1["ServiceA"] -->|"직접 의존"| B1["ServiceB"]
+    end
+    subgraph "이벤트 기반 (느슨한 결합)"
+        A2["ServiceA"] -->|"publishEvent"| E["Event"]
+        E -->|"@EventListener"| B2["ServiceB"]
+    end
+    style A1 fill:#FFCDD2
+    style B1 fill:#FFCDD2
+    style A2 fill:#C8E6C9
+    style E fill:#FFF9C4
+    style B2 fill:#C8E6C9
+```
+
 ```kotlin
 // 3. ProcessConversationPostTurnService.kt - 이벤트 리스너로 변경
 @Component
@@ -341,6 +423,12 @@ class ProcessConversationPostTurnService(
 // 4. ProcessConversationPostTurnPort.kt 삭제 (더 이상 불필요)
 ```
 
+<div class="notice--success" markdown="1">
+**✅ Port & Adapter 패턴 삭제 → 이벤트 기반 전환**
+
+Port 인터페이스를 통한 직접 호출은 호출자가 피호출자의 존재를 알아야 합니다. 이벤트 기반으로 전환하면 발행자는 구독자를 모르고, 구독자 추가/변경이 발행자 코드에 영향을 주지 않습니다. 이 포스트에서는 Port 삭제 + 이벤트 전환으로 **결합도**와 **트랜잭션 가시성** 문제를 동시에 해결했습니다.
+</div>
+
 ### 3.3 변경 사항 요약
 
 | 파일 | 변경 |
@@ -375,6 +463,12 @@ class ProcessConversationPostTurnService(
 | **보상 지급** | `consecutiveDays = 0` → 미지급 | 정상 계산 → 정상 지급 |
 
 > **참고**: 트랜잭션 없이 `publishEvent`를 호출하면 이벤트가 무시됩니다 (`fallbackExecution = false` 기본값).
+
+<div class="notice--warning" markdown="1">
+**⚠️ fallbackExecution**
+
+`@TransactionalEventListener`의 `fallbackExecution`은 기본값이 `false`입니다. 트랜잭션 없이 `publishEvent()`를 호출하면 이벤트가 **조용히 무시**됩니다 — 에러도 없고 로그도 없어서 디버깅이 매우 어렵습니다. `true`로 설정하면 트랜잭션 없을 때 즉시 실행되지만, 데이터 가시성 보장이 안 되므로 주의가 필요합니다.
+</div>
 
 ---
 

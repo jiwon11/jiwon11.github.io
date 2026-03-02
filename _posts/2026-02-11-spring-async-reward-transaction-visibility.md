@@ -100,11 +100,17 @@ flowchart TD
 
 기존 구조에서는 요약 완료 후 무조건 보상을 생성했기 때문에 **"종료하지 않은 사용자에게도 보상이 지급"**되거나, 반대로 **타이밍 이슈로 보상이 누락**되는 경우가 발생했습니다.
 
+<div class="notice--warning" markdown="1">
+**⚠️ Race Condition (경쟁 상태)**
+
+두 개 이상의 독립적인 작업이 공유 자원이나 상태에 동시에 접근할 때, 실행 순서에 따라 결과가 달라지는 현상을 **Race Condition**이라 합니다. 이 포스트에서는 "요약 생성 완료"와 "사용자 종료"라는 두 비동기 이벤트가 경쟁하여 보상 생성 여부가 타이밍에 의존하게 됩니다. 전통적인 락(Lock)이나 뮤텍스(Mutex) 대신, 이 글에서는 **가드 패턴**으로 해결합니다.
+</div>
+
 ---
 
 ## 3. 원인 분석: AFTER_COMMIT이 해결해주지 못한 것
 
-[이전 글](/2026-02-09-spring-transactional-event-listener-coroutine-visibility)에서 `@TransactionalEventListener(AFTER_COMMIT)`을 도입하여 **미커밋 데이터를 코루틴에서 읽지 못하는 문제**는 해결했습니다.
+[이전 글](/posts/spring-transactional-event-listener-coroutine-visibility/)에서 `@TransactionalEventListener(AFTER_COMMIT)`을 도입하여 **미커밋 데이터를 코루틴에서 읽지 못하는 문제**는 해결했습니다.
 
 하지만 새로운 문제가 남아 있었습니다. `AFTER_COMMIT` 이후 실행되는 코루틴은 **fire-and-forget** 방식이기 때문에, 코루틴의 완료 시점을 외부에서 알 수 없습니다.
 
@@ -129,6 +135,12 @@ sequenceDiagram
 ```
 
 문제의 본질은 **"요약 완료"와 "사용자 종료"라는 두 개의 독립적인 시점이 서로를 모른다**는 것이었습니다. `AFTER_COMMIT`은 트랜잭션 가시성을 해결해줬지만, 비동기 작업 간의 순서 조율까지는 해결해주지 않습니다.
+
+<div class="notice--warning" markdown="1">
+**⚠️ fire-and-forget의 한계**
+
+`launch(Dispatchers.IO)`로 실행한 코루틴은 호출자에게 결과를 반환하지 않는 fire-and-forget 방식입니다. 호출자는 코루틴이 **언제 완료되는지, 성공했는지, 실패했는지 알 수 없습니다.** `AFTER_COMMIT`은 "커밋된 데이터를 읽을 수 있는가"(가시성)를 해결하지만, "비동기 작업들이 어떤 순서로 완료되는가"(조율)는 별도 설계가 필요합니다.
+</div>
 
 ---
 
@@ -164,6 +176,12 @@ flowchart TD
     style I fill:#4CAF50,color:#fff
 ```
 
+<div class="notice--info" markdown="1">
+**📘 Domain Event와 책임 분리**
+
+Domain Event는 도메인에서 발생한 중요한 사건을 객체로 표현한 것입니다. `ConversationCompletedEvent`처럼 "무엇이 일어났는가"만 전달하고, "그 결과로 무엇을 해야 하는가"는 구독자가 결정합니다. 이 패턴으로 대화 처리(발행자)와 보상 생성(구독자)의 책임을 분리하면, 보상 로직이 변경되어도 대화 처리 코드는 영향받지 않습니다.
+</div>
+
 ### 4.2 EndConversationService: 종료 기록 분리
 
 대화 종료를 별도 API로 분리하고, `ConversationEndHistory` 엔티티를 도입했습니다.
@@ -197,6 +215,12 @@ class EndConversationService(
 ```
 
 **멱등성**이 핵심입니다. 사용자가 종료 버튼을 여러 번 누르더라도 종료 기록은 하루에 하나만 생성됩니다.
+
+<div class="notice--info" markdown="1">
+**📘 멱등성(Idempotency)**
+
+**멱등성**은 동일한 요청을 여러 번 보내도 결과가 같은 성질입니다. `existsByUserIdAndDate`로 먼저 확인하고 없을 때만 생성하는 패턴은 네트워크 재시도, 사용자 중복 클릭, 이벤트 중복 발행 등 운영 환경의 예상치 못한 중복 호출에 안전하게 대응합니다. REST API에서 PUT은 멱등하지만 POST는 아닙니다 — 이 서비스는 POST 호출이지만 내부적으로 멱등성을 보장합니다.
+</div>
 
 ### 4.3 ConversationRewardService: 5단계 가드 패턴
 
@@ -278,6 +302,12 @@ class ConversationRewardService(
 | 4 | 요약 레코드 존재 여부 | AI 요약이 생성되었는가? |
 | 5 | 요약 content 비어있는지 | 빈 요약이면 저품질 처리 |
 
+<div class="notice--success" markdown="1">
+**✅ Guard Clause 패턴 (방어적 프로그래밍)**
+
+Guard Clause는 함수 초반에 유효하지 않은 조건을 걸러내고 즉시 반환하는 패턴입니다. 이 서비스에서는 5단계 가드를 체인으로 연결하여, 각 가드가 "이 시점에서 보상을 생성하면 안 되는 이유"를 하나씩 검증합니다. 모든 가드를 통과한 경우에만 실제 로직이 실행되므로, **두 진입점 중 어느 쪽이 먼저 호출되든** 조건이 충족될 때만 보상이 생성됩니다.
+</div>
+
 ### 4.4 시나리오별 동작
 
 이 설계로 앞서 언급한 세 가지 시나리오가 모두 해결됩니다.
@@ -305,6 +335,12 @@ sequenceDiagram
 시나리오 B(요약이 먼저 완료)에서는 반대로 동작합니다. 요약 완료 시점에는 가드 3(종료 기록 없음)에서 스킵하고, 이후 사용자가 종료하면 모든 가드를 통과하여 보상이 생성됩니다.
 
 어느 쪽이 먼저 실행되든, **나중에 오는 호출에서 모든 조건이 충족되어 보상이 생성**됩니다.
+
+<div class="notice--info" markdown="1">
+**📘 Eventual Consistency (최종 일관성)**
+
+분산 시스템에서 모든 노드가 **즉시** 같은 상태를 보는 것을 Strong Consistency라 하고, **시간이 지나면 결국** 같은 상태에 도달하는 것을 Eventual Consistency라 합니다. 이 보상 시스템도 같은 원리입니다 — 종료와 요약 완료가 동시에 일어나지 않지만, 두 이벤트가 **결국 모두 발생하면** 가드 조건이 충족되어 보상이 생성됩니다.
+</div>
 
 ---
 
@@ -344,9 +380,21 @@ class LowQualityConversationDetector(
 }
 ```
 
+<div class="notice--info" markdown="1">
+**📘 Rule-based Classification (규칙 기반 분류)**
+
+규칙 기반 분류는 사전에 정의한 조건의 조합으로 대상을 분류하는 방식입니다. ML 모델과 달리 규칙이 명시적이어서 **"왜 이렇게 분류했는가"를 설명할 수 있고**, 규칙 추가/수정이 즉시 반영됩니다. 이 시스템에서는 3가지 규칙 중 2개 이상 충족 시 저품질로 분류하는 **다수결(majority voting)** 방식을 사용합니다.
+</div>
+
 보상을 미지급할 때는 `RewardSkipHistory`에 사유를 저장합니다. CS 대응("왜 보상을 못 받았나요?")과 가드 2번의 중복 방지에 활용됩니다.
 
 저품질 대화여도 "대화를 한 것"으로 카운트하여 연속일수는 유지합니다. 매일 보상(DAY1)만 미지급하고, 7일/14일/28일 연속 보상은 정상 지급합니다.
+
+<div class="notice--info" markdown="1">
+**📘 Audit Trail (감사 추적)**
+
+Audit Trail은 시스템에서 발생한 중요한 결정과 그 사유를 기록하는 것입니다. `RewardSkipHistory`는 "보상을 주지 않은 이유"를 저장하여 두 가지 목적을 달성합니다: 1) CS 대응 시 "왜 보상이 안 왔나요?"에 근거 데이터로 답변 가능, 2) 가드 2번에서 중복 처리를 방지하는 기술적 용도. **부정적 결과도 기록**하는 것이 운영 안정성의 핵심입니다.
+</div>
 
 ```kotlin
 // CreateRewardService.kt
@@ -369,10 +417,9 @@ if (streakCondition != null && streakCondition != RewardCondition.DAY1) {
 
 ## 6. 정리
 
-### 체크리스트
 
-- [ ] **하나의 결과를 만드는 진입점이 여러 개인가?** 순서가 보장되지 않는다면 가드 패턴으로 "누가 먼저 오든 동작하는" 구조를 설계하세요.
-- [ ] **실패 시 추적 가능한 이력을 남기는가?** "안 준 이유"도 기록하면 CS 대응과 데이터 분석에 활용할 수 있습니다.
+- **하나의 결과를 만드는 진입점이 여러 개인가?** 순서가 보장되지 않는다면 가드 패턴으로 "누가 먼저 오든 동작하는" 구조를 설계하세요.
+- **실패 시 추적 가능한 이력을 남기는가?** "안 준 이유"도 기록하면 CS 대응과 데이터 분석에 활용할 수 있습니다.
 
 ### 교훈
 

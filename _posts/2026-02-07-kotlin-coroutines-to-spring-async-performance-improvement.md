@@ -96,6 +96,12 @@ OpenAI의 reasoning 모델(gpt-5-nano 등)은 `reasoning_effort` 파라미터를
 
 `reasoning_effort`가 높을수록 모델이 내부적으로 더 많은 reasoning token을 생성하여 깊은 사고 과정을 거칩니다. 이 reasoning token은 API 응답에는 포함되지 않지만, **응답 시간과 토큰 비용**에 직접적인 영향을 줍니다.
 
+<div class="notice--info" markdown="1">
+**📘 Reasoning Token과 reasoning_effort**
+
+최신 LLM(gpt-5-nano 등)은 답변 생성 전에 내부적으로 "생각하는" 토큰(reasoning token)을 생성합니다. 이 토큰은 API 응답에 포함되지 않지만, 연산 시간과 비용에 영향을 줍니다. `reasoning_effort`가 낮을수록 reasoning token이 적게 생성되어 응답이 빨라지지만, 복잡한 추론 능력은 떨어집니다.
+</div>
+
 ### 2.2 모델별 성능 비교
 
 다양한 모델과 `reasoning_effort` 조합을 프로덕션에서 측정했습니다.
@@ -291,6 +297,27 @@ val connectionProvider = ConnectionProvider.builder("openai-pool")
 
 실측 결과, 커넥션 재사용으로 두 번째 이후 요청에서 **150~450ms의 지연을 절감**할 수 있었습니다.
 
+<div class="notice--info" markdown="1">
+**📘 Connection Pool과 TCP/TLS Handshake**
+
+HTTPS 연결 수립에는 TCP 3-way handshake(~1 RTT) + TLS handshake(~2 RTT)가 필요합니다. 서울↔미국 기준 RTT가 ~150ms이므로, 매번 연결을 새로 맺으면 300~450ms가 연결 설정에만 소비됩니다. Connection Pool은 연결을 재사용하여 두 번째 요청부터 이 비용을 제거합니다.
+</div>
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+    Note over C,S: 풀 없음: 매번 handshake
+    C->>S: TCP SYN
+    S->>C: TCP SYN-ACK
+    C->>S: TCP ACK + TLS ClientHello
+    S->>C: TLS ServerHello + Certificate
+    C->>S: TLS Finished (~300-450ms 소요)
+    C->>S: HTTP Request
+    Note over C,S: 풀 있음: 즉시 요청
+    C->>S: HTTP Request (기존 연결 재사용, ~0ms)
+```
+
 각 설정값의 설계 의도:
 
 | 설정 | 값 | 설계 의도 |
@@ -300,6 +327,12 @@ val connectionProvider = ConnectionProvider.builder("openai-pool")
 | `maxLifeTime` | 5분 | 오래된 커넥션을 주기적으로 갱신하여 stale connection 방지 |
 | `pendingAcquireTimeout` | 60초 | 풀이 가득 찼을 때 커넥션 획득 대기 상한. OpenAI API의 긴 응답 시간을 고려 |
 | `evictInBackground` | 120초 | 유휴 커넥션을 2분마다 정리. 리소스 누수 방지 |
+
+<div class="notice--warning" markdown="1">
+**⚠️ Stale Connection**
+
+Stale Connection은 풀에 유지되고 있지만, 서버 측에서 이미 끊은 연결입니다. 이 연결로 요청을 보내면 에러가 발생합니다. `maxLifeTime`으로 연결의 최대 수명을 제한하고, `evictInBackground`로 주기적으로 유휴 연결을 정리하여 방지합니다.
+</div>
 
 ### 3.3 Timeout 계층화
 
@@ -339,6 +372,12 @@ graph LR
 | Response Timeout | 60초 | OpenAI API 응답 대기 상한. 모델에 따라 수초~10초 이상 걸릴 수 있어 여유있게 설정 |
 | Read Timeout | 60초 | 응답 수신 중 네트워크 지연 감지 |
 
+<div class="notice--warning" markdown="1">
+**⚠️ Timeout Layering**
+
+단일 타임아웃은 프로덕션에서 불충분합니다. 네트워크 장애는 연결, 전송, 대기, 수신 각 단계에서 발생할 수 있습니다. 타임아웃 없이 느린 API 하나가 스레드를 무한 점유하면, 스레드 풀이 고갈되어 전체 서비스가 응답 불능 상태에 빠집니다. 이를 **캐스케이딩 장애(cascading failure)**라 합니다.
+</div>
+
 ### 3.4 gzip 압축
 
 ```kotlin
@@ -351,6 +390,12 @@ graph LR
 
 `compress(true)`로 Reactor Netty 클라이언트 수준에서 gzip을 활성화하고, `Accept-Encoding` 헤더를 명시하여 서버에 압축 응답을 요청합니다. 실측 결과 응답 데이터 크기를 약 **70% 줄일** 수 있었습니다.
 
+<div class="notice--info" markdown="1">
+**📘 gzip 압축**
+
+HTTP 클라이언트가 `Accept-Encoding: gzip` 헤더를 보내면, 서버는 응답 본문을 gzip으로 압축하여 전송합니다. JSON 같은 텍스트 데이터는 압축률이 높아 원본 대비 ~70% 크기를 줄일 수 있습니다. 네트워크 대역폭을 절약하고 전송 시간을 단축합니다.
+</div>
+
 ### 3.5 메모리 버퍼 크기 설정
 
 ```kotlin
@@ -362,6 +407,12 @@ val exchangeStrategies = ExchangeStrategies.builder()
 ```
 
 WebClient의 기본 메모리 버퍼 크기는 256KB입니다. OpenAI API의 응답은 긴 텍스트를 포함할 수 있으므로 **10MB**로 확보합니다. 이 설정이 없으면 긴 응답에서 `DataBufferLimitException`이 발생합니다.
+
+<div class="notice--warning" markdown="1">
+**⚠️ DataBufferLimitException**
+
+Spring WebClient의 기본 메모리 버퍼 크기는 256KB입니다. 응답이 이보다 크면 `DataBufferLimitException`이 발생합니다. 이는 보안(메모리 폭발 방지)을 위한 기본 제한이지만, LLM API처럼 큰 응답을 다루는 경우 적절히 늘려야 합니다. 다만 무한정 늘리면 OOM(Out of Memory) 위험이 있으므로 예상 최대 응답 크기를 기준으로 설정합니다.
+</div>
 
 ### 3.6 전체 WebClient 설정 코드
 
@@ -432,6 +483,17 @@ class OpenAiProperties {
 - **그룹화**: 관련 설정을 하나의 클래스로 묶어 관리
 - **IDE 지원**: 자동완성, 리팩토링 지원
 
+<div class="notice--info" markdown="1">
+**📘 @ConfigurationProperties vs @Value**
+
+| 비교 항목 | `@Value` | `@ConfigurationProperties` |
+|---|---|---|
+| 바인딩 단위 | 필드 단위 (`@Value("${openai.apiKey}")`) | 클래스 단위 (prefix 기반) |
+| 타입 안전성 | 문자열 → 수동 변환 필요 | 자동 타입 변환 + 컴파일 타임 검증 |
+| IDE 지원 | 제한적 | **자동완성, 리팩토링, 문서화** |
+| 검증 | 불가 | `@Validated` + Bean Validation 가능 |
+</div>
+
 ---
 
 ## 4. 지수 백오프 재시도 전략
@@ -441,6 +503,17 @@ class OpenAiProperties {
 OpenAI API에서 가장 빈번하게 발생하는 오류 두 가지는 **429 Too Many Requests**(Rate Limit)와 **503 Service Unavailable**(일시적 서버 장애)입니다. 이 두 오류는 일정 시간이 지나면 자연히 해소되는 **일시적 오류(transient error)** 입니다.
 
 재시도 전략 없이 이런 오류를 바로 사용자에게 전달하면 불필요한 실패가 됩니다. 반대로 모든 오류를 무분별하게 재시도하면, 400 Bad Request나 401 Unauthorized 같이 **재시도해도 절대 성공하지 않는 오류**까지 반복 호출하게 됩니다.
+
+<div class="notice--warning" markdown="1">
+**⚠️ Transient Error vs Permanent Error**
+
+| 오류 유형 | HTTP 상태 코드 | 재시도 |
+|---|---|---|
+| **일시적 (Transient)** | 429 Too Many Requests, 503 Service Unavailable | O — 시간이 지나면 해소 |
+| **영구적 (Permanent)** | 400 Bad Request, 401 Unauthorized, 404 Not Found | X — 재시도해도 동일한 실패 |
+
+일시적 오류는 시간이 지나면 자연히 해소되므로 재시도가 효과적이지만, 영구적 오류를 재시도하면 서버 부하만 가중됩니다.
+</div>
 
 ### 4.2 Reactor Retry.backoff 적용
 
@@ -493,6 +566,28 @@ webClient.post()
 
 Reactor의 `Retry.backoff`은 기본적으로 **jitter factor 0.5**를 적용하여, 대기 시간에 ±50%의 무작위 변동을 줍니다. 이는 여러 요청이 동시에 Rate Limit에 걸렸을 때, 모두 같은 시점에 재시도하여 **thundering herd** 문제를 일으키는 것을 방지합니다.
 
+<div class="notice--info" markdown="1">
+**📘 Exponential Backoff + Jitter + Thundering Herd**
+
+**지수 백오프(Exponential Backoff)**는 재시도 간격을 1s→2s→4s→8s...로 지수적으로 늘리는 전략입니다. **Jitter**는 이 간격에 랜덤 편차를 추가합니다. Jitter 없이 100개 클라이언트가 동시에 Rate Limit에 걸리면, 모두 정확히 같은 시점에 재시도하여 서버를 다시 과부하시킵니다. 이를 **Thundering Herd Problem**이라 합니다.
+</div>
+
+```mermaid
+flowchart LR
+    subgraph "Jitter 없음 (위험)"
+        A1["Client 1: 2s"] --> S1["서버 과부하!"]
+        A2["Client 2: 2s"] --> S1
+        A3["Client 3: 2s"] --> S1
+    end
+    subgraph "Jitter 있음 (안전)"
+        B1["Client 1: 1.5s"] --> S2["부하 분산"]
+        B2["Client 2: 2.3s"] --> S2
+        B3["Client 3: 1.8s"] --> S2
+    end
+    style S1 fill:#f44336,color:#fff
+    style S2 fill:#4CAF50,color:#fff
+```
+
 ### 4.4 재시도 흐름도
 
 ```mermaid
@@ -503,7 +598,7 @@ flowchart TD
     B -->|503 Service Unavailable| D
     B -->|기타 에러 400, 401, 500 등| E[즉시 실패 - 재시도 없음]
 
-    D -->|10회 이하| F["지수 백오프 대기\n1s → 2s → 4s → ... → 100s"]
+    D -->|10회 이하| F["지수 백오프 대기<br/>1s → 2s → 4s → ... → 100s"]
     D -->|10회 초과| G[최종 실패 - 예외 발생]
 
     F --> A
@@ -650,6 +745,25 @@ interface OpenAiClientPort {
 - **교체 용이성**: OpenAI API를 다른 LLM API로 교체해도 core 모듈 수정 없음
 - **테스트 용이성**: `OpenAiClientPort`를 mock하여 비즈니스 로직을 단위 테스트 가능
 - **관심사 분리**: 모델 설정과 WebClient 최적화는 infrastructure 모듈에서만 수행
+
+<div class="notice--success" markdown="1">
+**✅ Hexagonal Architecture (Port & Adapter)**
+
+비즈니스 로직이 외부 시스템(DB, API, 메시지 큐)에 직접 의존하지 않도록 **Port(인터페이스)**와 **Adapter(구현체)**로 분리하는 아키텍처입니다. 비즈니스 로직은 Port만 알고, Adapter가 실제 외부 통신을 담당합니다. 외부 시스템 교체 시 Adapter만 새로 만들면 됩니다.
+</div>
+
+```mermaid
+flowchart LR
+    subgraph Core["Core (비즈니스 로직)"]
+        UC["UseCase"] --> P["Port 인터페이스"]
+    end
+    subgraph Infra["Infrastructure"]
+        A["Adapter 구현체"] -.->|"implements"| P
+        A --> E["외부 시스템<br/>(OpenAI API)"]
+    end
+    style Core fill:#E3F2FD
+    style Infra fill:#FFF3E0
+```
 
 ---
 
