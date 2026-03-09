@@ -34,7 +34,7 @@ social:
 
 # Google Analytics
 google_analytics:
-  id: G-SLQCSYRVVS
+  id: G-7XJW68L4WK
 
 # Google site verification
 google_site_verification: krxdfpPBR03bGNIYfBs0QIg5rjzrL2u6M0frupqFs4E
@@ -151,3 +151,8 @@ jekyll-archives:
   permalinks:
     tag: /tags/:name/
     category: /categories/:name/
+
+# Web Analytics Settings
+analytics:
+  google:
+    id: G-7XJW68L4WK   # 발급받은 측정 ID 입력
