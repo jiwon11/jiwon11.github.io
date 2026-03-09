@@ -6,7 +6,6 @@
   <meta name="google-site-verification" content="{{ site.owner.google.verify }}">{% endif %}
   {% if site.owner.bing-verify %}
   <meta name="msvalidate.01" content="{{ site.owner.bing-verify }}">{% endif %}
-  <meta name="google-adsense-account" content="ca-pub-3008277693152978">
   {% if site.plugins contains 'jekyll-seo-tag' or site.gems contains 'jekyll-seo-tag' %}
   {% comment %}
   Add metadata for search engines and social networks if jekyll-seo-tag plugin is enabled
@@ -25,9 +24,6 @@
       document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + 'js';
     }
   </script>
-
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3008277693152978"
-    crossorigin="anonymous"></script>
 
   <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}">
   <link rel="stylesheet" href="{{ site.skin | default: '/assets/css/skins/default.css' | relative_url }}">

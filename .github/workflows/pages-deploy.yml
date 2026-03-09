@@ -46,7 +46,6 @@ jobs:
           echo "Removing old so-simple theme files..."
           # Remove theme directories
           rm -rf _sass
-          rm -rf _includes
           rm -rf _layouts
           # Remove old data files (so-simple specific)
           rm -rf _data
@@ -55,6 +54,9 @@ jobs:
           rm -rf assets/js
           # Remove outdated lock file
           rm -f Gemfile.lock
+          # Remove old so-simple includes (keep metadata-hook.html for Chirpy)
+          find _includes -type f ! -name 'metadata-hook.html' -delete 2>/dev/null || true
+          find _includes -type d -empty -delete 2>/dev/null || true
           echo "Cleanup complete!"
 
       - name: Install dependencies
