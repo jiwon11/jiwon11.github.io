@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "[Kotlin/Spring] suspend 함수와 @Transactional의 위험한 조합 - ThreadLocal 기반 트랜잭션의 함정"
-date: 2025-01-24 14:00:00 +0900
+date: 2026-01-24 14:00:00 +0900
 categories: [TIL]
 tags: [Kotlin, Coroutine, Spring Boot, Transactional, ThreadLocal, 동시성]
 description: "Kotlin 코루틴의 suspend 함수에서 @Transactional을 사용할 때 발생하는 트랜잭션 컨텍스트 유실 문제의 원인과 해결 방법을 정리했습니다."
