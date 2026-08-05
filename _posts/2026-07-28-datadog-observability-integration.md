@@ -1,13 +1,13 @@
 ---
 title: "Datadog 관측성 구축기 — LLM Observability부터 구조화 로그까지"
-date: 2026-08-05
+date: 2026-07-28
 category: 개발기
 tags: [spring-boot, kotlin, datadog, observability, llm-observability, structured-logging, aws, elastic-beanstalk]
 readTime: 18min
 mermaid: false
 image:
-  path: /assets/images/posts/2026-08-05-datadog-observability-integration/thumbnail.jpg
-  thumbnail: /assets/images/posts/2026-08-05-datadog-observability-integration/thumbnail.jpg
+  path: /assets/images/posts/2026-07-28-datadog-observability-integration/thumbnail.jpg
+  thumbnail: /assets/images/posts/2026-07-28-datadog-observability-integration/thumbnail.jpg
 ---
 
 # Datadog 관측성 구축기 — LLM Observability부터 구조화 로그까지
@@ -29,7 +29,7 @@ image:
 1. **LLM Observability**: 자체 OpenAI 클라이언트를 수동 계측해 프롬프트, 응답, 토큰 사용량을 추적
 2. **구조화 로그**: HTTP 요청, AI 호출, JD 크롤링, 오류를 Datadog이 바로 집계할 수 있는 JSON 필드로 기록
 
-![모니터링 대시보드 화면](/assets/images/posts/2026-08-05-datadog-observability-integration/thumbnail.jpg)
+![모니터링 대시보드 화면](/assets/images/posts/2026-07-28-datadog-observability-integration/thumbnail.jpg)
 
 <small>측정할 수 있어야 개선할 수 있다. Photo by [Stephen Dawson on Unsplash](https://unsplash.com/photos/turned-on-monitoring-screen-qwtCeJ5cLYs).</small>
 
@@ -246,7 +246,7 @@ private fun String.maskPii(): String =
 
 로그는 Elastic Beanstalk stdout에서 CloudWatch Logs로 전달되고, Datadog Forwarder Lambda가 이를 Datadog으로 보냅니다. LLM 스팬은 `dd-java-agent`의 Agentless LLM Observability 경로로 전송합니다.
 
-![Datadog 관측성 데이터 흐름](/assets/images/posts/2026-08-05-datadog-observability-integration/observability-flow.svg)
+![Datadog 관측성 데이터 흐름](/assets/images/posts/2026-07-28-datadog-observability-integration/observability-flow.svg)
 
 최종 JVM 옵션은 다음과 같습니다. 실제 Procfile에서는 한 줄로 작성했습니다.
 
@@ -338,7 +338,7 @@ try {
 3. 오류 기록 실패는 원래 OpenAI 예외를 덮어쓰지 않는다.
 4. `finally`에서 종료하되 종료 실패도 밖으로 전파하지 않는다.
 
-![LLM 호출과 계측 실패 격리 시퀀스](/assets/images/posts/2026-08-05-datadog-observability-integration/llm-observability-sequence.svg)
+![LLM 호출과 계측 실패 격리 시퀀스](/assets/images/posts/2026-07-28-datadog-observability-integration/llm-observability-sequence.svg)
 
 <div class="notice--success" markdown="1">
 **✅ 관측성의 실패 원칙**
@@ -595,7 +595,7 @@ must be log-based.
 | LLM Observability | 스팬 수, 오류율, 지연, 토큰 |
 | Raw logs | `ai_call`, `jd_crawl` 원본 로그 |
 
-![Datadog LLM Observability의 모델·기능별 지연시간 대시보드](/assets/images/posts/2026-08-05-datadog-observability-integration/llm-observability-latency-dashboard.png)
+![Datadog LLM Observability의 모델·기능별 지연시간 대시보드](/assets/images/posts/2026-07-28-datadog-observability-integration/llm-observability-latency-dashboard.png)
 
 <small>실제 수집된 스팬을 바탕으로 전체 지연시간 추이와 기능별 평균 지연시간, 모델별 p75·p90·p95를 비교했다.</small>
 

@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 1040 720" role="img" aria-labelledby="title desc">
+  <title id="title">JD URL 등록 파이프라인</title>
+  <desc id="desc">URL 입력부터 SSRF 검증, HTML 수집, 구조화 데이터 우선 파싱, 본문 검증, AI 메타 추출과 저장까지의 흐름</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#eef6ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+    <style>
+      .title { font: 700 28px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+      .subtitle { font: 500 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #64748b; }
+      .label { font: 700 17px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; text-anchor: middle; }
+      .small { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; text-anchor: middle; }
+      .rank { font: 700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0369a1; text-anchor: middle; }
+      .node { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; rx: 14; filter: url(#shadow); }
+      .secure { fill: #ecfeff; stroke: #06b6d4; }
+      .parse { fill: #eff6ff; stroke: #60a5fa; }
+      .ai { fill: #f5f3ff; stroke: #8b5cf6; }
+      .success { fill: #ecfdf5; stroke: #10b981; }
+      .edge { fill: none; stroke: #64748b; stroke-width: 2.2; marker-end: url(#arrow); }
+      .fallback { fill: none; stroke: #94a3b8; stroke-width: 2; stroke-dasharray: 6 6; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1040" height="720" rx="24" fill="url(#bg)"/>
+  <text x="520" y="48" class="title" text-anchor="middle">JD URL 등록 파이프라인</text>
+  <text x="520" y="76" class="subtitle" text-anchor="middle">외부 페이지를 신뢰하지 않고, 구조화 데이터부터 단계적으로 해석한다</text>
+
+  <rect class="node" x="60" y="120" width="220" height="92"/>
+  <text x="170" y="158" class="label">URL 입력</text>
+  <text x="170" y="184" class="small">GraphQL registerJd</text>
+
+  <rect class="node secure" x="410" y="120" width="220" height="92"/>
+  <text x="520" y="154" class="label">URL Guard</text>
+  <text x="520" y="180" class="small">HTTP(S) · 공개 IP</text>
+  <text x="520" y="200" class="small">리다이렉트 홉마다 재검증</text>
+
+  <rect class="node secure" x="760" y="120" width="220" height="92"/>
+  <text x="870" y="154" class="label">HTML 수집</text>
+  <text x="870" y="180" class="small">connect 5초 · read 10초</text>
+  <text x="870" y="200" class="small">최대 3 MB</text>
+
+  <path class="edge" d="M280 166 H405"/>
+  <path class="edge" d="M630 166 H755"/>
+  <path class="edge" d="M870 212 V266 H190 V301"/>
+
+  <rect class="node parse" x="60" y="306" width="260" height="108"/>
+  <text x="190" y="334" class="rank">1순위</text>
+  <text x="190" y="363" class="label">Next.js __NEXT_DATA__</text>
+  <text x="190" y="389" class="small">initialData의 JD 필드 조립</text>
+
+  <rect class="node parse" x="390" y="306" width="260" height="108"/>
+  <text x="520" y="334" class="rank">2순위</text>
+  <text x="520" y="363" class="label">JSON-LD JobPosting</text>
+  <text x="520" y="389" class="small">title · description · company</text>
+
+  <rect class="node parse" x="720" y="306" width="260" height="108"/>
+  <text x="850" y="334" class="rank">3순위</text>
+  <text x="850" y="363" class="label">Jsoup DOM 폴백</text>
+  <text x="850" y="389" class="small">.entry-content → article → main</text>
+
+  <path class="fallback" d="M320 360 H385"/>
+  <text x="352" y="348" class="small">없음</text>
+  <path class="fallback" d="M650 360 H715"/>
+  <text x="682" y="348" class="small">없음</text>
+
+  <path class="edge" d="M190 414 V466 H380"/>
+  <path class="edge" d="M520 414 V466"/>
+  <path class="edge" d="M850 414 V466 H660"/>
+
+  <rect class="node secure" x="380" y="454" width="280" height="86"/>
+  <text x="520" y="488" class="label">본문 정책 검증</text>
+  <text x="520" y="514" class="small">500자 이상 · 최대 10,000자</text>
+
+  <path class="edge" d="M520 540 V570 H320 V589"/>
+
+  <rect class="node ai" x="170" y="594" width="300" height="86"/>
+  <text x="320" y="628" class="label">AI 구조화</text>
+  <text x="320" y="654" class="small">분할 → 메타 추출 → 지원 전략</text>
+
+  <rect class="node success" x="570" y="594" width="300" height="86"/>
+  <text x="720" y="628" class="label">JD 저장</text>
+  <text x="720" y="654" class="small">원문 · 출처 URL · 구조화 필드</text>
+
+  <path class="edge" d="M470 637 H565"/>
+</svg>
