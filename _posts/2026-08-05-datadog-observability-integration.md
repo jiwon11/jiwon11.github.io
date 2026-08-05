@@ -595,6 +595,12 @@ must be log-based.
 | LLM Observability | 스팬 수, 오류율, 지연, 토큰 |
 | Raw logs | `ai_call`, `jd_crawl` 원본 로그 |
 
+![Datadog LLM Observability의 모델·기능별 지연시간 대시보드](/assets/images/posts/2026-08-05-datadog-observability-integration/llm-observability-latency-dashboard.png)
+
+<small>실제 수집된 스팬을 바탕으로 전체 지연시간 추이와 기능별 평균 지연시간, 모델별 p75·p90·p95를 비교했다.</small>
+
+대시보드에서는 `experienceStarExtraction`이 평균 13.52초로 가장 느린 스팬이었고, 모델별로는 `gpt-4o`의 평균 지연시간이 8.69초로 `gpt-4o-mini`의 3.54초보다 길었습니다. 단순히 “OpenAI 호출이 느리다”에서 그치지 않고 어떤 기능과 모델부터 최적화해야 하는지 우선순위를 정할 수 있게 됐습니다.
+
 ### 8.2 로그 기반 모니터 정의
 
 Datadog UI에서만 모니터를 만들면 설정의 의도와 변경 이력을 코드 리뷰에서 확인하기 어렵습니다. 재현 가능한 시작점이 되도록 JSON 정의를 저장했습니다.
