@@ -12,23 +12,19 @@ image:
 
 # 리워드 책임 분리 개발기 — 생성, 수령, 충전을 하나의 흐름에서 떼어내기
 
-안녕하세요. duurian 팀에서 백엔드 개발을 담당하고 있는 정지원입니다.
+보상 기능은 처음에는 단순해 보입니다. 어떤 사건이 발생하면 기록을 만들고, 사용자의 자산을 변경하면 됩니다. 하지만 기능이 커질수록 “권리가 생기는 일”, “권리를 사용한 것으로 바꾸는 일”, “실제 자산을 반영하는 일”은 서로 다른 실패 조건과 동시성 문제를 갖게 됩니다.
 
-처음 조건 달성형 보상을 만들 때의 흐름은 직관적이었습니다. 조건을 만족하면 리워드를 생성하고 곧바로 두리안을 충전했습니다. 작은 기능일 때는 한 메서드에서 모든 일이 끝나는 편이 이해하기 쉬웠습니다.
+이 글은 세 책임을 분리해 생각하는 일반적인 설계 방법을 정리한 개발기입니다. 특정 서비스의 현재 구조를 설명하거나 운영 정책을 공개하는 문서가 아닙니다.
 
-문제는 리워드가 늘면서 시작됐습니다. 여러 조건형·이벤트형 보상으로 생성 계기가 다양해졌고, 사용자가 직접 “받기”를 누르는 UI도 추가됐습니다. 생성 시점과 수령 시점 모두에서 충전이 가능해지자 같은 보상이 서로 다른 경로를 통해 두 번 충전되는 사고가 발생했습니다.
-
-이 글은 이 문제를 단순한 중복 호출 버그로 보지 않고, 리워드의 생성·수령·재화 충전 책임을 다시 정의한 과정을 다룹니다.
-
-> 보상 트리거, 구간, 지급량, 타입 이름과 원장 필드는 공개용 예시로 일반화했습니다. 수령형과 즉시 지급형을 분리한 설계 원칙만 실제 구조와 동일합니다.
+> 이 글의 도메인 이름, 상태, 처리 순서, 코드, 테이블과 필드는 모두 설명을 위한 가상 예시입니다. 실제 보상 발생 조건, 지급량, 상품 종류, 수령 방식, 예외 규칙, API, 스키마, 트랜잭션 경계와 운영 기준은 포함하지 않았습니다.
 {: .prompt-info }
 
 ![분리된 모듈을 상징하는 블록](/assets/images/posts/reward-responsibility/building-blocks.jpg)
 
-<small>각 블록이 하나의 책임을 갖는 구조. Photo by [Duc Anh Nguyen on Pexels](https://www.pexels.com/photo/colorful-building-blocks-on-a-table-8289844/).</small>
+<small>서로 다른 책임을 가진 구성 요소를 떠올리게 하는 블록. Photo by [Duc Anh Nguyen on Pexels](https://www.pexels.com/photo/colorful-building-blocks-on-a-table-8289844/).</small>
 
 <div class="notice--info" markdown="1">
-**AI 대화와 보상 파이프라인 개발기**
+**연관 개발기**
 
 1. [AI 대화 후처리 개선기](/posts/ai-conversation-post-processing-pipeline/)
 2. **리워드 생성·수령·충전 책임 분리** — 현재 글
@@ -37,672 +33,309 @@ image:
 
 ---
 
-## 1. 사고를 한 장으로 요약하면
+## 1. 메서드를 나누기 전에 의미부터 나눈다
 
-운영에서 기대한 변화는 한 번의 충전이었지만 실제로는 두 번 반영됐습니다.
+한 메서드가 다음 세 질문에 모두 답하고 있다면 책임 경계가 흐려졌다는 신호일 수 있습니다.
 
-~~~mermaid
-sequenceDiagram
-    autonumber
-    participant E as 보상 생성 경로
-    participant R as 보상 수령 경로
-    participant C as 두리안 충전
-    participant B as 사용자 잔액
+- 어떤 사건을 근거로 권리가 생겼는가?
+- 그 권리는 아직 사용할 수 있는가?
+- 자산 변화가 정확히 한 번 기록됐는가?
 
-    E->>C: 동일 보상으로 금액 충전
-    C->>B: 잔액 반영
-    R->>C: 동일 보상으로 다시 충전
-    C->>B: 잔액 반영
-    Note over B: 기대 1회 / 실제 2회
-~~~
+세 질문은 비슷해 보여도 필요한 데이터와 불변식이 다릅니다.
 
-처음에는 “충전 메서드가 두 번 호출됐다”가 원인처럼 보였습니다. 더 정확한 원인은 다음과 같았습니다.
-
-> 하나의 보상에 대해 충전을 시작할 수 있는 책임이 두 경로에 동시에 존재했다.
-
-| 관찰한 현상 | 표면적 처방 | 구조적 처방 |
+| 개념 | 설명을 위한 이름 | 지키려는 불변식 |
 |---|---|---|
-| 같은 보상으로 두 번 충전 | 한쪽 호출 삭제 | 충전 시작 권한을 한 흐름에만 둔다 |
-| 생성과 지급의 의미 혼재 | 메서드 이름 변경 | 상태와 유스케이스를 분리한다 |
-| 수령 API 재호출 | 컨트롤러 중복 방지 | DB 상태 전이를 성공 조건으로 사용한다 |
-| 잔액만 남아 원인 추적 어려움 | 로그 추가 | 재화 원장에 출처를 기록한다 |
-
----
-
-## 2. 처음 설계가 틀렸다기보다 요구사항이 달라졌다
-
-초기 조건형 보상은 “조건 달성 즉시 지급”이었습니다.
+| 권리 생성 | Entitlement Creation | 같은 근거로 의도치 않은 권리를 중복 생성하지 않는다 |
+| 상태 전이 | Entitlement Transition | 허용된 이전 상태에서만 다음 상태로 이동한다 |
+| 효과 반영 | Effect Application | 자산 변화와 근거 기록의 정합성을 유지한다 |
 
 ~~~mermaid
 flowchart LR
-    C["업무 조건 계산"] --> P["보상 상품 조회"]
-    P --> R["Reward 생성"]
-    R --> D["두리안 즉시 충전"]
-    D --> B["잔액 반영"]
+    S["가상의 사건"] --> C["권리 생성"]
+    C --> T["상태 전이"]
+    T --> E["효과 반영"]
+
+    C -. "생성 불변식" .-> CI["중복 근거 확인"]
+    T -. "전이 불변식" .-> TI["현재 상태 확인"]
+    E -. "자산 불변식" .-> EI["원장과 잔액 정합성"]
 ~~~
 
-당시 <code>CreateRewardService</code>는 다음 책임을 함께 가지고 있었습니다.
-
-1. 보상 조건을 계산한다.
-2. 보상 상품을 선택한다.
-3. Reward 레코드를 저장한다.
-4. 사용자 두리안 잔액을 증가시킨다.
-5. 두리안 거래 내역을 기록한다.
-
-사용자가 별도의 수령 행동을 하지 않는 요구사항에서는 합리적인 흐름이었습니다. 이후 UI에 “받기”와 “모두 받기”가 생기면서 리워드는 즉시 지급 결과가 아니라 수령 가능한 권리가 됐습니다.
-
-~~~text
-기존 의미  Reward = 지급된 재화의 기록
-변경 의미  Reward = 사용자가 수령할 수 있는 권리
-~~~
-
-의미가 달라졌는데 기존 충전 경로를 그대로 남겨두면 생성과 수령 양쪽이 같은 부수효과를 가질 수밖에 없습니다.
+여기서 화살표는 실제 서비스의 처리 순서를 뜻하지 않습니다. 각 책임이 어떤 결과를 다음 책임에 제공할 수 있는지 보여주는 개념도입니다.
 
 ---
 
-## 3. 리워드와 두리안은 같은 도메인이 아니다
+## 2. 권리와 자산 기록을 같은 것으로 보지 않는다
 
-책임을 분리하기 위해 먼저 두 개념을 구분했습니다.
-
-| 도메인 | 핵심 질문 | 대표 데이터 |
-|---|---|---|
-| Claim | 왜, 어떤 조건으로, 어떤 보상을 받을 권리가 생겼는가? | kind, status, itemId |
-| Asset | 실제 잔액이 얼마나 변했고 그 출처는 무엇인가? | balance, ledger, source |
+권리는 “어떤 효과를 적용할 수 있는 근거”이고, 자산 기록은 “실제로 무엇이 변했는지”를 설명합니다. 둘을 하나의 레코드로 표현하면 생성 여부와 반영 여부가 뒤섞이기 쉽습니다.
 
 ~~~mermaid
 classDiagram
-    class Claim {
-        UUID id
-        UUID subjectId
-        ClaimKind kind
-        ClaimStatus status
-        UUID itemId
+    class ExampleEntitlement {
+        ExampleId id
+        SubjectId subjectId
+        EvidenceKey evidenceKey
+        ExampleState state
     }
 
-    class RewardItem {
-        UUID id
-        int durianBase
-        int durianBonus
-        int duration
+    class ExampleEffect {
+        EffectId id
+        ExampleId entitlementId
+        EffectValue value
     }
 
-    class AssetBalance {
-        UUID subjectId
-        int paid
-        int free
-        long version
+    class ExampleLedger {
+        LedgerId id
+        ReferenceKey referenceKey
+        Delta delta
     }
 
-    class AssetLedger {
-        UUID sourceId
-        LedgerSourceType sourceType
-        int amount
-        int balanceBefore
-        int balanceAfter
-    }
-
-    Claim --> RewardItem : 어떤 상품인가
-    AssetLedger --> Claim : sourceId
-    AssetBalance --> AssetLedger : 잔액 변화의 원장
+    ExampleEntitlement --> ExampleEffect : 적용 근거
+    ExampleEffect --> ExampleLedger : 변화 기록
 ~~~
 
-Claim은 재화 그 자체가 아닙니다. “상품 X를 받을 수 있는 권리”를 나타냅니다. 실제 재화 변화는 잔액과 원장이 담당합니다.
+이 모델에서 중요한 것은 이름이 아니라 분리된 의미입니다.
 
-<div class="notice--info" markdown="1">
-**분리 후의 핵심 문장**
+1. 권리 레코드는 생성 근거와 생명주기를 설명합니다.
+2. 효과 객체는 무엇을 반영할지 표현합니다.
+3. 원장은 반영된 변화와 추적 근거를 남깁니다.
 
-- 생성은 권리를 만든다.
-- 수령은 권리의 상태를 전이한다.
-- 충전은 전이된 권리를 잔액과 원장에 반영한다.
-</div>
+실제 제품이 어떤 모델을 선택하는지는 요구사항에 따라 달라집니다. 모든 시스템이 세 개의 물리 테이블을 가져야 한다는 뜻도 아닙니다. 논리적 책임을 먼저 나누고, 저장 구조는 정합성과 조회 비용을 고려해 결정하는 편이 안전합니다.
 
 ---
 
-## 4. 목표 구조: 세 유스케이스, 하나의 방향
+## 3. 유스케이스의 출력으로 다음 책임을 연결한다
 
-~~~mermaid
-flowchart LR
-    subgraph Create["1. 생성"]
-        C1["조건 검증"] --> C2["Reward<br/>PENDING"]
-    end
-
-    subgraph Receive["2. 수령"]
-        R1["소유권 검증"] --> R2["PENDING → RECEIVED"]
-    end
-
-    subgraph Charge["3. 충전"]
-        D1["거래 원장 생성"] --> D2["사용자 잔액 증가"]
-    end
-
-    C2 --> R1
-    R2 --> D1
-
-    style Create fill:#e3f2fd,stroke:#1565c0
-    style Receive fill:#fff8e1,stroke:#f9a825
-    style Charge fill:#e8f5e9,stroke:#2e7d32
-~~~
-
-의존 방향도 한쪽으로만 흐르게 했습니다.
-
-~~~text
-CreateRewardUseCase
-        ↓ PENDING Reward
-ReceiveRewardUseCase
-        ↓ 성공한 상태 전이
-ChargeDurianUseCase
-        ↓ 거래 원장 + 잔액
-~~~
-
-충전 서비스는 리워드가 수령 가능한지 판단하지 않습니다. 리워드 수령 서비스는 잔액을 직접 계산하지 않습니다. 생성 서비스는 사용자가 언제 수령했는지 결정하지 않습니다.
-
----
-
-## 5. 생성 책임: 조건을 판정하고 PENDING을 만든다
-
-조건형 보상 생성은 다음 흐름으로 처리합니다. 구체적인 트리거와 구간 값은 설정된 정책으로 치환했습니다.
-
-~~~mermaid
-flowchart TD
-    A["조건형 보상 생성 시도"] --> B{동일 업무 키로 이미 생성됐는가?}
-    B -->|예| X["스킵"]
-    B -->|아니오| C["업무 조건 계산"]
-    C --> D{지급 조건을 만족하는가?}
-    D -->|아니오| X
-    D -->|예| Q{제외 조건에 해당하는가?}
-    Q -->|예| S["미지급 사유 기록"]
-    Q -->|아니오| R1["정책에 맞는 Reward 생성"]
-    S --> M["다음 정책 구간 확인"]
-    R1 --> M
-    M --> R2["추가 조건 충족 시 Reward 생성"]
-~~~
-
-실제 생성 메서드는 Reward를 저장한 뒤 결과만 반환합니다. 이 경로에는 두리안 충전 호출이 없습니다.
+분리된 서비스가 서로의 내부 저장소를 직접 조작하면 경계만 늘고 결합도는 그대로입니다. 대신 앞 단계가 다음 단계에 필요한 최소 결과를 반환하도록 설계할 수 있습니다.
 
 ~~~kotlin
-private fun createClaimIfEligible(
-    command: CreateRewardCommand,
-    policyKey: RewardPolicyKey,
-): CommandRewardResult? {
-    val policy = rewardPolicyPort.findByKey(policyKey) ?: return null
+// 공개 설명을 위한 가상 타입이다.
+data class CreatedEntitlement(
+    val id: ExampleId,
+)
 
-    val product =
-        queryProductDurianPort.findById(
-            policy.productId
-        ) ?: return null
+data class TransitionedEntitlement(
+    val id: ExampleId,
+    val transitionToken: TransitionToken,
+)
 
-    val reward = Reward.create(
-        userId = command.userId,
-        type = RewardType.CLAIMABLE,
-        durianProductId = product.id
-    )
+interface CreateEntitlement {
+    fun execute(command: ExampleCreateCommand): CreatedEntitlement
+}
 
-    val savedReward = commandRewardPort.saveReward(reward)
+interface TransitionEntitlement {
+    fun execute(command: ExampleTransitionCommand): TransitionedEntitlement
+}
 
-    return CommandRewardResult(
-        id = savedReward.id,
-        userId = savedReward.userId,
-        type = savedReward.type,
-        status = savedReward.status,
-        durianProductId = savedReward.durianProductId,
-        quantity = product.durianTotal,
-        description = product.description,
-        createdAt = savedReward.createdAt,
-        updatedAt = savedReward.updatedAt
-    )
+interface ApplyEffect {
+    fun execute(command: ExampleEffectCommand)
 }
 ~~~
 
-<code>Reward.create</code>의 기본 상태는 <code>PENDING</code>입니다.
+여기서 <code>TransitionedEntitlement</code>는 “상태 전이에 성공한 대상”만 다음 책임으로 전달하기 위한 예시입니다. 실제 반환 타입이나 호출 구조를 나타내지 않습니다.
 
 ~~~mermaid
-stateDiagram-v2
-    [*] --> PENDING: 수령형 조건 달성
-    PENDING --> RECEIVED: 사용자가 수령
-    RECEIVED --> [*]
+flowchart TB
+    I["입력"] --> UC1["Create Entitlement"]
+    UC1 --> O1["CreatedEntitlement"]
+    O1 --> UC2["Transition Entitlement"]
+    UC2 --> O2["TransitionedEntitlement"]
+    O2 --> UC3["Apply Effect"]
+    UC3 --> O3["Effect Result"]
+
+    DB1[("권리 저장소")] --- UC1
+    DB1 --- UC2
+    DB2[("자산 저장소")] --- UC3
 ~~~
 
-다른 수령형 보상도 같은 규칙을 따릅니다. 각 정책 조건과 기존 동일 업무 키 여부를 검사한 뒤 PENDING Reward만 생성합니다.
+이 방식은 다음과 같은 실수를 줄여 줍니다.
+
+- 생성 서비스가 자산 저장소의 세부 구현까지 아는 문제
+- 상태를 바꾸지 못했는데도 효과 반영을 시도하는 문제
+- 호출자가 내부 엔티티를 수정해 생명주기 규칙을 우회하는 문제
 
 ---
 
-## 6. 수령 책임: 상태 전이에 성공한 요청만 충전을 시작한다
+## 4. 상태 전이는 읽기와 쓰기를 하나의 조건으로 표현한다
 
-단건 수령 서비스는 다음 순서로 동작합니다.
+상태 기반 기능에서 흔한 실수는 먼저 읽고, 애플리케이션에서 판단한 다음, 나중에 갱신하는 것입니다. 동시에 두 요청이 들어오면 둘 다 같은 이전 상태를 읽을 수 있습니다.
 
 ~~~mermaid
 sequenceDiagram
-    autonumber
-    actor U as 사용자
-    participant R as ReceiveRewardService
-    participant DB as Reward Repository
-    participant C as ChargeDurianService
-    participant L as Durian Ledger
+    participant A as 요청 A
+    participant B as 요청 B
+    participant DB as 저장소
 
-    U->>R: rewardId 수령 요청
-    R->>DB: Reward 조회
-    R->>R: 소유권·현재 상태 검사
-    R->>DB: PENDING 조건 UPDATE
-    DB-->>R: affectedRows
-    alt affectedRows = 1
-        R->>C: rewardId로 충전 요청
-        C->>L: 거래 원장 + 잔액 반영
-        R-->>U: 수령 결과
-    else affectedRows = 0
-        R-->>U: 이미 수령된 보상
-    end
+    A->>DB: 상태 조회
+    B->>DB: 상태 조회
+    DB-->>A: 같은 이전 상태
+    DB-->>B: 같은 이전 상태
+    A->>DB: 상태 변경
+    B->>DB: 상태 변경 시도
 ~~~
 
+일반적인 대안은 기대 상태를 UPDATE 조건에 포함하는 것입니다.
+
+~~~sql
+UPDATE entitlement_example
+SET state = :next_state
+WHERE id = :id
+  AND state = :expected_state;
+~~~
+
+영향받은 행이 한 건이면 전이 성공, 없으면 누군가 먼저 처리했거나 입력 조건이 맞지 않은 것으로 해석할 수 있습니다. 단, “행이 없음”을 어떤 사용자 응답으로 바꿀지는 제품 정책이므로 이 글에서는 다루지 않습니다.
+
+상태 조건 UPDATE의 동시성 원리와 저장 컨텍스트 주의점은 [상태 조건 UPDATE로 중복 수령 방지](/posts/reward-conditional-update-idempotency/)에서 별도로 정리했습니다.
+
+---
+
+## 5. 원장은 부가 로그가 아니라 정합성 경계다
+
+잔액 숫자만 바뀌면 결과는 알 수 있어도 이유를 재구성하기 어렵습니다. 그래서 자산 변화와 근거 기록을 같은 정합성 경계에서 다루는 설계가 자주 사용됩니다.
+
+~~~mermaid
+flowchart LR
+    V["전이에 성공한 가상 권리"] --> L["원장 항목 생성"]
+    L --> B["잔액 변화"]
+    B --> C["커밋"]
+    L -. "같은 트랜잭션 후보" .- B
+~~~
+
+가상의 원장 모델은 다음처럼 최소한의 참조 키를 가질 수 있습니다.
+
+~~~sql
+CREATE TABLE example_asset_ledger (
+    ledger_id       UUID PRIMARY KEY,
+    subject_key     UUID NOT NULL,
+    reference_key   UUID NOT NULL,
+    delta_value     BIGINT NOT NULL,
+    recorded_at     TIMESTAMP NOT NULL,
+    UNIQUE (reference_key)
+);
+~~~
+
+이 스키마는 실제 테이블이나 컬럼이 아닙니다. <code>reference_key</code>에 유일성 제약을 두어 같은 근거의 중복 반영을 방어할 수 있다는 설계 예시입니다.
+
+애플리케이션의 사전 검사만으로는 동시 요청을 완전히 막기 어렵습니다. 조건부 상태 전이와 원장 유일성 제약처럼 서로 다른 계층의 방어를 조합하면 한 계층의 실수가 전체 정합성 훼손으로 이어질 가능성을 낮출 수 있습니다.
+
+---
+
+## 6. 트랜잭션 경계는 실패 시 함께 되돌릴 범위다
+
+책임을 분리했다고 해서 반드시 트랜잭션까지 세 개로 나눌 필요는 없습니다. 객체의 책임과 원자성 경계는 별개의 설계 결정입니다.
+
+~~~mermaid
+flowchart TB
+    subgraph TX["가상의 원자적 처리 범위"]
+        T["허용된 상태 전이"]
+        L["원장 기록"]
+        B["잔액 반영"]
+        T --> L --> B
+    end
+
+    C["권리 생성"] -. "별도 경계일 수도 있음" .-> TX
+~~~
+
+경계를 정할 때는 다음 질문이 유용했습니다.
+
+- 상태는 바뀌었지만 자산은 반영되지 않아도 되는가?
+- 원장은 생겼지만 잔액이 바뀌지 않은 상태를 허용하는가?
+- 외부 시스템 호출이 있다면 DB 롤백으로 되돌릴 수 있는가?
+- 재시도할 때 같은 근거를 식별할 키가 있는가?
+
+답이 “함께 성공하거나 함께 실패해야 한다”면 하나의 로컬 트랜잭션 후보입니다. 외부 시스템까지 포함한다면 로컬 트랜잭션만으로 해결할 수 없으므로 아웃박스, 멱등 키, 보상 작업 같은 별도의 전달 전략을 검토해야 합니다.
+
+---
+
+## 7. 포트는 기술보다 변경 이유를 기준으로 나눈다
+
+헥사고날 구조에서 포트를 지나치게 세분화하면 이름만 다른 인터페이스가 늘어날 수 있습니다. 반대로 하나의 저장 포트에 모든 기능을 모으면 권리와 자산의 변경 이유가 다시 결합됩니다.
+
+~~~mermaid
+flowchart LR
+    APP["Application"]
+    EP["Entitlement Port"]
+    AP["Asset Port"]
+    OP["Operation Record Port"]
+
+    APP --> EP
+    APP --> AP
+    APP --> OP
+
+    EP --> EDB[("Persistence Adapter A")]
+    AP --> ADB[("Persistence Adapter B")]
+    OP --> ODB[("Persistence Adapter C")]
+~~~
+
+포트의 적절한 크기는 팀과 코드베이스에 따라 다릅니다. 다만 다음 기준은 비교적 재사용하기 좋았습니다.
+
+- 같은 불변식을 지키는 연산은 함께 둔다.
+- 호출자가 알 필요 없는 물리 저장 구조는 숨긴다.
+- 도메인 결과와 저장 엔티티를 무조건 동일시하지 않는다.
+- 테스트에서 실패 지점을 독립적으로 표현할 수 있게 한다.
+
+---
+
+## 8. 여러 건 처리에서는 “성공한 대상”을 잃지 않는다
+
+여러 권리를 한 번에 처리할 때 단순히 전체 개수만 반환하면 어떤 항목이 실제로 전이에 성공했는지 알기 어렵습니다. 이후 효과 반영 대상을 안전하게 고르려면 성공한 식별자를 보존해야 합니다.
+
+~~~text
+입력 식별자 집합
+        │
+        ▼
+조건부 상태 전이
+        │
+        ├── 성공 식별자 집합
+        └── 전이되지 않은 식별자 집합
+~~~
+
+데이터베이스의 <code>RETURNING</code>, 항목별 조건부 UPDATE, 처리 토큰 등 여러 구현 전략이 있습니다. 어떤 전략이 적절한지는 데이터 양, 잠금 비용, 부분 성공 허용 여부와 데이터베이스 기능에 따라 달라집니다.
+
+부분 성공을 허용할지, 전체를 롤백할지, 재시도를 어떻게 보여줄지는 제품 정책입니다. 공개 예시에서는 한 가지를 정답처럼 제시하지 않고 결정이 필요한 지점으로만 남겼습니다.
+
+---
+
+## 9. 테스트는 메서드 호출보다 불변식을 검증한다
+
+책임 분리의 효과는 동시 요청과 실패 상황에서 드러납니다.
+
+| 테스트 범주 | 검증할 일반 불변식 |
+|---|---|
+| 생성 중복 | 같은 근거가 의도치 않게 여러 권리를 만들지 않는다 |
+| 상태 경합 | 동일한 이전 상태에서 한 전이만 성공한다 |
+| 원장 중복 | 같은 참조 키의 자산 변화가 중복 기록되지 않는다 |
+| 중간 실패 | 원장과 잔액이 합의한 원자성 경계를 지킨다 |
+| 재시도 | 같은 명령이 다시 와도 허용 범위를 넘는 부수효과가 없다 |
+
 ~~~kotlin
-@Transactional
-override fun receiveReward(
-    command: ReceiveRewardCommand
-): ReceiveRewardsResult {
-    val reward = queryRewardPort.findById(command.rewardId)
-        ?: throw NotFoundRewardException()
+@Test
+fun one_transition_wins_for_the_same_example_id() {
+    // Given: 같은 가상 권리를 가리키는 동시 명령
+    // When: 여러 실행자가 조건부 전이를 시도
+    // Then: 성공한 전이의 수가 설계한 불변식과 일치
+}
 
-    if (!reward.isOwnedBy(command.userId)) {
-        throw AccessDeniedException()
-    }
-
-    if (reward.isAlreadyReceived()) {
-        throw AlreadyReceivedRewardException()
-    }
-
-    val updatedCount =
-        commandRewardPort.updateStatusToReceived(reward.id)
-
-    if (updatedCount == 0) {
-        throw AlreadyReceivedRewardException()
-    }
-
-    val updatedReward =
-        queryRewardPort.findById(reward.id)
-            ?: throw NotFoundRewardException()
-
-    val balance =
-        chargeDurianUseCase.chargeDurianByReward(
-            ChargeDurianByRewardCommand(
-                userId = command.userId,
-                rewardId = updatedReward.id,
-                productId = updatedReward.durianProductId,
-                title = resolveTitleByRewardType(updatedReward.type)
-            )
-        )
-
-    // updatedReward와 balance로 ReceiveRewardsResult를 구성한다.
+@Test
+fun the_same_reference_does_not_create_duplicate_effects() {
+    // Given: 같은 가상 참조 키
+    // When: 효과 반영 명령이 반복
+    // Then: 원장과 자산 변화가 중복되지 않음
 }
 ~~~
 
-위 코드는 응답 DTO 매핑을 제외한 실제 핵심 흐름입니다. 사전 상태 확인은 빠른 실패를 위한 사용자 친화적 검증입니다. 실제 중복 방지의 최종 판단은 DB의 조건부 UPDATE 결과가 담당합니다. 이 부분은 세 번째 글에서 동시성 타임라인과 함께 자세히 다룹니다.
+테스트 이름과 타입 역시 설명용입니다. 실제 정책값 대신 “정확히 한 번 전이”, “중복 부수효과 없음” 같은 구조적 불변식을 검증하는 것이 핵심입니다.
 
 ---
 
-## 7. 충전 책임: 원장을 먼저 만들고 잔액을 갱신한다
+## 10. 정리
 
-<code>ChargeDurianService</code>는 보상 외에도 주문, 관리자 지급, 쿠폰 등 여러 출처의 충전을 처리합니다.
+이번 설계에서 얻은 일반적인 교훈은 다음과 같습니다.
 
-~~~mermaid
-flowchart LR
-    O["유료 주문"] --> C["ChargeDurianService"]
-    R["리워드 수령"] --> C
-    A["관리자 지급"] --> C
-    P["쿠폰"] --> C
-    C --> T["AssetLedger 저장"]
-    C --> U["UserDurian 잔액 저장"]
-~~~
+1. 권리 생성, 상태 전이, 자산 반영은 서로 다른 책임으로 모델링할 수 있습니다.
+2. 책임 분리와 트랜잭션 분리는 같은 결정이 아닙니다.
+3. 상태 전이는 기대 상태를 쓰기 조건에 포함하면 경합을 더 명확하게 다룰 수 있습니다.
+4. 원장과 유일성 제약은 중복 부수효과를 막는 중요한 방어선입니다.
+5. 여러 건 처리에서는 개수보다 실제 성공한 대상을 추적해야 합니다.
+6. 구체적인 지급 조건과 실패 응답은 구조가 아니라 제품 정책이므로 별도로 관리해야 합니다.
 
-공통 충전 로직은 상품을 조회하고, 현재 잔액을 기준으로 거래 원장을 만든 뒤, 무료 또는 유료 잔액을 증가시킵니다.
-
-~~~kotlin
-private fun processingDurian(
-    productId: UUID,
-    userId: UUID,
-    durianType: DurianType,
-    sourceType: LedgerSourceType,
-    sourceId: UUID,
-    meta: String?,
-): GetUserDurianBalanceResult {
-    val productDurian = queryProductDurianPort.findById(productId)
-        ?: throw NotFoundProductException()
-
-    val userDurian = queryUserDurianPort.findByUserId(userId)
-        ?: UserDurian.create(userId)
-
-    val currentBalancePaid = userDurian.balancePaid
-    val currentBalanceFree = userDurian.balanceFree
-    val currentTotalBalance = userDurian.balanceTotal
-
-    val totalAmount =
-        productDurian.durianBase + productDurian.durianBonus
-    val expiresAt = TimezoneConverter.calculateExpiresAtInUtc(
-        productDurian.duration.toLong()
-    )
-
-    val chargeTransaction = AssetLedger.createCredit(
-        userId = userId,
-        durianType = durianType,
-        sourceType = sourceType,
-        sourceId = sourceId,
-        amount = totalAmount,
-        balanceBefore = currentTotalBalance,
-        expiresAt = expiresAt,
-        meta = meta
-    )
-
-    commandAssetLedgerPort.save(chargeTransaction)
-
-    val updatedUserDurian = if (durianType.isFree()) {
-        userDurian.copy(
-            balanceFree = currentBalanceFree + totalAmount
-        )
-    } else {
-        userDurian.copy(
-            balancePaid = currentBalancePaid + totalAmount
-        )
-    }
-    commandUserDurianPort.save(updatedUserDurian)
-
-    return GetUserDurianBalanceResult(
-        balancePaid = updatedUserDurian.balancePaid,
-        balanceFree = updatedUserDurian.balanceFree,
-        balanceTotal = updatedUserDurian.balanceTotal
-    )
-}
-~~~
-
-### sourceType과 sourceId가 남기는 것
-
-| 필드 | 보상 충전 예시 | 의미 |
-|---|---|---|
-| sourceType | REWARD | 어떤 도메인에서 시작됐는가 |
-| sourceId | reward.id | 어떤 보상이 원인이었는가 |
-| entryType | CREDIT | 증가·차감 중 무엇인가 |
-| amount | 정책으로 결정 | 얼마가 변했는가 |
-| balanceBefore / After | 계산된 값 | 전후 잔액 |
-
-이 정보 덕분에 잔액 숫자 하나만 보는 대신 “어떤 보상 때문에 언제 얼마나 증가했는지”를 추적할 수 있습니다.
-
-<div class="notice--warning" markdown="1">
-**현재 제약의 정확한 범위**
-
-거래 엔티티에는 출처와 거래 종류를 묶은 유일 제약이 선언되어 있지 않습니다. 따라서 원장 자체가 보상 충전의 중복을 최종 차단하는 구조는 아닙니다. 현재의 1차 중복 차단선은 Reward의 PENDING → RECEIVED 조건부 UPDATE입니다.
-</div>
-
----
-
-## 8. 책임 분리와 트랜잭션 분리는 같은 말이 아니다
-
-서비스 클래스는 세 개로 나눴지만 단건 수령은 하나의 Spring 트랜잭션 안에서 처리됩니다.
-
-~~~mermaid
-flowchart LR
-    subgraph TX["하나의 수령 트랜잭션"]
-        A["Reward 상태 전이"] --> B["두리안 원장 저장"]
-        B --> C["사용자 잔액 저장"]
-    end
-
-    C --> D{모두 성공?}
-    D -->|예| E["COMMIT"]
-    D -->|아니오| F["ROLLBACK"]
-~~~
-
-<code>ReceiveRewardService.receiveReward</code>와 <code>ChargeDurianService.chargeDurianByReward</code>는 서로 다른 Spring 빈입니다. 두 메서드 모두 기본 전파 속성의 <code>@Transactional</code>을 사용하므로 충전 서비스는 바깥 수령 트랜잭션에 참여합니다.
-
-| 실패 지점 | Reward 상태 | 거래 원장 | 사용자 잔액 |
-|---|---|---|---|
-| 조건부 UPDATE 실패 | 변경 없음 | 생성 안 됨 | 변경 없음 |
-| 상품 조회 실패 | 롤백 | 생성 안 됨 | 변경 없음 |
-| 원장 저장 실패 | 롤백 | 롤백 | 변경 없음 |
-| 잔액 저장 실패 | 롤백 | 롤백 | 롤백 |
-| 모든 단계 성공 | RECEIVED | 커밋 | 커밋 |
-
-책임은 분리하되 원자적으로 함께 성공해야 하는 상태 변화는 같은 트랜잭션에 남겼습니다.
-
-> 클래스 경계는 “누가 무엇을 아는가”를 나누고, 트랜잭션 경계는 “무엇이 함께 성공해야 하는가”를 묶습니다.
-
----
-
-## 9. 일괄 수령은 충전 서비스에도 별도 유스케이스가 필요했다
-
-여러 보상을 하나씩 충전하면 사용자 잔액을 반복 조회·저장하고 거래도 건별 호출하게 됩니다. 그래서 일괄 수령은 성공한 보상 목록을 하나의 벌크 커맨드로 넘깁니다.
-
-~~~mermaid
-flowchart TD
-    P["PENDING 보상 N개 조회"] --> U["조건부 일괄 상태 UPDATE"]
-    U --> S["성공한 보상 구성"]
-    S --> T["N개 거래 원장 객체 생성"]
-    T --> TS["거래 원장 saveAll"]
-    TS --> B["최종 잔액 한 번 저장"]
-~~~
-
-~~~kotlin
-@Transactional
-override fun chargeDurianBulk(
-    command: ChargeDurianBulkCommand
-): GetUserDurianBalanceResult {
-    val products = queryProductDurianPort
-        .findAllByIdIn(command.items.map { it.productId }.distinct())
-        .associateBy { it.id }
-
-    val userDurian =
-        queryUserDurianPort.findByUserId(command.userId)
-            ?: UserDurian.create(command.userId)
-
-    var paid = userDurian.balancePaid
-    var free = userDurian.balanceFree
-    var total = userDurian.balanceTotal
-
-    val transactions = mutableListOf<AssetLedger>()
-
-    for (item in command.items) {
-        val product = products[item.productId]
-            ?: throw NotFoundProductException()
-        val amount = product.durianBase + product.durianBonus
-        val expiresAt = TimezoneConverter.calculateExpiresAtInUtc(
-            product.duration.toLong()
-        )
-
-        transactions += AssetLedger.createCredit(
-            userId = command.userId,
-            durianType = item.durianType,
-            sourceType = item.sourceType,
-            sourceId = item.sourceId,
-            amount = amount,
-            balanceBefore = total,
-            expiresAt = expiresAt,
-            meta = item.title?.toMetaJson()
-        )
-
-        if (item.durianType.isFree()) free += amount
-        else paid += amount
-        total += amount
-    }
-
-    commandAssetLedgerPort.saveAll(transactions)
-    val updatedUserDurian = commandUserDurianPort.save(
-        userDurian.copy(balancePaid = paid, balanceFree = free)
-    )
-
-    return GetUserDurianBalanceResult(
-        balancePaid = updatedUserDurian.balancePaid,
-        balanceFree = updatedUserDurian.balanceFree,
-        balanceTotal = updatedUserDurian.balanceTotal
-    )
-}
-~~~
-
-| 항목 | N번 단건 충전 | 벌크 충전 |
-|---|---:|---:|
-| 상품 조회 | 최대 N회 | 고유 상품 ID 한 번 |
-| 사용자 잔액 조회 | N회 | 한 번 |
-| 잔액 저장 | N회 | 한 번 |
-| 원장 데이터 | N건 | N건 유지 |
-| 트랜잭션 경계 | 반복 가능 | 한 번 |
-
-원장은 N건을 유지합니다. 일괄 처리라고 해서 원인 추적 단위를 잃지 않으면서, 잔액 계산과 저장만 묶었습니다.
-
----
-
-## 10. 모든 보상이 같은 정책을 따르는 것은 아니다
-
-현재 코드에는 사용자가 직접 수령하는 보상과 조건 달성 즉시 지급되는 보상이 함께 있습니다. 실제 보상 트리거 이름은 공개용 예시에서 A·B·C 유형으로 일반화했습니다.
-
-~~~mermaid
-flowchart LR
-    subgraph Claimable["사용자 수령형"]
-        C["조건형 A·B"] --> P["PENDING"]
-        P --> R["수령"]
-        R --> D["충전"]
-    end
-
-    subgraph Immediate["즉시 지급형"]
-        O["조건형 C"] --> I["RECEIVED 생성"]
-        I --> IC["즉시 충전"]
-    end
-~~~
-
-~~~kotlin
-val reward = Reward.create(
-    userId = command.userId,
-    type = RewardType.IMMEDIATE,
-    durianProductId = product.id,
-    status = RewardStatus.RECEIVED
-)
-
-val savedReward = commandRewardPort.saveReward(reward)
-
-chargeDurianUseCase.chargeDurianByReward(
-    ChargeDurianByRewardCommand(
-        userId = command.userId,
-        rewardId = savedReward.id,
-        productId = product.id,
-        title = LedgerTitle.REWARD_IMMEDIATE
-    )
-)
-~~~
-
-이 경로까지 포함해 “모든 Reward 생성은 충전과 완전히 분리됐다”고 말하면 현재 구현과 다릅니다.
-
-| 보상 타입 | 생성 상태 | 사용자 수령 필요 | 충전 시작 위치 |
-|---|---|---:|---|
-| CLAIMABLE_A | PENDING | 예 | ReceiveRewardService |
-| CLAIMABLE_B | PENDING | 예 | ReceiveRewardService |
-| IMMEDIATE_C | RECEIVED | 아니오 | CreateRewardService |
-
-책임 분리는 코드 모양을 통일하는 일이 아니라 제품 정책을 정확히 드러내는 일입니다. 즉시 지급형과 수령형이 모두 필요하다면 타입이나 지급 정책을 명시적으로 모델링하는 편이 다음 개선 방향입니다.
-
----
-
-## 11. 포트로 경계를 고정했다
-
-핵심 서비스는 영속성 구현과 직접 결합하지 않습니다.
-
-~~~mermaid
-flowchart LR
-    subgraph Core["Core"]
-        CR["CreateRewardService"]
-        RR["ReceiveRewardService"]
-        CD["ChargeDurianService"]
-        CP["CommandRewardPort"]
-        QP["QueryRewardPort"]
-        DP["CommandUserDurianPort"]
-        TP["CommandAssetLedgerPort"]
-    end
-
-    subgraph Infra["PostgreSQL Adapter"]
-        RA["Reward Adapter"]
-        DA["UserDurian Adapter"]
-        TA["Transaction Adapter"]
-    end
-
-    CR --> CP
-    RR --> QP
-    RR --> CP
-    RR --> CD
-    CD --> DP
-    CD --> TP
-    CP -.-> RA
-    QP -.-> RA
-    DP -.-> DA
-    TP -.-> TA
-~~~
-
-| 서비스 | 알아야 하는 것 | 몰라도 되는 것 |
-|---|---|---|
-| CreateRewardService | 보상 조건, 상품, 초기 상태 | 잔액 계산 방식 |
-| ReceiveRewardService | 소유권, 상태 전이, 충전 유스케이스 | JPA 저장 구현 |
-| ChargeDurianService | 상품 수량, 원장, 잔액 | 보상 생성 조건 |
-
-이 경계 덕분에 조건부 UPDATE는 Reward 어댑터에, 잔액 계산은 충전 서비스에, 오케스트레이션은 수령 서비스에 둘 수 있었습니다.
-
----
-
-## 12. 분리 후에도 남은 동시성 과제
-
-책임을 분리하면 중복 충전 지점은 줄어들지만 동시성 문제가 자동으로 사라지는 것은 아닙니다.
-
-### 12.1 보상 생성의 선조회 경쟁
-
-오늘 보상 존재 여부를 조회한 뒤 새 Reward를 저장하는 구조는 동시에 두 요청이 들어오면 둘 다 “없음”을 볼 수 있습니다. Reward 테이블에 업무 키 유일 제약이 없다면 중복 생성 가능성이 남습니다.
-
-### 12.2 거래 원장의 유일 제약 부재
-
-같은 rewardId를 원인으로 하는 CREDIT 원장이 두 번 생성되는 것을 DB 제약으로 막지 않습니다. 수령 상태 전이가 뚫리거나 다른 즉시 지급 경로가 추가되면 원장 계층만으로는 방어하지 못합니다.
-
-### 12.3 사용자 잔액의 동시 갱신
-
-<code>UserDurianEntity</code>에는 <code>@Version</code>이 있어 잃어버린 갱신을 감지합니다. 다만 충돌 시 어떤 요청을 재시도할지에 대한 정책은 별도로 필요합니다.
-
-~~~mermaid
-flowchart TD
-    G["중복 방지 레이어"] --> A["생성: 업무 키 UNIQUE"]
-    G --> B["수령: 상태 조건 UPDATE"]
-    G --> C["원장: source 유일 키"]
-    G --> D["잔액: version 또는 잠금"]
-
-    style B fill:#c8e6c9,stroke:#2e7d32,color:#111
-    style A fill:#fff9c4,stroke:#f9a825,color:#111
-    style C fill:#fff9c4,stroke:#f9a825,color:#111
-    style D fill:#e3f2fd,stroke:#1565c0,color:#111
-~~~
-
-현재 구현은 B를 핵심 게이트로 사용하고 D에서 낙관적 잠금을 적용합니다. A와 C를 DB 제약으로 보강하면 한 계층의 실수가 실제 재화 중복으로 이어질 가능성을 더 낮출 수 있습니다.
-
----
-
-## 13. 배운 점
-
-### 13.1 중복 호출보다 중복 책임을 먼저 찾아야 한다
-
-한 줄을 삭제하면 당장의 중복 충전은 멈춥니다. 하지만 다음 보상 타입이 같은 실수를 반복할 수 있습니다. 누가 충전을 시작할 수 있는지 한 곳으로 제한한 것이 더 근본적인 수정이었습니다.
-
-### 13.2 상태는 UI 표시값이 아니라 부수효과의 게이트다
-
-PENDING과 RECEIVED는 목록 화면을 위한 라벨이 아닙니다. 충전을 시작할 수 있는 요청을 결정하는 업무 규칙입니다.
-
-### 13.3 책임을 나눠도 원자성은 유지할 수 있다
-
-생성·수령·충전을 서로 다른 서비스로 나눴지만 수령 상태, 원장, 잔액은 같은 트랜잭션에서 커밋됩니다. 모듈성과 원자성은 서로 반대되는 목표가 아닙니다.
-
-### 13.4 원장은 잔액만큼 중요하다
-
-재화 시스템에서 “현재 얼마인가”만으로는 운영 사고를 분석할 수 없습니다. sourceType과 sourceId를 포함한 거래 원장이 있어야 변화의 원인을 역추적할 수 있습니다.
-
-### 13.5 예외 정책은 숨기지 말아야 한다
-
-일부 보상은 여전히 즉시 지급입니다. 모든 타입을 억지로 같은 흐름에 넣기보다 어떤 정책이 왜 예외인지 드러내는 편이 유지보수에 유리합니다.
-
----
-
-## 마무리
-
-리워드 생성과 두리안 충전을 한 메서드에서 처리하던 구조는 초기 요구사항에는 충분했습니다. 그러나 수령 UI와 여러 보상 타입이 추가되면서 “생성 즉시 지급”이라는 암묵적 의미가 더 이상 맞지 않았습니다.
-
-Reward를 받을 권리, Receive를 상태 전이의 오케스트레이션, Charge를 원장과 잔액 변경으로 다시 정의하면서 충전 시작점은 수령 흐름으로 모였습니다. 클래스는 나뉘었지만 함께 성공해야 하는 상태 변화는 하나의 트랜잭션으로 묶었습니다.
-
-도메인 책임 분리의 효과는 파일 수가 늘어나는 데 있지 않습니다. 같은 부수효과를 시작할 수 있는 이유와 장소가 하나로 줄어드는 데 있습니다.
-
----
-
-## 참고 자료
-- [Pexels 이미지 원문 — Duc Anh Nguyen](https://www.pexels.com/photo/colorful-building-blocks-on-a-table-8289844/)
+좋은 책임 분리는 클래스를 많이 만드는 일이 아니라, 각 변경이 어떤 불변식을 지키는지 분명하게 만드는 일에 가깝습니다. 내부 정책을 코드 곳곳에 흩뜨리지 않고 정책 계층에 모을 수 있다는 점도 이런 분리의 중요한 효과입니다.

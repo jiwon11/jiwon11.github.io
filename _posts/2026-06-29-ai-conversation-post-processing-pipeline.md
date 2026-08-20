@@ -12,26 +12,19 @@ image:
 
 # AI 대화 후처리 개선기 — 응답 트랜잭션에서 요약·친밀도·보상을 분리하기까지
 
-안녕하세요. duurian 팀에서 백엔드 개발을 담당하고 있는 정지원입니다.
+AI 기능이 포함된 요청은 핵심 결과를 저장한 뒤에도 파생 작업이 이어질 수 있습니다. 예를 들어 추가 분석, 검색용 데이터 생성, 지표 갱신처럼 사용자 응답과 다른 지연·실패 특성을 가진 작업들입니다.
 
-AI 대화의 마지막 턴에는 사용자에게 답변을 돌려주는 일 외에도 많은 작업이 따라옵니다. 대화를 요약하고, 대화 품질을 판별하고, 친밀도를 갱신하고, 조건에 맞으면 보상을 생성해야 합니다. 처음에는 이 작업들을 하나의 요청 흐름에서 처리했습니다. 구현은 단순했지만 사용자는 자신의 응답과 직접 관계없는 후처리가 끝날 때까지 기다려야 했습니다.
+이 글은 그런 파생 작업을 요청 트랜잭션에서 분리할 때 검토할 일반적인 설계 원칙을 정리합니다. 제목에 등장하는 요약·친밀도·보상은 문제를 이해하기 위한 예시 범주이며, 실제 서비스의 처리 단계나 순서를 뜻하지 않습니다.
 
-이번 글은 마지막 턴의 저장과 응답만 동기 경로에 남기고, 요약·친밀도·보상을 커밋 이후의 독립된 파이프라인으로 옮긴 과정을 다룹니다. 단순히 “코루틴으로 비동기화했다”는 이야기가 아니라 다음 질문에 답하는 개발기입니다.
-
-- 후처리는 언제 시작해야 커밋된 대화를 안전하게 읽을 수 있는가?
-- AI 호출과 DB 트랜잭션은 어디에서 분리해야 하는가?
-- 요약, 친밀도, 보상 사이의 순서는 어떻게 보장할 것인가?
-- 실패와 애플리케이션 종료까지 포함하면 현재 구조는 어디까지 안전한가?
-
-> 내부 성능 측정값과 세부 보상 트리거는 공개용으로 일반화했습니다. 표와 다이어그램은 절대 시간 대신 상대적인 전후 관계를 보여줍니다.
+> 아래 이벤트 이름, Task A·B·C, 코드, 다이어그램과 장애 시나리오는 모두 가상 예시입니다. 실제 실행 조건, 작업 순서, 의존 관계, 프롬프트, 모델, 재시도, 시간 제한, 보상 규칙, 트랜잭션 범위, 클래스명과 운영 수치는 포함하지 않았습니다.
 {: .prompt-info }
 
 ![서버의 연결과 데이터 흐름](/assets/images/posts/ai-conversation-post-processing/network-cables.jpg)
 
-<small>후처리 파이프라인을 떠올리게 하는 네트워크 연결. Photo by [Brett Sayles on Pexels](https://www.pexels.com/photo/cables-connected-on-server-2881229/).</small>
+<small>비동기 데이터 흐름을 떠올리게 하는 네트워크 연결. Photo by [Brett Sayles on Pexels](https://www.pexels.com/photo/cables-connected-on-server-2881229/).</small>
 
 <div class="notice--info" markdown="1">
-**AI 대화와 보상 파이프라인 개발기**
+**연관 개발기**
 
 1. **AI 대화 후처리 개선기** — 현재 글
 2. [리워드 생성·수령·충전 책임 분리](/posts/reward-creation-receipt-charge-responsibility/)
@@ -40,588 +33,372 @@ AI 대화의 마지막 턴에는 사용자에게 답변을 돌려주는 일 외�
 
 ---
 
-## 1. 한눈에 보는 개선 결과
+## 1. 먼저 핵심 결과와 파생 결과를 구분한다
 
-| 구분 | 개선 전 | 개선 후 |
-|---|---|---|
-| 사용자 응답 경로 | 대화 저장 + AI 요약까지 대기 | 사용자/AI 대화 저장까지만 담당 |
-| 후처리 시작점 | 요청 흐름 내부 | 대화 트랜잭션 커밋 이후 |
-| AI 호출과 DB | 긴 흐름 안에서 혼재 | AI 호출은 트랜잭션 밖, 저장만 짧은 트랜잭션 |
-| 작업 순서 | 호출 위치에 암묵적으로 의존 | 요약 → 친밀도 → 보상으로 명시 |
-| 작업 격리 | 한 실패가 전체 요청에 영향 | 사용자별 작업과 단계별 예외를 격리 |
-| 체감 성능 | 후처리까지 모두 대기 | 임계 경로가 크게 단축 |
-
-초기 테스트에서는 “사용자가 기다릴 이유가 없는 구간”을 응답 경로에서 제거한 뒤 마지막 턴의 체감 지연이 크게 줄었습니다.
+비동기 기술을 선택하기 전에 요청의 완료 조건을 정의해야 합니다.
 
 ~~~mermaid
 flowchart LR
-    subgraph before["개선 전 · 후처리까지 대기"]
-        B1["대화 생성"] --> B2["대화 저장"]
-        B2 --> B3["AI 요약"]
-        B3 --> B4["요약 저장"]
-        B4 --> B5["HTTP 응답"]
-    end
-
-    subgraph after["개선 후 · 임계 경로 단축"]
-        A1["대화 생성"] --> A2["대화 저장"]
-        A2 --> A3["HTTP 응답"]
-        A2 -. "커밋 후 이벤트" .-> A4["요약·친밀도·보상"]
-    end
-
-    style B5 fill:#ef9a9a,stroke:#c62828,color:#111
-    style A3 fill:#a5d6a7,stroke:#2e7d32,color:#111
-    style A4 fill:#bbdefb,stroke:#1565c0,color:#111
+    R["사용자 요청"] --> K["핵심 처리"]
+    K --> DB[("핵심 결과 커밋")]
+    DB --> H["응답 가능"]
+    DB -. "파생 작업 후보" .-> A["Task A"]
+    DB -. "파생 작업 후보" .-> B["Task B"]
+    DB -. "파생 작업 후보" .-> C["Task C"]
 ~~~
+
+핵심 결과는 요청 성공을 판단하는 데 반드시 필요한 데이터입니다. 파생 결과는 나중에 계산할 수 있지만, 늦어졌을 때의 사용자 경험과 복구 방법을 별도로 정의해야 하는 데이터입니다.
+
+| 질문 | 핵심 처리 후보 | 파생 처리 후보 |
+|---|---:|---:|
+| 없으면 현재 요청이 실패인가? | 예 | 상황에 따라 다름 |
+| 즉시 일관성이 필요한가? | 대체로 예 | 별도 검토 |
+| 외부 API 지연을 포함하는가? | 가능하면 피함 | 격리 후보 |
+| 독립 재시도가 가능한가? | 제한적 | 설계 가능 |
+
+이 표는 특정 제품의 분류가 아닙니다. 같은 작업도 사용자 계약과 데이터 의존성에 따라 핵심 경로가 될 수 있습니다.
 
 ---
 
-## 2. 문제의 시작: 마지막 턴이 너무 많은 책임을 가졌다
+## 2. 비동기화는 지연을 없애지 않고 이동시킨다
 
-일반적인 대화 턴은 “입력 → AI 응답 → 저장 → 반환”으로 끝납니다. 하지만 마지막 턴은 달랐습니다.
-
-~~~mermaid
-flowchart TD
-    T["마지막 대화 턴"] --> C["사용자·AI 대화 저장"]
-    T --> S["오늘 대화 요약 생성"]
-    T --> Q["대화 품질 판별"]
-    T --> F["친밀도 갱신"]
-    T --> R["조건에 맞는 보상 생성"]
-
-    S --> Q
-    S --> F
-    Q --> R
-    F --> R
-~~~
-
-이 작업들을 요청 안에서 순서대로 실행하면 다음 문제가 생깁니다.
-
-1. OpenAI 응답 시간이 그대로 마지막 턴 지연에 더해집니다.
-2. 요약 실패가 이미 성공한 대화 자체를 실패처럼 보이게 만들 수 있습니다.
-3. 외부 API를 기다리는 동안 DB 트랜잭션을 열어둘 유혹이 생깁니다.
-4. 친밀도와 보상이 “커밋되지 않은 대화”를 읽는 타이밍 문제가 생깁니다.
-
-<div class="notice--warning" markdown="1">
-**핵심 문제**
-
-대화 저장은 사용자가 요청한 핵심 기능이고, 요약·친밀도·보상은 그 결과를 소비하는 후처리입니다. 서로 실패 의미와 지연 허용 범위가 다른데 같은 생명주기에 묶여 있었습니다.
-</div>
-
----
-
-## 3. 먼저 동기 경로의 완료 조건을 다시 정의했다
-
-최적화의 출발점은 기술 선택이 아니라 완료 조건의 재정의였습니다.
-
-> “사용자와 AI의 대화가 DB에 안전하게 저장되면 이 HTTP 요청은 성공이다.”
-
-요약이나 보상 생성은 즉시 끝날 필요가 없습니다. 반면 저장되지 않은 대화를 기반으로 요약을 만들면 안 됩니다. 그래서 트랜잭션을 두 종류로 나눴습니다.
-
-| 트랜잭션 | 책임 | 외부 API 포함 | 완료가 사용자 응답을 막는가 |
-|---|---|---:|---:|
-| T1 | 사용자·AI 대화 저장 | 아니오 | 예 |
-| T2 | 생성된 요약 저장 | 아니오 | 아니오 |
-| 후속 서비스 트랜잭션 | 친밀도·보상 생성 | 아니오 | 아니오 |
+파생 작업을 요청 밖으로 옮기면 HTTP 응답 경로는 짧아질 수 있습니다. 하지만 전체 계산량과 실패 가능성이 사라지는 것은 아닙니다.
 
 ~~~mermaid
 sequenceDiagram
-    autonumber
     actor U as 사용자
-    participant API as Conversation API
-    participant DB as PostgreSQL
-    participant E as Event Listener
-    participant AI as OpenAI
-    participant P as 후처리 서비스
+    participant API as API
+    participant DB as DB
+    participant W as Worker
+    participant X as External API
 
-    U->>API: 마지막 턴 요청
-    API->>DB: 사용자·AI 대화 저장 (T1)
-    API->>API: ConversationCompletedEvent 발행
+    U->>API: 요청
+    API->>DB: 핵심 데이터 저장
     DB-->>API: COMMIT
-    API-->>U: 대화 응답
-
-    Note over E,P: T1 커밋 이후, 응답 경로 밖
-    E->>AI: 오늘 대화 요약 요청
-    AI-->>E: 요약 결과
-    E->>DB: 요약 저장 (짧은 T2)
-    E->>P: 친밀도 갱신
-    E->>P: 보상 생성 시도
+    API-->>U: 응답
+    API-->>W: 파생 작업 신호
+    W->>X: 외부 연산
+    X-->>W: 결과
+    W->>DB: 파생 결과 저장
 ~~~
 
-이 구조에서 중요한 점은 “이벤트 발행”과 “이벤트 처리”의 시점이 다르다는 것입니다. 이벤트는 T1 안에서 발행하지만, 리스너는 T1이 성공적으로 커밋된 뒤 실행합니다.
+이 구조가 유효하려면 다음 질문에 답해야 합니다.
+
+- 신호가 유실되면 어떻게 발견하는가?
+- 같은 신호가 중복 전달되면 안전한가?
+- 애플리케이션이 종료될 때 진행 중인 작업을 어떻게 다루는가?
+- 파생 결과가 늦어져도 되는 최대 범위는 무엇인가?
+- 운영자가 실패를 재처리할 수 있는가?
+
+따라서 “코루틴을 실행했다”는 사실만으로 신뢰할 수 있는 파이프라인이 완성되지는 않습니다. 전달 보장, 멱등성, 관측 가능성과 종료 절차까지 하나의 설계로 봐야 합니다.
 
 ---
 
-## 4. 대화 저장과 이벤트 발행을 한 트랜잭션에 묶었다
+## 3. 시작 조건은 커밋 성공과 결합한다
 
-현재 구현에서 <code>ConversationPersistenceService</code>는 두 대화를 저장하고 마지막 턴일 때만 완료 이벤트를 발행합니다.
-
-~~~kotlin
-@Service
-class ConversationPersistenceService(
-    private val commandConversationPort: CommandConversationPort,
-    private val eventPublisher: ApplicationEventPublisher,
-) {
-
-    @Transactional
-    fun saveConversationsAndPublishEvent(
-        userConversation: Conversation,
-        aiConversation: Conversation,
-        isLastTurn: Boolean,
-        userId: UUID,
-    ): Pair<Conversation, Conversation> {
-        val savedUser = commandConversationPort.saveConversation(userConversation)
-        val savedAi = commandConversationPort.saveConversation(aiConversation)
-
-        if (isLastTurn) {
-            eventPublisher.publishEvent(ConversationCompletedEvent(userId))
-        }
-
-        return savedUser to savedAi
-    }
-}
-~~~
-
-이벤트를 저장 성공 이후에 직접 호출하는 것처럼 보이지만, 실제 리스너는 <code>AFTER_COMMIT</code>에 결합했습니다.
-
-~~~kotlin
-@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-fun handleConversationCompleted(event: ConversationCompletedEvent) {
-    conversationPostTurnScope.launch(Dispatchers.IO) {
-        processPostTurn(event.userId)
-    }
-}
-~~~
-
-Spring 공식 문서에서 <code>AFTER_COMMIT</code>은 트랜잭션이 성공적으로 커밋된 후 리스너를 실행하는 단계입니다. 따라서 저장이 롤백되면 후처리도 시작되지 않습니다.
+파생 작업이 방금 저장한 데이터를 다시 읽는다면, 저장 메서드가 호출된 시점보다 커밋 성공 시점이 더 중요한 경계입니다.
 
 ~~~mermaid
 stateDiagram-v2
-    [*] --> T1진행
-    T1진행 --> 커밋: 저장 성공
-    T1진행 --> 롤백: 저장 실패
-    커밋 --> 후처리이벤트
-    롤백 --> 종료
-    후처리이벤트 --> 종료
+    [*] --> 처리중
+    처리중 --> 커밋완료: 저장 성공
+    처리중 --> 롤백완료: 저장 실패
+    커밋완료 --> 파생작업후보
+    롤백완료 --> 종료
+    파생작업후보 --> 종료
 ~~~
 
-<div class="notice--info" markdown="1">
-**왜 일반 이벤트 리스너가 아니었을까?**
+설명용 의사 코드는 다음처럼 표현할 수 있습니다.
 
-대화 요약은 오늘 저장된 대화를 다시 조회합니다. 커밋 전 리스너가 먼저 실행되면 같은 데이터가 보인다는 보장이 약해집니다. 후처리 시작 조건을 “메서드가 호출됨”이 아니라 “대화가 커밋됨”으로 잡았습니다.
-</div>
+~~~kotlin
+data class PostProcessRequested(
+    val recordId: ExampleRecordId,
+    val correlationId: CorrelationId,
+)
+
+fun handle(command: ExampleCommand): ExampleResult =
+    transaction {
+        val saved = saveCoreResult(command)
+
+        afterSuccessfulCommit {
+            publish(
+                PostProcessRequested(
+                    recordId = saved.id,
+                    correlationId = command.correlationId,
+                )
+            )
+        }
+
+        saved.toResult()
+    }
+~~~
+
+<code>afterSuccessfulCommit</code>과 <code>publish</code>는 특정 프레임워크 API가 아니라 개념을 보여주는 가상 함수입니다. 실제 구현은 로컬 이벤트, 트랜잭셔널 아웃박스, 메시지 브로커 등 요구되는 전달 수준에 따라 달라질 수 있습니다.
+
+핵심은 두 가지입니다.
+
+1. 롤백된 데이터에 대한 파생 작업을 시작하지 않습니다.
+2. 커밋과 신호 전달 사이의 실패 가능성을 별도로 다룹니다.
 
 ---
 
-## 5. 이벤트 리스너와 비동기 실행은 서로 다른 책임이다
+## 4. 커밋 후 콜백과 내구성 있는 전달은 다르다
 
-<code>AFTER_COMMIT</code>은 실행 시점을 정할 뿐, 작업을 자동으로 비동기화하지 않습니다. 리스너 안에서 오래 걸리는 요약을 그대로 실행하면 커밋 이후라도 요청 스레드는 그 작업을 기다릴 수 있습니다.
+프로세스 메모리 안의 이벤트는 구현이 단순하고 지연이 짧지만, 커밋 직후 프로세스가 종료되면 신호가 유실될 수 있습니다. 반면 아웃박스나 메시지 브로커는 구성 요소가 늘어나는 대신 복구 가능한 전달 경로를 만들 수 있습니다.
 
-그래서 후처리 전용 <code>CoroutineScope</code>를 빈으로 두었습니다.
-
-~~~kotlin
-@Configuration
-class CoroutineConfig {
-    private val supervisorJob = SupervisorJob()
-
-    private val exceptionHandler = CoroutineExceptionHandler { _, exception ->
-        log.error(exception) {
-            "대화 후처리 코루틴 실행 중 처리되지 않은 예외 발생"
-        }
-    }
-
-    @Bean
-    fun conversationPostTurnScope(): CoroutineScope =
-        CoroutineScope(
-            supervisorJob +
-                Dispatchers.Default +
-                exceptionHandler +
-                CoroutineName("ConversationPostTurnScope")
-        )
-
-    @PreDestroy
-    fun cleanup() {
-        supervisorJob.cancel("애플리케이션 종료")
-    }
-}
-~~~
-
-각 구성 요소의 책임은 다음과 같습니다.
-
-| 구성 요소 | 담당하는 문제 |
-|---|---|
-| <code>AFTER_COMMIT</code> | 커밋된 대화만 후처리 |
-| <code>launch(Dispatchers.IO)</code> | 요청 경로에서 분리하고 블로킹 I/O용 실행 문맥 사용 |
-| <code>SupervisorJob</code> | 한 사용자의 작업 실패가 다른 사용자의 작업을 취소하지 않도록 격리 |
-| <code>CoroutineExceptionHandler</code> | 처리되지 않은 루트 코루틴 예외 기록 |
-| <code>CoroutineName</code> | 로그와 디버깅에서 후처리 작업 식별 |
-| <code>@PreDestroy</code> | 애플리케이션 종료 시 새 작업과 진행 작업 취소 |
+| 방식 | 장점 | 반드시 검토할 위험 |
+|---|---|---|
+| 커밋 후 인메모리 실행 | 단순한 구조, 낮은 도입 비용 | 프로세스 종료 시 유실 가능성 |
+| DB 작업 레코드 | 핵심 데이터와 작업 예약을 함께 커밋 가능 | 폴링, 정리, 중복 실행 관리 |
+| 메시지 브로커 | 소비자 분리와 확장에 유리 | 인프라 운영, 중복 전달, 순서 관리 |
 
 ~~~mermaid
 flowchart TB
-    Scope["ConversationPostTurnScope"]
-    Scope --> A["사용자 A 후처리"]
-    Scope --> B["사용자 B 후처리"]
-    Scope --> C["사용자 C 후처리"]
-    A --> AF["요약 실패"]
-    B --> BS["정상 완료"]
-    C --> CS["정상 완료"]
-    AF -. "SupervisorJob: 실패 미전파" .- BS
-    AF -. "SupervisorJob: 실패 미전파" .- CS
-
-    style AF fill:#ffcdd2,stroke:#c62828,color:#111
-    style BS fill:#c8e6c9,stroke:#2e7d32,color:#111
-    style CS fill:#c8e6c9,stroke:#2e7d32,color:#111
+    COMMIT["핵심 데이터 커밋"]
+    COMMIT --> M{"필요한 전달 보장"}
+    M -->|"프로세스 범위로 충분"| MEM["인메모리 실행 후보"]
+    M -->|"복구 가능한 예약 필요"| OUT["작업 레코드·아웃박스 후보"]
+    M -->|"독립 소비자·확장 필요"| MQ["메시지 브로커 후보"]
 ~~~
 
-<code>SupervisorJob</code>은 “서로 다른 이벤트 작업”을 격리합니다. 한 이벤트 안의 요약·친밀도·보상 순서까지 자동으로 격리하는 것은 아닙니다. 그 부분은 서비스 코드에서 직접 정의했습니다.
+어느 방식이 맞는지는 작업의 중요도와 허용 가능한 지연에 따라 달라집니다. 이 글은 실제 서비스가 선택한 방식을 밝히지 않고, 판단 기준만 정리합니다.
 
 ---
 
-## 6. 후처리 순서를 코드로 드러냈다
+## 5. 외부 API 호출과 DB 트랜잭션을 분리한다
 
-요약, 친밀도, 보상은 완전히 독립적이지 않습니다.
-
-- 친밀도 계산은 오늘 생성된 요약 개수를 사용합니다.
-- 저품질 대화 판별은 요약 내용을 사용합니다.
-- 보상은 대화 종료 기록과 요약 존재 여부를 확인합니다.
-
-그래서 세 작업을 무조건 병렬로 실행하지 않았습니다.
-
-~~~kotlin
-private suspend fun processPostTurn(userId: UUID) {
-    createSummary(userId) ?: return
-
-    withContext(NonCancellable) {
-        updateFriendship(userId)
-        createReward(userId)
-    }
-}
-~~~
-
-~~~mermaid
-flowchart TD
-    S["1. 요약 생성"] --> OK{성공?}
-    OK -->|아니오| STOP["후속 작업 중단"]
-    OK -->|예| NC["NonCancellable 구간"]
-    NC --> F["2. 친밀도 갱신"]
-    F --> R["3. 보상 생성 시도"]
-    F -. "실패는 로깅 후 계속" .-> R
-
-    style STOP fill:#ffcdd2,stroke:#c62828,color:#111
-    style NC fill:#fff9c4,stroke:#f9a825,color:#111
-    style R fill:#c8e6c9,stroke:#2e7d32,color:#111
-~~~
-
-여기서 <code>NonCancellable</code>은 친밀도와 보상을 “절대 실패하지 않게” 만들지 않습니다. 부모 코루틴의 취소 신호가 들어왔을 때 해당 블록이 취소로 중단되는 것을 막을 뿐입니다. 각 단계에서 발생한 일반 예외는 여전히 직접 처리해야 합니다.
-
-~~~kotlin
-private fun updateFriendship(userId: UUID) {
-    try {
-        conversationFriendshipService
-            .tryUpdateFriendshipAfterConversation(userId)
-    } catch (e: Exception) {
-        log.error(e) { "친밀도 업데이트 실패" }
-    }
-}
-
-private fun createReward(userId: UUID) {
-    try {
-        conversationRewardService
-            .tryCreateConversationReward(userId)
-    } catch (e: Exception) {
-        log.error(e) { "대화 보상 생성 실패" }
-    }
-}
-~~~
-
-### 실패 정책을 표로 고정하기
-
-| 실패 지점 | 대화 저장 | 요약 | 친밀도 | 보상 | 현재 동작 |
-|---|---:|---:|---:|---:|---|
-| T1 롤백 | 실패 | 미실행 | 미실행 | 미실행 | 이벤트 소비 안 함 |
-| AI 요약 호출 실패 | 성공 | 실패 | 미실행 | 미실행 | 로그 후 종료 |
-| 요약 저장 실패 | 성공 | 실패 | 미실행 | 미실행 | T2 롤백 후 종료 |
-| 친밀도 갱신 실패 | 성공 | 성공 | 실패 | 실행 | 단계 예외 격리 |
-| 보상 생성 실패 | 성공 | 성공 | 성공 가능 | 실패 | 로그만 남김 |
-| JVM 비정상 종료 | 성공 | 유실 가능 | 유실 가능 | 유실 가능 | 재시도 없음 |
-
-이 표는 구현 설명보다 더 중요했습니다. “비동기”라는 한 단어로는 어느 실패가 어디까지 전파되는지 알 수 없기 때문입니다.
-
----
-
-## 7. AI 호출을 트랜잭션 밖으로 밀어냈다
-
-요약 생성에는 네 종류의 작업이 섞여 있습니다.
+외부 AI API는 네트워크 지연, 공급자 제한, 타임아웃과 일시 오류를 가집니다. 이런 호출을 DB 트랜잭션 안에 두면 응답을 기다리는 동안 커넥션과 잠금이 오래 유지될 수 있습니다.
 
 ~~~mermaid
 flowchart LR
-    Q["대화·프롬프트 조회"] --> C["프롬프트 구성"]
-    C --> AI["OpenAI 호출"]
-    AI --> P["응답 파싱"]
-    P --> T2["요약 저장 T2"]
+    subgraph risky["긴 트랜잭션 후보"]
+        T1["BEGIN"] --> Q1["데이터 조회"]
+        Q1 --> X1["외부 API 대기"]
+        X1 --> S1["결과 저장"]
+        S1 --> C1["COMMIT"]
+    end
 
-    style AI fill:#bbdefb,stroke:#1565c0,color:#111
-    style T2 fill:#c8e6c9,stroke:#2e7d32,color:#111
+    subgraph separated["분리된 경계"]
+        Q2["필요 데이터 조회"] --> X2["외부 API 호출"]
+        X2 --> T2["짧은 저장 트랜잭션"]
+    end
 ~~~
 
-가장 오래 걸리고 실패 가능성이 높은 것은 외부 AI 호출입니다. 이 시간을 DB 트랜잭션에 포함하면 커넥션과 트랜잭션 수명이 외부 시스템의 응답 시간에 종속됩니다. 현재 코드는 AI 호출을 먼저 끝내고, 저장 구간만 <code>TransactionTemplate</code>로 감쌉니다.
+일반적인 처리 모양은 다음과 같습니다.
 
 ~~~kotlin
-override suspend fun createConversationSummary(
-    command: CreateConversationSummaryCommand
-): List<String> {
-    val conversations =
-        queryConversationPort.findAllByUserIdAndCreatedAtInRange(
-            command.userId,
-            TimezoneConverter.calculateTimeRangeInUtc()
+suspend fun runExampleTask(id: ExampleRecordId) {
+    val input = loadInputSnapshot(id)
+    val generated = externalPort.generate(input)
+
+    shortTransaction {
+        saveDerivedResult(
+            id = id,
+            result = generated,
         )
-
-    val generationResult = withContext(Dispatchers.IO) {
-        handleSummary(conversations)
     }
-
-    withContext(Dispatchers.IO) {
-        transactionalRunner.executeWithoutResult {
-            generationResult.parsedSummaries.forEach { content ->
-                commandConversationSummaryPort.saveConversationSummary(
-                    ConversationSummary.create(command.userId, content)
-                )
-            }
-        }
-    }
-
-    return generationResult.parsedSummaries
 }
 ~~~
+
+다만 조회 이후 원본이 변경될 수 있으므로 스냅샷 버전, 입력 해시, 조건부 저장 같은 검증이 필요할 수 있습니다. 어떤 충돌을 허용하고 어떤 결과를 폐기할지는 제품 요구사항에 따라 정해야 합니다.
+
+---
+
+## 6. Task A·B·C의 관계를 명시한다
+
+비동기 파이프라인의 작업은 모두 병렬로 실행할 수 있는 것도, 모두 직렬이어야 하는 것도 아닙니다. 데이터 의존성을 그래프로 먼저 그리면 실행 구조를 선택하기 쉬워집니다.
+
+~~~mermaid
+flowchart LR
+    E["가상 이벤트"]
+    E --> A["Task A"]
+    E --> B["Task B"]
+    A --> C["Task C"]
+    B --> C
+    E --> D["Task D"]
+
+    style A fill:#e3f2fd,stroke:#1565c0
+    style B fill:#e3f2fd,stroke:#1565c0
+    style C fill:#fff8e1,stroke:#f9a825
+    style D fill:#e8f5e9,stroke:#2e7d32
+~~~
+
+이 그림은 설명을 위한 가상 의존 관계이며 실제 후처리 순서와 대응하지 않습니다.
+
+| 관계 | 실행 전략 후보 |
+|---|---|
+| 서로 입력과 출력이 독립 | 제한된 동시성으로 병렬 실행 |
+| 앞 작업의 결과가 필요 | 명시적 순차 실행 |
+| 일부 실패를 허용 | 실패 격리와 결과 상태 기록 |
+| 모두 성공해야 의미 있음 | 묶음 실패 처리 또는 보상 전략 |
+
+호출 순서에 우연히 의존하면 리팩터링 과정에서 규칙이 깨질 수 있습니다. 의존성이 실제 비즈니스 규칙이라면 코드 구조나 오케스트레이션 모델에 명시적으로 드러나야 합니다.
+
+---
+
+## 7. 코루틴에서는 수명과 실패 전파를 먼저 설계한다
+
+코루틴은 비동기 코드를 읽기 쉽게 만들지만 작업의 내구성을 자동으로 제공하지는 않습니다. 특히 서버 애플리케이션에서는 어느 스코프가 작업을 소유하는지 분명해야 합니다.
+
+~~~mermaid
+flowchart TB
+    S["애플리케이션이 관리하는 Scope"]
+    S --> J1["Event 1 Job"]
+    S --> J2["Event 2 Job"]
+    J1 --> A1["Task A"]
+    J1 --> B1["Task B"]
+    J2 --> A2["Task A"]
+
+    STOP["종료 신호"] -.-> S
+~~~
+
+검토할 항목은 다음과 같습니다.
+
+- 요청 스코프와 애플리케이션 스코프 중 누가 작업을 소유하는가?
+- 한 자식 작업의 실패가 형제 작업을 취소해야 하는가?
+- 동시 실행 수는 어디에서 제한하는가?
+- 블로킹 클라이언트를 어떤 실행 문맥에서 호출하는가?
+- 종료 시 새 작업 수락을 멈추고 진행 작업을 기다릴 것인가?
+- 제한 시간 이후 작업을 취소하면 재처리 근거가 남는가?
 
 ~~~kotlin
-@Component
-class TransactionalRunner(
-    private val transactionTemplate: TransactionTemplate,
-) {
-    fun executeWithoutResult(block: () -> Unit) {
-        transactionTemplate.executeWithoutResult { block() }
+// 실제 설정이 아닌 구조 설명용 의사 코드다.
+suspend fun processExample(event: PostProcessRequested) =
+    supervisedTaskGroup {
+        val a = async { taskA(event) }
+        val b = async { taskB(event) }
+
+        taskC(
+            first = a.await(),
+            second = b.await(),
+        )
     }
-}
 ~~~
 
-~~~mermaid
-gantt
-    title 트랜잭션을 짧게 유지한 후처리
-    dateFormat  X
-    axisFormat %L
-    section 외부 작업
-    대화 조회·프롬프트 구성 :0, 2
-    OpenAI 호출              :2, 9
-    응답 파싱                :9, 10
-    section DB 트랜잭션
-    요약 저장 T2             :10, 12
-~~~
-
-Gantt의 숫자는 실제 초가 아니라 상대적인 구간입니다. 핵심은 느린 외부 호출 구간에 DB 트랜잭션이 열려 있지 않다는 점입니다.
+<code>supervisedTaskGroup</code> 역시 가상 표현입니다. 실패 격리가 필요하다는 이유만으로 모든 예외를 삼키면 안 됩니다. 실패는 상태, 메트릭 또는 재처리 가능한 레코드로 관측되어야 합니다.
 
 ---
 
-## 8. 친밀도와 보상 서비스에도 방어 조건을 중복 배치했다
+## 8. 멱등성은 전달 방식과 함께 설계한다
 
-파이프라인이 순서를 보장하더라도 각 서비스는 독립적으로 안전해야 합니다. 이벤트가 중복 호출되거나 대화 종료 API와 후처리가 앞뒤로 교차할 수 있기 때문입니다.
-
-### 친밀도 갱신 전 확인
-
-~~~mermaid
-flowchart TD
-    A["친밀도 갱신 요청"] --> B{오늘 이벤트가 이미 있는가?}
-    B -->|예| X["스킵"]
-    B -->|아니오| C{대화 종료 기록이 있는가?}
-    C -->|아니오| X
-    C -->|예| D{오늘 요약이 있는가?}
-    D -->|아니오| X
-    D -->|예| E["친밀도 갱신"]
-    E --> F{레벨 상승?}
-    F -->|예| G["레벨업 보상 생성"]
-    F -->|아니오| H["종료"]
-~~~
-
-### 대화 보상 생성 전 확인
-
-| 순서 | 가드 조건 | 막는 문제 |
-|---:|---|---|
-| 1 | 오늘 대화 보상이 이미 존재 | 이벤트 중복 처리 |
-| 2 | 오늘 미지급 이력이 이미 존재 | 저품질 판정 재실행 |
-| 3 | 대화 종료 기록 존재 | 아직 사용자가 대화를 끝내지 않은 상태 |
-| 4 | 오늘 요약 존재 | 후처리 순서 역전 |
-| 5 | 저품질 판별 성공 | 판별 실패를 정상 보상으로 오인 |
-
-후처리 오케스트레이터 한 곳만 믿지 않고, 실제 상태를 변경하는 서비스도 자신의 선행 조건을 검증합니다. 이중 방어는 비동기 흐름에서 특히 유용합니다.
-
----
-
-## 9. 관측 가능성도 기능의 일부로 취급했다
-
-비동기 후처리는 사용자 응답과 분리되므로 실패가 사용자에게 바로 드러나지 않습니다. 로그와 알림이 없으면 “응답은 성공했는데 요약이 없다”는 데이터만 남습니다.
-
-현재 요약 서비스는 다음 메타데이터를 남깁니다.
-
-| 관측 항목 | 목적 |
-|---|---|
-| 사용자 ID | 영향 사용자 추적 |
-| 오늘 대화 수 | 입력 데이터 존재 여부 확인 |
-| 파싱 결과 수·빈 값 수 | 모델 응답과 파서 문제 구분 |
-| 모델명 | 모델 설정별 장애 비교 |
-| 입력·출력·전체 토큰 | 잘림과 비용 이상 징후 확인 |
-| AI 원본 응답 일부 | 파싱 실패 원인 확인 |
-| 대화 컨텍스트 일부 | 입력 구성 문제 확인 |
-
-빈 요약을 감지하면 경고 로그뿐 아니라 별도 알림 포트로 운영 채널에 전달합니다.
-
-~~~mermaid
-flowchart LR
-    AI["AI 응답"] --> P["파싱"]
-    P --> B{유효한 요약이 있는가?}
-    B -->|예| S["DB 저장"]
-    B -->|아니오| L["구조화 로그"]
-    B -->|아니오| N["운영 채널 알림"]
-    L --> S
-    N --> S
-~~~
-
-현재 구현은 빈 요약도 그대로 저장할 수 있습니다. 알림은 탐지를 강화하지만 데이터 정책을 바꾸지는 않습니다. 빈 결과를 저장하지 않을지, 재시도할지는 별도의 제품·운영 정책으로 남겨두었습니다.
-
----
-
-## 10. 성능 개선을 어떻게 해석해야 하는가
-
-초기 측정에서는 마지막 턴 API의 체감 지연이 크게 줄었습니다.
-
-| 지표 | 개선 전 | 개선 후 |
-|---|---|---|
-| 마지막 턴 API | 후처리 완료까지 대기 | 대화 저장 뒤 응답 |
-| 사용자 대기 경로 | 대화 + 요약 | 대화 생성·저장 |
-
-~~~mermaid
-flowchart LR
-    B["개선 전<br/><b>후처리까지 대기</b>"] --> D["임계 경로 단축"]
-    D --> A["개선 후<br/><b>저장 뒤 응답</b>"]
-    style B fill:#ffcdd2,stroke:#c62828,color:#111
-    style D fill:#fff9c4,stroke:#f9a825,color:#111
-    style A fill:#c8e6c9,stroke:#2e7d32,color:#111
-~~~
-
-이 결과를 “AI 요약 자체가 빨라졌다”고 해석하면 안 됩니다. 요약 자체의 실행 시간은 사라진 것이 아니라 사용자 응답의 임계 경로 밖으로 이동했습니다.
-
-> 최적화한 것은 후처리 작업의 계산량이 아니라 사용자가 기다리는 경로의 길이였습니다.
-
----
-
-## 11. 현재 구조가 보장하지 않는 것
-
-이번 구조는 응답 시간과 트랜잭션 경계를 개선했지만 메시지 브로커가 있는 내구성 파이프라인은 아닙니다.
-
-### 11.1 인메모리 이벤트는 유실될 수 있다
-
-T1 커밋 직후 JVM이 종료되면 대화는 저장됐지만 후처리는 시작되지 않을 수 있습니다. 애플리케이션 이벤트와 코루틴은 프로세스 메모리 안에 있기 때문입니다.
-
-### 11.2 종료 시 취소만 하고 완료를 기다리지 않는다
-
-<code>@PreDestroy</code>는 <code>SupervisorJob.cancel()</code>을 호출하지만 진행 중인 작업의 완료를 기다리는 <code>join</code> 단계는 없습니다. 더구나 친밀도·보상 구간은 <code>NonCancellable</code>입니다. 종료 유예 시간과 작업 완료 정책을 함께 설계해야 합니다.
-
-### 11.3 자동 재시도와 DLQ가 없다
-
-AI 일시 장애나 DB 순간 장애가 발생하면 로그는 남지만 자동 재시도되지 않습니다. 운영자가 탐지한 뒤 수동 보정해야 합니다.
-
-### 11.4 취소 예외를 일반 예외로 다룰 수 있다
-
-요약 생성의 <code>catch (Exception)</code>은 <code>CancellationException</code>까지 잡을 수 있습니다. 코루틴 취소 의미를 보존하려면 취소 예외는 다시 던지는 정책이 더 명확합니다.
-
-~~~mermaid
-flowchart TD
-    C["대화 T1 커밋"] --> W{"JVM 생존?"}
-    W -->|예| P["인메모리 후처리"]
-    W -->|아니오| L["이벤트 유실 가능"]
-    P --> O{"후처리 성공?"}
-    O -->|예| E["완료"]
-    O -->|아니오| M["로그·알림"]
-    M --> R["자동 재시도 없음"]
-
-    style L fill:#ffcdd2,stroke:#c62828,color:#111
-    style R fill:#ffcdd2,stroke:#c62828,color:#111
-~~~
-
----
-
-## 12. 다음 단계: 빠른 비동기화에서 내구성 있는 작업으로
-
-요구되는 신뢰 수준이 높아진다면 다음 단계는 Transactional Outbox와 작업 상태 테이블입니다.
+신뢰할 수 있는 비동기 시스템은 대개 “중복 전달이 올 수 있다”는 전제에서 시작합니다.
 
 ~~~mermaid
 sequenceDiagram
-    autonumber
-    participant API as Conversation API
-    participant DB as PostgreSQL
-    participant P as Outbox Publisher
-    participant Q as Message Queue
-    participant W as Post-process Worker
+    participant P as Producer
+    participant W as Worker
+    participant DB as DB
 
-    API->>DB: 대화 + outbox 레코드 저장 (한 트랜잭션)
-    DB-->>API: COMMIT
-    API-->>API: 사용자 응답
-    P->>DB: 미발행 outbox 조회
-    P->>Q: ConversationCompleted 발행
-    Q->>W: at-least-once 전달
-    W->>DB: 단계별 멱등 처리
-    W-->>Q: ACK
+    P->>W: 같은 작업 신호
+    P->>W: 같은 작업 신호 재전달
+    W->>DB: 작업 키로 조건부 기록
+    DB-->>W: 첫 처리 성공
+    W->>DB: 같은 작업 키로 조건부 기록
+    DB-->>W: 이미 처리됨
 ~~~
 
-| 단계 | 지금 | 다음 설계 |
-|---|---|---|
-| 이벤트 보존 | JVM 메모리 | DB outbox |
-| 전달 | 한 번 시도 | at-least-once |
-| 재시도 | 없음 | 지수 백오프 |
-| 실패 격리 | 로그 | DLQ 또는 실패 상태 |
-| 진행 상태 | 결과 데이터로 추론 | PENDING / RUNNING / SUCCEEDED / FAILED |
-| 중복 방지 | 서비스별 사전 조회 | 단계별 멱등 키·제약 |
+가능한 멱등성 키는 가상 이벤트 식별자, 원본 레코드 버전, 작업 종류의 조합 등으로 만들 수 있습니다. 중요한 것은 재시도 때 같은 작업임을 판별할 수 있어야 한다는 점입니다.
 
-모든 서비스가 처음부터 메시지 큐를 필요로 하지는 않습니다. 이번 단계에서는 사용자 지연을 크게 줄이는 단순한 구조가 충분했습니다. 다만 현재 보장 범위를 문서화했기 때문에, 요구 수준이 바뀌었을 때 어디를 확장해야 하는지도 분명해졌습니다.
+~~~sql
+CREATE TABLE example_async_operation (
+    operation_key   VARCHAR(200) PRIMARY KEY,
+    operation_kind  VARCHAR(100) NOT NULL,
+    result_state    VARCHAR(100) NOT NULL,
+    updated_at      TIMESTAMP NOT NULL
+);
+~~~
 
----
-
-## 13. 배운 점
-
-### 13.1 비동기화 전에 완료 조건부터 분리해야 한다
-
-무엇을 백그라운드로 보낼지 결정하려면 먼저 “이 요청의 성공은 무엇인가?”를 정의해야 합니다. 대화 저장이 성공 조건이라는 합의가 있었기 때문에 요약을 안전하게 응답 경로 밖으로 옮길 수 있었습니다.
-
-### 13.2 커밋 시점과 실행 스레드는 별개의 문제다
-
-<code>AFTER_COMMIT</code>은 데이터 가시성 문제를, 별도 코루틴 스코프는 응답 지연 문제를 해결합니다. 둘 중 하나만 적용하면 목표를 완성할 수 없습니다.
-
-### 13.3 느린 외부 호출을 트랜잭션으로 감싸지 않는다
-
-AI 호출이 끝난 뒤 저장할 결과가 생겼을 때만 짧은 트랜잭션을 열었습니다. 이 경계가 커넥션 점유 시간과 장애 전파 범위를 줄였습니다.
-
-### 13.4 실패 정책은 코드보다 표가 더 잘 설명한다
-
-요약 실패 시 보상을 만들 것인지, 친밀도 실패 후 보상을 계속할 것인지 같은 결정은 기술 세부사항이 아니라 제품 정책입니다. 실패 매트릭스로 드러내야 팀이 같은 시스템을 상상할 수 있습니다.
-
-### 13.5 비동기는 완료가 아니라 책임의 이동이다
-
-사용자의 대기 시간은 줄었지만 후처리의 실패 가능성이 사라진 것은 아닙니다. 실패를 누가 탐지하고, 재시도하고, 보정할지까지 정해야 비동기 기능이 운영 가능한 기능이 됩니다.
+이 역시 실제 스키마가 아닙니다. 성공 전에 키를 선점할지, 실패 상태를 덮어쓸지, 얼마나 보관할지는 운영 정책에 따라 달라지므로 예시에서 제외했습니다.
 
 ---
 
-## 마무리
+## 9. 실패 정책을 작업별로 표로 만든다
 
-이번 개선의 핵심은 코루틴 자체가 아니었습니다. 대화 저장, 커밋 이후 실행, AI 호출, 짧은 DB 저장, 친밀도와 보상이라는 서로 다른 책임에 각자의 시간과 실패 경계를 준 것이 핵심이었습니다.
+후처리 전체를 하나의 <code>try/catch</code>로 감싸면 어느 단계가 실패했고 무엇을 재시도해야 하는지 알기 어렵습니다. 작업별 실패 의미를 먼저 문서화하는 편이 좋습니다.
 
-그 결과 사용자는 마지막 턴에서 요약이 끝날 때까지 기다리지 않게 됐고, 후처리는 커밋된 대화를 기준으로 명확한 순서와 실패 정책을 갖게 됐습니다. 동시에 인메모리 이벤트 유실, 자동 재시도 부재, 종료 처리 같은 다음 과제도 선명해졌습니다.
+| 항목 | 결정해야 할 질문 |
+|---|---|
+| 재시도 가능성 | 일시 오류와 영구 오류를 어떻게 구분하는가? |
+| 최대 지연 | 결과가 언제까지 생성되어야 하는가? |
+| 중복 안전성 | 같은 입력을 다시 처리해도 안전한가? |
+| 선행 의존성 | 앞 작업 실패 시 실행할 수 있는가? |
+| 사용자 영향 | 결과 지연을 사용자에게 보여줘야 하는가? |
+| 운영 대응 | 자동 재처리와 수동 복구의 경계는 어디인가? |
 
-성능 최적화는 단순히 더 빠른 코드를 쓰는 일이 아닙니다. 사용자가 기다려야 하는 일과 기다리지 않아도 되는 일을 정확히 가르는 일에서 시작합니다.
+~~~mermaid
+flowchart TD
+    F["작업 실패"] --> C{"분류"}
+    C -->|"일시적 가능성"| R["제한된 재시도 후보"]
+    C -->|"입력·규칙 오류"| Q["격리 및 원인 기록"]
+    C -->|"알 수 없음"| O["관측 후 운영 판단"]
+    R --> D{"재시도 예산 소진?"}
+    D -->|"아니오"| R
+    D -->|"예"| Q
+~~~
+
+재시도 횟수, 간격, 격리 저장 기간 같은 값은 시스템 용량과 중요도에 따라 달라지는 내부 운영 기준이므로 이 글에서는 제시하지 않습니다.
 
 ---
 
-## 참고 자료
+## 10. 관측 가능성은 사용자 응답과 별도로 설계한다
 
-- [Spring Framework — Transaction-bound Events](https://docs.spring.io/spring-framework/reference/6.2/data-access/transaction/event.html)
-- [Kotlin — Coroutine exceptions handling](https://kotlinlang.org/docs/exception-handling.html)
-- [Kotlin — Coroutine context and dispatchers](https://kotlinlang.org/docs/coroutine-context-and-dispatchers.html)
-- [kotlinx.coroutines API — NonCancellable과 SupervisorJob](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/)
-- [Pexels 이미지 원문 — Brett Sayles](https://www.pexels.com/photo/cables-connected-on-server-2881229/)
+사용자가 이미 성공 응답을 받았다면 후처리 실패가 HTTP 오류로 드러나지 않습니다. 운영자가 별도로 발견할 수 있어야 합니다.
+
+~~~mermaid
+flowchart LR
+    E["작업 신호"] --> Q["대기"]
+    Q --> X["실행"]
+    X --> S["성공"]
+    X --> F["실패"]
+    F --> R["재처리 후보"]
+
+    Q -.-> M["메트릭"]
+    X -.-> L["구조화 로그"]
+    F -.-> A["알림"]
+    R -.-> D["운영 화면"]
+~~~
+
+특정 서비스명을 노출하지 않고도 다음과 같은 일반 지표를 정의할 수 있습니다.
+
+- 큐 또는 작업 레코드의 대기 시간
+- 작업 종류별 성공·실패 비율
+- 외부 API 지연과 오류 분류
+- 생성 시점부터 최종 완료까지의 종단 지연
+- 같은 멱등성 키의 중복 감지 횟수
+- 재처리 대기 항목 수
+
+로그에는 원문 대화나 프롬프트 대신 상관관계 식별자와 작업 상태를 남기는 편이 개인정보와 디버깅 사이의 균형을 잡는 데 유리합니다.
+
+---
+
+## 11. 검증은 빠른 응답만으로 끝나지 않는다
+
+후처리 분리의 성공 기준을 응답 시간 하나로 두면 유실과 중복을 놓칠 수 있습니다.
+
+| 검증 범주 | 일반적인 확인 항목 |
+|---|---|
+| 커밋 경계 | 롤백된 핵심 데이터로 작업이 시작되지 않는다 |
+| 외부 지연 | 외부 API 대기 동안 긴 DB 트랜잭션을 유지하지 않는다 |
+| 중복 전달 | 같은 작업이 반복되어도 부수효과가 중복되지 않는다 |
+| 프로세스 종료 | 종료 전후에 유실·복구 상태를 식별할 수 있다 |
+| 부분 실패 | 독립 작업의 실패 범위가 설계와 일치한다 |
+| 역압 | 유입량이 처리량을 넘을 때 제한 장치가 작동한다 |
+| 관측성 | 실패 항목을 찾고 재처리 근거를 확인할 수 있다 |
+
+부하 테스트에서도 평균 응답 시간뿐 아니라 꼬리 지연, DB 커넥션 점유, 외부 API 동시 요청 수와 작업 적체를 함께 봐야 합니다. 구체적인 목표값은 공개 예시에 포함하지 않았습니다.
+
+---
+
+## 12. 정리
+
+AI 요청의 후처리를 분리하며 재사용할 수 있는 원칙은 다음과 같습니다.
+
+1. 핵심 결과와 파생 결과의 완료 조건을 먼저 구분합니다.
+2. 파생 작업은 핵심 데이터가 커밋된 뒤 시작합니다.
+3. 커밋 후 실행과 내구성 있는 전달을 같은 것으로 보지 않습니다.
+4. 외부 API 호출은 긴 DB 트랜잭션 밖에 둡니다.
+5. 작업 사이의 의존성과 실패 전파를 명시합니다.
+6. 중복 전달을 전제로 멱등성 키와 상태 기록을 설계합니다.
+7. 응답 이후의 실패를 발견할 메트릭과 재처리 경로를 준비합니다.
+
+비동기화의 목적은 단순히 응답을 빠르게 만드는 것이 아닙니다. 서로 다른 실패 의미를 가진 일을 분리하고, 각 작업의 생명주기를 운영 가능한 형태로 만드는 데 더 큰 가치가 있습니다.

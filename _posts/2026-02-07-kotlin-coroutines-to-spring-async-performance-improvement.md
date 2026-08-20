@@ -10,823 +10,283 @@ image:
   thumbnail: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=600&q=80"
 ---
 
-# OpenAI API 호출 최적화 -- 모델 선택부터 WebClient 튜닝까지
+# OpenAI API 호출 최적화 — 모델 선택부터 WebClient 튜닝까지
 
-안녕하세요. duurian 팀에서 백엔드 개발을 담당하고 있는 정지원입니다.
+안녕하세요. 백엔드 개발자 정지원입니다.
 
-이번 글에서는 AI 대화 서비스에서 OpenAI API 호출을 최적화한 과정을 공유합니다. 크게 두 가지 축으로 진행했습니다.
+이 글에서는 Kotlin과 Spring WebClient로 LLM API를 호출할 때 모델 선택과 네트워크 설정을 어떻게 검증했는지 정리합니다. 특정 서비스의 대화 횟수, 프롬프트, 모델명, 토큰 한도, 연결 수, 타임아웃, 재시도 횟수, 성능 수치는 다루지 않습니다.
 
-1. **OpenAI 모델 최적화**: `reasoning_effort` 파라미터 튜닝과 모델 비교를 통한 응답 속도 개선
-2. **WebClient 최적화**: Connection Pool, Timeout 계층화, gzip 압축, 지수 백오프 재시도를 통한 네트워크 효율 및 안정성 개선
-
-> 운영 정책과 인프라 설정은 공개 가능한 형태로 일반화했습니다. 대화 횟수, 토큰 상한, 풀 크기, 타임아웃·재시도 값은 실제 값이 아니라 설정 프로퍼티 이름으로 표현합니다. 성능 수치는 동일 기준의 상대값으로 정규화했습니다.
+> **공개 범위 안내**
+>
+> 모든 모델 이름은 A·B 같은 가상 명칭으로, 모든 설정은 프로퍼티 이름으로 표현했습니다. 표의 결과도 실제 측정값이 아니라 비교 방법을 설명하기 위한 상대 평가입니다. 현재 또는 과거 운영 설정을 추론할 수 있는 정보는 포함하지 않습니다.
 {: .prompt-info }
 
 ---
 
-## 1. 배경: AI 대화 서비스와 OpenAI API 의존도
+## 1. 최적화 문제를 두 층으로 나누기
 
-### 1.1 서비스 소개
+LLM 호출이 느리거나 불안정할 때 원인을 한 덩어리로 보면 해결하기 어렵습니다.
 
-duurian은 AI 페르소나 기반의 대화 서비스입니다. 사용자가 AI 페르소나와 일별로 정해진 횟수의 대화를 나누고, 마지막 턴이 완료되면 AI가 오늘의 대화 내용을 분석하여 대화 요약을 생성합니다.
+~~~mermaid
+flowchart LR
+    P["LLM 호출 문제"] --> M["모델 계층"]
+    P --> N["네트워크 계층"]
 
-서비스의 핵심 기능 대부분이 OpenAI API에 의존하고 있습니다.
+    M --> M1["모델 특성"]
+    M --> M2["추론 강도"]
+    M --> M3["출력 길이"]
 
-| 기능 | OpenAI API 호출 | 설명 |
-|---|---|---|
-| 대화 응답 생성 | 매 턴마다 | 사용자 메시지에 대한 AI 후속 응답 생성 |
-| 대화 요약 생성 | 마지막 턴 완료 시 | 오늘 전체 대화 내용 요약 |
+    N --> N1["Connection Pool"]
+    N --> N2["Timeout"]
+    N --> N3["Retry"]
+    N --> N4["Buffer·Compression"]
+~~~
 
-사용자별로 턴마다 대화 호출이 발생하고, 마지막에는 요약 호출이 추가됩니다. 사용자 수가 증가하면 API 호출 빈도도 비례하여 늘어나므로, **외부 API 호출의 효율성과 안정성**이 서비스 전체의 성능을 좌우하는 구조입니다.
+모델 계층은 응답 생성 자체의 비용을 결정합니다. 네트워크 계층은 연결 수립, 대기, 장애 전파, 응답 수신을 제어합니다. 두 층을 분리해서 측정해야 “모델이 느린 것”과 “호출 방식이 비효율적인 것”을 구분할 수 있습니다.
 
-### 1.2 초기 상태: gpt-5-nano + reasoning_effort: low
+---
 
-서비스 초기에는 **gpt-5-nano** 모델을 `reasoning_effort: low`로 사용하고 있었고, WebClient는 별도 최적화 없이 기본 설정으로 OpenAI API를 호출하고 있었습니다.
+## 2. 모델은 실제 작업으로 비교한다
 
-```kotlin
-// 초기 WebClient — 최적화 이전
-@Bean
-fun openAiWebClient(): WebClient {
-    return WebClient.builder()
-        .baseUrl(apiUrl)
-        .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer $apiKey")
-        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-        .build()
-}
-```
+벤치마크는 일반 질문이 아니라 애플리케이션이 실제로 수행하는 작업과 비슷한 입력으로 진행해야 합니다. 다만 공개 글에서는 입력 내용과 운영 모델을 노출하지 않고 평가 항목만 남겼습니다.
 
-```kotlin
-// 초기 모델 설정 — gpt-5-nano + reasoning_effort: low
-val request = ChatCompletionRequest(
-    model = "gpt-5-nano",
-    messages = openAiMessages,
-    maxCompletionTokens = openAiProperties.maxCompletionTokens,
-    reasoningEffort = "low"
-)
-```
-
-테스트 서버에서 측정한 결과, 이 조합의 성능이 기대 이하였습니다.
-
-### 1.3 실측 데이터: 왜 최적화가 필요했는가
-
-테스트 서버 환경에서 OpenAI API 호출 시간을 `[OpenAI-Metrics]` 로그를 통해 측정했습니다.
-
-**gpt-5-nano (reasoning_effort: low) — 초기 설정**
-
-| 기능 | 초기 관측 결과 |
+| 평가 항목 | 확인할 내용 |
 |---|---|
-| 대화 응답 생성 | 사용자가 지연을 체감하는 수준 |
-| 대화 요약 생성 | 대화 응답보다 더 긴 지연 |
+| 품질 | 필수 정보 누락, 형식 위반, 사실성 |
+| 지연 | 평균보다 p50·p95·최댓값 |
+| 비용 | 입력·출력 토큰과 호출 빈도 |
+| 안정성 | 빈 응답, 파싱 실패, 일시 오류 |
+| 일관성 | 같은 유형 입력에서 결과 편차 |
 
-응답을 기다리는 시간이 대화 경험에 영향을 줄 만큼 길었습니다.
+비교 결과는 다음처럼 상대적으로 기록할 수 있습니다.
 
-이 문제를 해결하기 위해 **모델/파라미터 최적화**와 **WebClient 최적화**를 동시에 진행했습니다.
+| 후보 | 품질 | 지연 | 비용 | 판단 |
+|---|---|---|---|---|
+| Model A | 기준 | 기준 | 기준 | 비교 기준 |
+| Model B | 동등 | 더 짧음 | 더 낮음 | 후보 |
+| Model C | 더 높음 | 더 김 | 더 높음 | 복잡한 작업용 |
 
----
+이 표는 실제 운영 결과가 아닙니다. 중요한 것은 하나의 숫자로 모델을 선택하지 않고 품질·지연·비용·안정성을 함께 비교하는 방식입니다.
 
-## 2. OpenAI 모델 최적화
+### 추론 강도는 작업 난이도에 맞춘다
 
-### 2.1 reasoning_effort란?
+추론 옵션을 지원하는 모델이라면 복잡한 논리 작업과 단순 변환 작업을 같은 설정으로 호출할 필요가 없습니다.
 
-OpenAI의 reasoning 모델(gpt-5-nano 등)은 `reasoning_effort` 파라미터를 통해 **추론에 투입하는 연산량**을 조절할 수 있습니다.
-
-| reasoning_effort | 설명 | 특징 |
-|---|---|---|
-| `high` | 최대 추론 | 정확도 최고, 응답 속도 최저 |
-| `medium` | 균형 | 기본값 |
-| `low` | 제한적 추론 | 빠르지만 복잡한 추론에 약함 |
-| `minimal` | 최소 추론 | 속도 최고, 단순 작업에 적합 |
-
-`reasoning_effort`가 높을수록 모델이 내부적으로 더 많은 reasoning token을 생성하여 깊은 사고 과정을 거칩니다. 이 reasoning token은 API 응답에는 포함되지 않지만, **응답 시간과 토큰 비용**에 직접적인 영향을 줍니다.
-
-<div class="notice--info" markdown="1">
-**📘 Reasoning Token과 reasoning_effort**
-
-최신 LLM(gpt-5-nano 등)은 답변 생성 전에 내부적으로 "생각하는" 토큰(reasoning token)을 생성합니다. 이 토큰은 API 응답에 포함되지 않지만, 연산 시간과 비용에 영향을 줍니다. `reasoning_effort`가 낮을수록 reasoning token이 적게 생성되어 응답이 빨라지지만, 복잡한 추론 능력은 떨어집니다.
-</div>
-
-### 2.2 모델별 성능 비교
-
-다양한 모델과 `reasoning_effort` 조합을 프로덕션에서 측정했습니다.
-
-| 모델 | reasoning_effort | 대화 응답 | 대화 요약 |
-|---|---|---|---|
-| gpt-5-nano | low | 기준 | 기준 |
-| gpt-5-nano | minimal | **가장 짧음** | **가장 짧음** |
-| gpt-4o-mini | - | 두 번째 | 두 번째 |
-
-```mermaid
-flowchart TD
-    Q["🔍 모델 + reasoning_effort 선택"] --> A
-    Q --> B
-    Q --> C
-
-    A["gpt-5-nano, low<br>비교 기준"]
-    B["gpt-5-nano, minimal<br>대화·요약 모두 가장 짧음"]
-    C["gpt-4o-mini<br>두 번째로 짧음"]
-
-    style A fill:#FFCDD2,stroke:#C62828,color:#333
-    style B fill:#C8E6C9,stroke:#2E7D32,color:#333
-    style C fill:#C8E6C9,stroke:#2E7D32,color:#333
-```
-
-핵심 발견:
-- **gpt-5-nano low → minimal**: 대화 응답과 요약 모두 유의미하게 단축
-- **gpt-4o-mini**: reasoning 모델이 아니므로 `reasoning_effort` 불필요. 안정적인 성능
-
-`reasoning_effort`를 `low`에서 `minimal`로 한 단계만 낮춰도 응답 시간이 크게 줄어드는 이유는, `low`도 여전히 상당한 reasoning token을 생성하기 때문입니다. `minimal`은 reasoning을 거의 건너뛰고 바로 응답을 생성합니다.
-
-### 2.3 대화 서비스에 적합한 모델 전략
-
-대화 응답 생성과 요약 생성은 **높은 수준의 추론이 필요한 작업이 아닙니다.** 이미 시스템 프롬프트와 대화 컨텍스트가 충분히 제공되므로, 모델은 주어진 컨텍스트를 바탕으로 자연스러운 대화를 이어가거나 내용을 요약하기만 하면 됩니다.
-
-반면 **수학 문제 풀이, 코드 작성, 논리적 분석** 같은 작업은 깊은 추론이 필요하므로 `reasoning_effort`를 높이는 것이 적합합니다.
-
-| 작업 유형 | 추론 필요도 | 적합한 설정 |
-|---|---|---|
-| 대화 응답 생성 | 낮음 | `minimal` 또는 non-reasoning 모델 |
-| 대화 요약 생성 | 낮음 | `minimal` 또는 non-reasoning 모델 |
-| 추천 설명 생성 | 중간 | `medium` |
-| 복잡한 분석 작업 | 높음 | `high` |
-
-### 2.4 동적 모델 설정: DB 기반 모델 관리
-
-모델 변경 시마다 코드를 수정하고 재배포하는 것은 비효율적입니다. `AiModelResolver`를 통해 **DB에서 모델명을 동적으로 조회**하고, DB에 없으면 환경변수를 fallback으로 사용합니다.
-
-```kotlin
-@Component
-class AiModelResolver(
-    private val queryAiModelPort: QueryAiModelPort,
-    private val openAiClientPort: OpenAiClientPort,
-) {
-
-    fun resolve(aiModelId: UUID?): String {
-        // 1) DB에서 프롬프트에 연결된 모델 조회
-        if (aiModelId != null) {
-            val model = queryAiModelPort.findById(aiModelId)
-            if (model != null) return model.name
-        }
-
-        // 2) 환경변수 fallback
-        val defaultModel = openAiClientPort.getDefaultModel()
-        if (!defaultModel.isNullOrBlank()) return defaultModel
-
-        // 3) 둘 다 없으면 에러
-        throw NotFoundAiModelException()
-    }
-}
-```
-
-이 구조의 장점:
-- **재배포 없이 모델 변경**: DB의 프롬프트-모델 매핑을 변경하면 즉시 반영
-- **프롬프트별 모델 지정**: 대화 응답은 gpt-5-nano minimal, 요약은 gpt-4o-mini 등 용도에 맞는 모델 배정 가능
-- **환경변수 fallback**: DB에 매핑이 없어도 기본 모델로 동작
-
-### 2.5 reasoning_effort 적용 코드
-
-```kotlin
-@Component
-class OpenAiClientAdapter(
-    @param:Qualifier("openAiWebClient")
-    private val webClient: WebClient,
-    private val openAiProperties: OpenAiProperties
-) : OpenAiClientPort {
-
-    override fun chatCompletion(
-        messages: List<ConversationMessage>,
-        model: String?, temperature: Double?, maxTokens: Int?
-    ): String {
-        val actualModel = model
-            ?: openAiProperties.model
-            ?: throw IllegalStateException("OpenAI 모델이 설정되지 않았습니다.")
-
-        // gpt-5-nano일 때만 reasoning_effort 적용
-        val reasoningEffort = if (actualModel == "gpt-5-nano") "low" else null
-
-        val request = ChatCompletionRequest(
-            model = actualModel,
-            messages = openAiMessages,
-            maxCompletionTokens = openAiProperties.maxTokens,
-            stream = false,
-            reasoningEffort = reasoningEffort
-        )
-        // ...
-    }
-}
-```
-
-`reasoning_effort`는 reasoning 모델에만 의미가 있으므로, gpt-5-nano일 때만 설정하고 다른 모델에서는 null(미포함)로 처리합니다. DTO에 `@JsonInclude(JsonInclude.Include.NON_NULL)`이 적용되어 있어, null 필드는 요청 JSON에서 자동 제거됩니다.
-
-```kotlin
-@JsonInclude(JsonInclude.Include.NON_NULL)
-data class ChatCompletionRequest(
-    val model: String,
-    val messages: List<ChatMessage>,
-    @field:JsonProperty("max_completion_tokens")
-    val maxCompletionTokens: Int? = null,
-    val stream: Boolean = false,
-    val temperature: Double? = null,
-    @field:JsonProperty("reasoning_effort")
-    val reasoningEffort: String? = null  // "minimal", "low", "medium", "high"
+~~~kotlin
+data class ModelPolicy(
+    val modelAlias: String,
+    val reasoningLevel: String?,
+    val maxOutputTokens: Int,
 )
-```
 
----
-
-## 3. WebClient 최적화
-
-모델 최적화로 API 응답 속도를 개선했다면, WebClient 최적화는 **네트워크 계층의 효율성과 안정성**을 높이는 작업입니다.
-
-### 3.1 기존 WebClient의 문제
-
-```mermaid
-graph LR
-    subgraph problem["기본 WebClient의 문제점"]
-        B["커넥션 풀 부재"]
-        C["타임아웃 미설정"]
-        D["재시도 로직 부재"]
-        E["압축 미적용"]
-    end
-
-    subgraph impact["서비스에 미치는 영향"]
-        F["매 요청마다<br>TCP/TLS handshake 반복<br>→ 150~450ms 지연 추가"]
-        G["응답 지연 시 무한 대기<br>→ 스레드 풀 고갈<br>→ 서비스 전체 장애"]
-        H["Rate Limit 429 시 즉시 실패<br>→ 사용자에게 에러 노출<br>→ 일시적 장애에 취약"]
-        I["대용량 JSON 원본 전송<br>→ 네트워크 대역폭 낭비<br>→ 응답 수신 시간 증가"]
-    end
-
-    B --> F
-    C --> G
-    D --> H
-    E --> I
-
-    style problem fill:#FFF3E0,stroke:#E74C3C,stroke-width:2px
-    style impact fill:#FFEBEE,stroke:#C62828,stroke-width:2px
-    style B fill:#E74C3C,stroke:#333,color:#fff
-    style C fill:#E74C3C,stroke:#333,color:#fff
-    style D fill:#E74C3C,stroke:#333,color:#fff
-    style E fill:#E74C3C,stroke:#333,color:#fff
-    style F fill:#FADBD8,stroke:#333
-    style G fill:#FADBD8,stroke:#333
-    style H fill:#FADBD8,stroke:#333
-    style I fill:#FADBD8,stroke:#333
-```
-
-### 3.2 Connection Pool 설계
-
-Reactor Netty의 `ConnectionProvider`를 사용하여 커넥션 풀을 구성합니다.
-
-```kotlin
-val connectionProvider = ConnectionProvider.builder("openai-pool")
-    .maxConnections(networkProperties.poolCapacity)
-    .maxIdleTime(networkProperties.idleTimeout)
-    .maxLifeTime(networkProperties.connectionLifetime)
-    .pendingAcquireTimeout(networkProperties.acquireTimeout)
-    .evictInBackground(networkProperties.evictionInterval)
-    .build()
-```
-
-커넥션 풀의 핵심은 **커넥션 재사용**입니다.
-
-```
-[기본 설정 — 커넥션 풀 없음]
-요청 1: TCP 연결 → TLS 핸드셰이크 → 요청/응답 → 연결 종료
-요청 2: TCP 연결 → TLS 핸드셰이크 → 요청/응답 → 연결 종료  ← 동일한 과정 반복
-
-[커넥션 풀 적용]
-요청 1: TCP 연결 → TLS 핸드셰이크 → 요청/응답 → 풀에 반환
-요청 2: 풀에서 커넥션 획득 → 요청/응답 → 풀에 반환              ← handshake 생략
-```
-
-실측 결과, 커넥션 재사용 후 두 번째 이후 요청에서 반복되던 연결 수립 지연을 줄일 수 있었습니다.
-
-<div class="notice--info" markdown="1">
-**📘 Connection Pool과 TCP/TLS Handshake**
-
-HTTPS 연결 수립에는 TCP 3-way handshake(~1 RTT) + TLS handshake(~2 RTT)가 필요합니다. 서울↔미국 기준 RTT가 ~150ms이므로, 매번 연결을 새로 맺으면 300~450ms가 연결 설정에만 소비됩니다. Connection Pool은 연결을 재사용하여 두 번째 요청부터 이 비용을 제거합니다.
-</div>
-
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
-    Note over C,S: 풀 없음: 매번 handshake
-    C->>S: TCP SYN
-    S->>C: TCP SYN-ACK
-    C->>S: TCP ACK + TLS ClientHello
-    S->>C: TLS ServerHello + Certificate
-    C->>S: TLS Finished (네트워크 RTT만큼 지연)
-    C->>S: HTTP Request
-    Note over C,S: 풀 있음: 즉시 요청
-    C->>S: HTTP Request (기존 연결 재사용, ~0ms)
-```
-
-각 설정값의 설계 의도:
-
-| 설정 | 값 결정 기준 | 설계 의도 |
-|---|---|---|
-| `maxConnections` | 동시 요청량과 외부 API 한도 | 호출 상한을 두어 자원 고갈 방지 |
-| `maxIdleTime` | 서버 keep-alive와 관측값 | 끊어진 유휴 연결 재사용 방지 |
-| `maxLifeTime` | 연결 안정성 관측값 | 오래된 커넥션을 주기적으로 갱신 |
-| `pendingAcquireTimeout` | 허용 가능한 전체 지연 | 풀이 가득 찼을 때 무한 대기 방지 |
-| `evictInBackground` | 유휴 연결 정리 주기 | 불필요한 연결과 리소스 누수 방지 |
-
-<div class="notice--warning" markdown="1">
-**⚠️ Stale Connection**
-
-Stale Connection은 풀에 유지되고 있지만, 서버 측에서 이미 끊은 연결입니다. 이 연결로 요청을 보내면 에러가 발생합니다. `maxLifeTime`으로 연결의 최대 수명을 제한하고, `evictInBackground`로 주기적으로 유휴 연결을 정리하여 방지합니다.
-</div>
-
-### 3.3 Timeout 계층화
-
-타임아웃을 **네트워크 계층별로 세분화**하여 설정합니다.
-
-```kotlin
-val httpClient = HttpClient.create(connectionProvider)
-    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, networkProperties.connectTimeoutMillis)
-    .responseTimeout(networkProperties.responseTimeout)
-    .doOnConnected { conn ->
-        conn.addHandlerLast(ReadTimeoutHandler(networkProperties.readTimeoutSeconds))
-        conn.addHandlerLast(WriteTimeoutHandler(networkProperties.writeTimeoutSeconds))
-    }
-    .compress(true)                                       // gzip 압축 활성화
-```
-
-```mermaid
-graph LR
-    A["TCP 연결<br/>connect timeout"] --> B["요청 쓰기<br/>write timeout"]
-    B --> C["응답 대기<br/>response timeout"]
-    C --> D["응답 읽기<br/>read timeout"]
-
-    style A fill:#3498DB,stroke:#333,color:#fff
-    style B fill:#2ECC71,stroke:#333,color:#fff
-    style C fill:#F39C12,stroke:#333,color:#fff
-    style D fill:#E74C3C,stroke:#333,color:#fff
-```
-
-| 타임아웃 | 값 결정 기준 | 역할 |
-|---|---|---|
-| Connect Timeout | 네트워크 RTT와 장애 감지 목표 | TCP 연결 수립 실패를 빠르게 감지 |
-| Write Timeout | 최대 요청 크기와 전송 속도 | 요청 전송 중 네트워크 문제 감지 |
-| Response Timeout | 모델별 지연 분포와 사용자 SLA | 외부 API 응답 대기 상한 설정 |
-| Read Timeout | 응답 크기와 수신 속도 | 응답 수신 중 네트워크 지연 감지 |
-
-<div class="notice--warning" markdown="1">
-**⚠️ Timeout Layering**
-
-단일 타임아웃은 프로덕션에서 불충분합니다. 네트워크 장애는 연결, 전송, 대기, 수신 각 단계에서 발생할 수 있습니다. 타임아웃 없이 느린 API 하나가 스레드를 무한 점유하면, 스레드 풀이 고갈되어 전체 서비스가 응답 불능 상태에 빠집니다. 이를 **캐스케이딩 장애(cascading failure)**라 합니다.
-</div>
-
-### 3.4 gzip 압축
-
-```kotlin
-// HttpClient 레벨에서 압축 활성화
-.compress(true)
-
-// WebClient 헤더에서 Accept-Encoding 명시
-.defaultHeader(HttpHeaders.ACCEPT_ENCODING, "gzip, deflate")
-```
-
-`compress(true)`로 Reactor Netty 클라이언트 수준에서 gzip을 활성화하고, `Accept-Encoding` 헤더를 명시하여 서버에 압축 응답을 요청합니다. 실측 결과 응답 데이터 크기를 약 **70% 줄일** 수 있었습니다.
-
-<div class="notice--info" markdown="1">
-**📘 gzip 압축**
-
-HTTP 클라이언트가 `Accept-Encoding: gzip` 헤더를 보내면, 서버는 응답 본문을 gzip으로 압축하여 전송합니다. JSON 같은 텍스트 데이터는 압축률이 높아 원본 대비 ~70% 크기를 줄일 수 있습니다. 네트워크 대역폭을 절약하고 전송 시간을 단축합니다.
-</div>
-
-### 3.5 메모리 버퍼 크기 설정
-
-```kotlin
-val exchangeStrategies = ExchangeStrategies.builder()
-    .codecs { configurer ->
-        configurer.defaultCodecs().maxInMemorySize(networkProperties.maxInMemoryBytes)
-    }
-    .build()
-```
-
-OpenAI API의 응답은 긴 텍스트를 포함할 수 있으므로, 관측한 최대 응답 크기에 안전 여유를 더해 버퍼 상한을 설정합니다. 이 설정이 없으면 긴 응답에서 `DataBufferLimitException`이 발생할 수 있습니다.
-
-<div class="notice--warning" markdown="1">
-**⚠️ DataBufferLimitException**
-
-Spring WebClient의 기본 메모리 버퍼 크기는 256KB입니다. 응답이 이보다 크면 `DataBufferLimitException`이 발생합니다. 이는 보안(메모리 폭발 방지)을 위한 기본 제한이지만, LLM API처럼 큰 응답을 다루는 경우 적절히 늘려야 합니다. 다만 무한정 늘리면 OOM(Out of Memory) 위험이 있으므로 예상 최대 응답 크기를 기준으로 설정합니다.
-</div>
-
-### 3.6 전체 WebClient 설정 코드
-
-```kotlin
-@Configuration
-@EnableConfigurationProperties(OpenAiProperties::class)
-class OpenAiConfig(
-    private val openAiProperties: OpenAiProperties
-) {
-
-    @Bean(name = ["openAiWebClient"])
-    fun openAiWebClient(): WebClient {
-        // 1. Connection Pool 설정
-        val connectionProvider = ConnectionProvider.builder("openai-pool")
-            .maxConnections(openAiProperties.poolCapacity)
-            .maxIdleTime(openAiProperties.idleTimeout)
-            .maxLifeTime(openAiProperties.connectionLifetime)
-            .pendingAcquireTimeout(openAiProperties.acquireTimeout)
-            .evictInBackground(openAiProperties.evictionInterval)
-            .build()
-
-        // 2. HttpClient 설정 (타임아웃, 압축)
-        val httpClient = HttpClient.create(connectionProvider)
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, openAiProperties.connectTimeoutMillis)
-            .responseTimeout(openAiProperties.responseTimeout)
-            .doOnConnected { conn ->
-                conn.addHandlerLast(ReadTimeoutHandler(openAiProperties.readTimeoutSeconds))
-                conn.addHandlerLast(WriteTimeoutHandler(openAiProperties.writeTimeoutSeconds))
-            }
-            .compress(true)
-
-        // 3. 버퍼 크기 설정
-        val exchangeStrategies = ExchangeStrategies.builder()
-            .codecs { configurer ->
-                configurer.defaultCodecs().maxInMemorySize(openAiProperties.maxInMemoryBytes)
-            }
-            .build()
-
-        // 4. WebClient 빌드
-        return WebClient.builder()
-            .baseUrl(openAiProperties.apiUrl)
-            .clientConnector(ReactorClientHttpConnector(httpClient))
-            .exchangeStrategies(exchangeStrategies)
-            .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer ${openAiProperties.apiKey}")
-            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            .defaultHeader(HttpHeaders.ACCEPT_ENCODING, "gzip, deflate")
-            .build()
-    }
-}
-```
-
-설정값들은 `@ConfigurationProperties`를 통해 외부화합니다.
-
-```kotlin
-@Component
-@ConfigurationProperties(prefix = "openai")
-class OpenAiProperties {
-    lateinit var apiKey: String
-    lateinit var apiUrl: String
-    lateinit var model: String
-    var maxTokens: Int? = null
-    var temperature: Double? = null
-}
-```
-
-`@Value` 대신 `@ConfigurationProperties`를 사용한 이유:
-- **타입 안전성**: 컴파일 타임에 타입 검증
-- **그룹화**: 관련 설정을 하나의 클래스로 묶어 관리
-- **IDE 지원**: 자동완성, 리팩토링 지원
-
-<div class="notice--info" markdown="1">
-**📘 @ConfigurationProperties vs @Value**
-
-| 비교 항목 | `@Value` | `@ConfigurationProperties` |
-|---|---|---|
-| 바인딩 단위 | 필드 단위 (`@Value("${openai.apiKey}")`) | 클래스 단위 (prefix 기반) |
-| 타입 안전성 | 문자열 → 수동 변환 필요 | 자동 타입 변환 + 컴파일 타임 검증 |
-| IDE 지원 | 제한적 | **자동완성, 리팩토링, 문서화** |
-| 검증 | 불가 | `@Validated` + Bean Validation 가능 |
-</div>
-
----
-
-## 4. 지수 백오프 재시도 전략
-
-### 4.1 왜 재시도가 필요한가
-
-OpenAI API에서 가장 빈번하게 발생하는 오류 두 가지는 **429 Too Many Requests**(Rate Limit)와 **503 Service Unavailable**(일시적 서버 장애)입니다. 이 두 오류는 일정 시간이 지나면 자연히 해소되는 **일시적 오류(transient error)** 입니다.
-
-재시도 전략 없이 이런 오류를 바로 사용자에게 전달하면 불필요한 실패가 됩니다. 반대로 모든 오류를 무분별하게 재시도하면, 400 Bad Request나 401 Unauthorized 같이 **재시도해도 절대 성공하지 않는 오류**까지 반복 호출하게 됩니다.
-
-<div class="notice--warning" markdown="1">
-**⚠️ Transient Error vs Permanent Error**
-
-| 오류 유형 | HTTP 상태 코드 | 재시도 |
-|---|---|---|
-| **일시적 (Transient)** | 429 Too Many Requests, 503 Service Unavailable | O — 시간이 지나면 해소 |
-| **영구적 (Permanent)** | 400 Bad Request, 401 Unauthorized, 404 Not Found | X — 재시도해도 동일한 실패 |
-
-일시적 오류는 시간이 지나면 자연히 해소되므로 재시도가 효과적이지만, 영구적 오류를 재시도하면 서버 부하만 가중됩니다.
-</div>
-
-### 4.2 Reactor Retry.backoff 적용
-
-```kotlin
-webClient.post()
-    .uri("/chat/completions")
-    .bodyValue(request)
-    .retrieve()
-    .bodyToMono<ChatCompletionResponse>()
-    .timeout(openAiProperties.requestTimeout)
-    .retryWhen(
-        Retry.backoff(openAiProperties.retryCount, openAiProperties.initialBackoff)
-            .filter { e ->
-                e is WebClientResponseException.TooManyRequests ||   // 429만
-                e is WebClientResponseException.ServiceUnavailable   // 503만
-            }
-            .maxBackoff(openAiProperties.maxBackoff)
-            .doBeforeRetry { signal ->
-                log.warn {
-                    "OpenAI API 재시도 ${signal.totalRetries() + 1}회: " +
-                    "${signal.failure().message}"
-                }
-            }
+fun createRequest(
+    input: List<Message>,
+    policy: ModelPolicy,
+): CompletionRequest =
+    CompletionRequest(
+        model = policy.modelAlias,
+        messages = input,
+        reasoningEffort = policy.reasoningLevel,
+        maxCompletionTokens = policy.maxOutputTokens,
     )
-```
+~~~
 
-| 항목 | 값 결정 기준 | 이유 |
-|---|---|---|
-| 최대 재시도 | 사용자 SLA와 전체 요청 시간 | 복구 기회를 주되 요청이 과도하게 길어지지 않게 제한 |
-| 초기 백오프 | 외부 API의 복구 특성 | 일시적 오류 뒤 첫 재시도 간격 설정 |
-| 최대 백오프 | 외부 API 제한과 요청 예산 | 장시간 장애에서 재시도 폭주 방지 |
-| 재시도 대상 | 429, 503 | 재시도로 복구 가능한 일시적 오류만. 다른 4xx/5xx는 재시도 무의미 |
-
-### 4.3 지수 백오프의 동작 원리
-
-`Retry.backoff`은 **지수적으로 증가하는 대기 시간 + jitter(무작위 변동)** 을 적용합니다.
-
-```
-재시도 1: initialBackoff
-재시도 2: initialBackoff × 2
-재시도 3: initialBackoff × 4
-... 최대 maxBackoff 안에서 jitter 적용
-```
-
-Reactor의 `Retry.backoff`은 기본적으로 **jitter factor 0.5**를 적용하여, 대기 시간에 ±50%의 무작위 변동을 줍니다. 이는 여러 요청이 동시에 Rate Limit에 걸렸을 때, 모두 같은 시점에 재시도하여 **thundering herd** 문제를 일으키는 것을 방지합니다.
-
-<div class="notice--info" markdown="1">
-**📘 Exponential Backoff + Jitter + Thundering Herd**
-
-**지수 백오프(Exponential Backoff)**는 재시도 간격을 1s→2s→4s→8s...로 지수적으로 늘리는 전략입니다. **Jitter**는 이 간격에 랜덤 편차를 추가합니다. Jitter 없이 100개 클라이언트가 동시에 Rate Limit에 걸리면, 모두 정확히 같은 시점에 재시도하여 서버를 다시 과부하시킵니다. 이를 **Thundering Herd Problem**이라 합니다.
-</div>
-
-```mermaid
-flowchart LR
-    subgraph "Jitter 없음 (위험)"
-        A1["Client 1: 2s"] --> S1["서버 과부하!"]
-        A2["Client 2: 2s"] --> S1
-        A3["Client 3: 2s"] --> S1
-    end
-    subgraph "Jitter 있음 (안전)"
-        B1["Client 1: 1.5s"] --> S2["부하 분산"]
-        B2["Client 2: 2.3s"] --> S2
-        B3["Client 3: 1.8s"] --> S2
-    end
-    style S1 fill:#f44336,color:#fff
-    style S2 fill:#4CAF50,color:#fff
-```
-
-### 4.4 재시도 흐름도
-
-```mermaid
-flowchart TD
-    A[OpenAI API 호출] --> B{응답 확인}
-    B -->|200 OK| C[성공 - 결과 반환]
-    B -->|429 Rate Limit| D{재시도 횟수 확인}
-    B -->|503 Service Unavailable| D
-    B -->|기타 에러 400, 401, 500 등| E[즉시 실패 - 재시도 없음]
-
-    D -->|재시도 예산 이내| F["지수 백오프 대기<br/>초기값 → 증가 → 최대값"]
-    D -->|재시도 예산 초과| G[최종 실패 - 예외 발생]
-
-    F --> A
-
-    style A fill:#4A90D9,stroke:#333,color:#fff
-    style C fill:#27AE60,stroke:#333,color:#fff
-    style E fill:#E74C3C,stroke:#333,color:#fff
-    style G fill:#E74C3C,stroke:#333,color:#fff
-    style F fill:#F39C12,stroke:#333,color:#fff
-```
+구체적인 별칭과 값은 외부 설정이나 모델 정책 저장소에서 주입합니다. 코드 리뷰에서는 값보다 “어떤 작업이 어떤 정책을 선택하는가”와 “변경 시 품질 검증이 있는가”를 확인합니다.
 
 ---
 
-## 5. 에러 처리와 응답 매핑
+## 3. Connection Pool을 직접 설계하기
 
-### 5.1 에러 타입별 매핑
+HTTPS 요청마다 새 연결을 만들면 TCP와 TLS 연결 수립 비용을 반복합니다. Reactor Netty의 <code>ConnectionProvider</code>를 사용하면 연결을 재사용할 수 있습니다.
 
-외부 API의 다양한 오류를 **도메인 레이어의 예외 타입으로 변환**합니다.
+~~~kotlin
+val connectionProvider =
+    ConnectionProvider.builder("llm-pool")
+        .maxConnections(network.poolCapacity)
+        .maxIdleTime(network.idleTimeout)
+        .maxLifeTime(network.connectionLifetime)
+        .pendingAcquireTimeout(network.acquireTimeout)
+        .evictInBackground(network.evictionInterval)
+        .build()
+~~~
 
-```kotlin
-.onErrorMap { e ->
-    when (e) {
-        is TimeoutException -> OpenAiTimeoutException()
-        is WebClientResponseException.TooManyRequests -> OpenAiRateLimitException()
-        is OpenAiEmptyResponseException -> e
-        else -> OpenAiApiException()
-    }
-}
-```
+각 값은 다음 근거로 정합니다.
 
-| WebClient 예외 | 도메인 예외 | 의미 |
-|---|---|---|
-| `TimeoutException` | `OpenAiTimeoutException` | 설정된 응답 시간 안에 완료되지 않음 |
-| `TooManyRequests` (429) | `OpenAiRateLimitException` | 재시도 예산 이후에도 Rate Limit 지속 |
-| `OpenAiEmptyResponseException` | 그대로 전파 | API는 200이지만 응답 내용이 없음 |
-| 기타 모든 예외 | `OpenAiApiException` | 알 수 없는 API 오류 |
+| 설정 | 결정 근거 |
+|---|---|
+| Pool capacity | 동시 요청량, 외부 API 한도, 인스턴스 자원 |
+| Idle timeout | 서버 keep-alive와 유휴 연결 오류 |
+| Connection lifetime | 오래된 연결의 실패율 |
+| Acquire timeout | 사용자 요청의 전체 시간 예산 |
+| Eviction interval | 유휴 연결 정리 비용 |
 
-### 5.2 응답 메트릭 로깅
+실제 값은 공개하지 않습니다. 트래픽과 실행 환경이 다르면 같은 값이 오히려 장애를 만들 수 있기 때문입니다.
 
-모든 API 호출에 대해 응답 시간과 토큰 사용량을 구조화하여 로깅합니다.
+---
 
-```kotlin
-.map { response ->
-    val elapsedTime = System.currentTimeMillis() - startTime
+## 4. 타임아웃은 계층별로 둔다
 
-    response.usage?.let { usage ->
-        log.info {
-            "[OpenAI-Metrics] " +
-                "responseTime=${elapsedTime}ms, " +
-                "promptTokens=${usage.promptTokens}, " +
-                "completionTokens=${usage.completionTokens}, " +
-                "totalTokens=${usage.totalTokens}, " +
-                "model=${response.model} "
+“요청 타임아웃 하나”만 두면 연결, 쓰기, 응답 대기, 읽기 중 어디서 멈췄는지 구분하기 어렵습니다.
+
+~~~mermaid
+flowchart LR
+    A["Connect"] --> B["Write"]
+    B --> C["Response"]
+    C --> D["Read"]
+~~~
+
+~~~kotlin
+val httpClient =
+    HttpClient.create(connectionProvider)
+        .option(
+            ChannelOption.CONNECT_TIMEOUT_MILLIS,
+            network.connectTimeoutMillis,
+        )
+        .responseTimeout(network.responseTimeout)
+        .doOnConnected { connection ->
+            connection.addHandlerLast(
+                ReadTimeoutHandler(network.readTimeoutSeconds),
+            )
+            connection.addHandlerLast(
+                WriteTimeoutHandler(network.writeTimeoutSeconds),
+            )
         }
-    }
-    // ...
-}
-```
+        .compress(true)
+~~~
 
-`[OpenAI-Metrics]` 태그로 구조화된 로그를 남기면 모델별/기능별 응답 시간을 모니터링할 수 있습니다. 앞서 제시한 모델별 실측 데이터도 이 로그를 기반으로 수집한 것입니다.
-
-### 5.3 빈 응답 및 reasoning 모델 응답 처리
-
-OpenAI API는 200 OK를 반환하면서도 content가 비어 있을 수 있고, reasoning 모델은 `content` 대신 `reasoningContent` 필드에 응답을 담을 수 있습니다.
-
-```kotlin
-val choice = response.choices?.firstOrNull()
-val message = choice?.message
-
-// content 또는 reasoningContent 중 하나를 사용
-val content = message?.content?.takeIf { it.isNotBlank() }
-    ?: message?.reasoningContent?.takeIf { it.isNotBlank() }
-
-if (content.isNullOrBlank()) {
-    log.warn {
-        "OpenAI API 응답에 content가 없습니다: " +
-        "id=${response.id}, " +
-        "finishReason=${choice?.finishReason}, " +
-        "refusal=${message?.refusal}"
-    }
-    throw OpenAiEmptyResponseException()
-}
-```
-
-`content` → `reasoningContent` 순서로 fallback하는 이유는, gpt-5-nano 같은 reasoning 모델이 `reasoning_effort` 설정에 따라 응답을 다른 필드에 담을 수 있기 때문입니다.
+타임아웃 값은 모델별 지연 분포와 사용자 요청의 시간 예산을 기준으로 결정합니다. 너무 짧으면 정상 응답을 실패로 만들고, 너무 길면 느린 외부 호출이 서버 자원을 오래 점유합니다.
 
 ---
 
-## 6. Hexagonal Architecture에서의 통합
+## 5. 버퍼와 압축은 상한을 전제로 한다
 
-### 6.1 아키텍처 구조
+LLM 응답은 일반 JSON API보다 클 수 있습니다. WebClient의 메모리 버퍼는 예상 가능한 최대 응답과 동시 요청 수를 함께 고려해야 합니다.
 
-모델 설정과 WebClient 관련 코드는 **Hexagonal Architecture(포트 & 어댑터 패턴)** 에 따라 분리되어 있습니다.
+~~~kotlin
+val strategies =
+    ExchangeStrategies.builder()
+        .codecs { codecs ->
+            codecs.defaultCodecs()
+                .maxInMemorySize(network.maxInMemoryBytes)
+        }
+        .build()
+~~~
 
-```
-프로젝트 구조
-├── core/                      (비즈니스 로직)
-│   ├── port/out/
-│   │   └── OpenAiClientPort   ← 인터페이스 정의 (Port)
-│   └── support/
-│       └── AiModelResolver    ← DB 기반 모델 조회
-│
-├── domain/                    (도메인 모델)
-│   ├── error/
-│   │   ├── OpenAiApiException
-│   │   ├── OpenAiTimeoutException
-│   │   ├── OpenAiRateLimitException
-│   │   └── OpenAiEmptyResponseException
-│   └── model/
-│       └── AiModelRequest     ← 모델 요청 메타 (model, reasoningEffort)
-│
-└── infrastructure/openai/     (외부 API 통합)
-    ├── config/
-    │   ├── OpenAiConfig       ← WebClient Bean 설정
-    │   └── OpenAiProperties   ← 설정값 외부화
-    ├── adapter/
-    │   └── OpenAiClientAdapter ← Port 구현체 (Adapter)
-    └── dto/
-        ├── ChatCompletionRequest
-        └── ChatCompletionResponse
-```
+버퍼를 크게 만들면 모든 문제가 해결되는 것은 아닙니다. 동시 요청 수와 곱해지면 메모리 사용량이 커지므로 다음을 함께 확인해야 합니다.
 
-### 6.2 Port 인터페이스
+- 출력 토큰 상한
+- 응답 스트리밍 가능 여부
+- 동시 요청량
+- 역직렬화 전 원문 보관 여부
+- 초과 응답의 실패 처리
 
-```kotlin
-// core 모듈 — 외부 API 구현에 의존하지 않음
-interface OpenAiClientPort {
-    fun chatCompletion(
-        messages: List<ConversationMessage>,
-        model: String? = null,
-        temperature: Double? = null,
-        maxTokens: Int? = null
-    ): String
+gzip은 텍스트 응답의 전송량을 줄일 수 있지만 실제 효과는 응답 크기와 네트워크 환경을 측정해 판단해야 합니다.
 
-    fun getDefaultTemperature(): Double
-    fun getDefaultMaxTokens(): Int
-    fun getDefaultModel(): String?
+---
+
+## 6. 재시도는 오류 종류와 시간 예산으로 제한한다
+
+재시도는 일시 오류에만 적용해야 합니다. 잘못된 요청이나 인증 실패처럼 같은 입력으로 성공할 가능성이 없는 오류를 반복하면 외부 API와 서버 모두에 부담을 줍니다.
+
+~~~kotlin
+fun retrySpec(policy: RetryPolicy): Retry =
+    Retry.backoff(policy.maxAttempts, policy.initialBackoff)
+        .maxBackoff(policy.maxBackoff)
+        .jitter(policy.jitter)
+        .filter(::isTransientFailure)
+~~~
+
+~~~mermaid
+flowchart TD
+    A["호출 실패"] --> B{"일시 오류인가?"}
+    B -->|No| C["즉시 실패 변환"]
+    B -->|Yes| D{"시간 예산이 남았는가?"}
+    D -->|No| C
+    D -->|Yes| E["Backoff + Jitter"]
+    E --> F["재시도"]
+~~~
+
+구체적인 오류 목록과 횟수는 외부 API 계약과 사용자 SLA에 따라 달라집니다. 공개 글에서는 실제 필터와 재시도 값을 제외했습니다.
+
+### Thundering Herd 방지
+
+여러 요청이 동시에 실패한 뒤 같은 간격으로 재시도하면 외부 API에 다시 부하가 집중됩니다. 지수 백오프에 jitter를 추가하면 재시도 시점을 분산할 수 있습니다.
+
+---
+
+## 7. 외부 API 예외를 애플리케이션 경계에서 변환한다
+
+WebClient 예외를 코어 로직까지 그대로 전달하면 비즈니스 계층이 HTTP와 Reactor 구현에 결합됩니다.
+
+~~~kotlin
+sealed interface LlmFailure {
+    data object TimedOut : LlmFailure
+    data object RateLimited : LlmFailure
+    data object InvalidResponse : LlmFailure
+    data class Unavailable(val cause: Throwable) : LlmFailure
 }
-```
+~~~
 
-비즈니스 로직은 WebClient, Connection Pool, Retry 전략, `reasoning_effort` 등의 구현 세부사항을 전혀 알지 못합니다. `OpenAiClientPort`만 의존합니다.
+어댑터가 외부 오류를 제한된 실패 타입으로 바꾸면 상위 계층은 다음 행동만 결정하면 됩니다.
 
-이 구조의 장점:
-- **교체 용이성**: OpenAI API를 다른 LLM API로 교체해도 core 모듈 수정 없음
-- **테스트 용이성**: `OpenAiClientPort`를 mock하여 비즈니스 로직을 단위 테스트 가능
-- **관심사 분리**: 모델 설정과 WebClient 최적화는 infrastructure 모듈에서만 수행
+- 사용자에게 재시도 가능 여부를 안내할지
+- 대체 경로를 사용할지
+- 비동기 보정 대상으로 남길지
+- 운영 알림을 보낼지
 
-<div class="notice--success" markdown="1">
-**✅ Hexagonal Architecture (Port & Adapter)**
+이 행동 정책 역시 서비스 내부 규칙이므로 이 글에서는 특정 선택을 설명하지 않습니다.
 
-비즈니스 로직이 외부 시스템(DB, API, 메시지 큐)에 직접 의존하지 않도록 **Port(인터페이스)**와 **Adapter(구현체)**로 분리하는 아키텍처입니다. 비즈니스 로직은 Port만 알고, Adapter가 실제 외부 통신을 담당합니다. 외부 시스템 교체 시 Adapter만 새로 만들면 됩니다.
-</div>
+---
 
-```mermaid
+## 8. 관측 데이터는 내용보다 구조가 중요하다
+
+LLM 호출 로그에는 최소한 다음과 같은 기술 지표가 필요합니다.
+
+| 필드 종류 | 예시 |
+|---|---|
+| 작업 구분 | 공개용 별칭 |
+| 모델 구분 | 공개용 모델 그룹 |
+| 시간 | 전체 지연, 재시도 지연 |
+| 사용량 | 입력·출력 토큰 |
+| 결과 | 성공, 시간 초과, 제한, 파싱 실패 |
+
+프롬프트와 응답 원문은 개인정보와 내부 정책을 포함할 수 있으므로 기본 수집 대상으로 두지 않습니다. 필요하다면 마스킹, 샘플링, 접근 권한, 보존 기간을 함께 설계해야 합니다.
+
+---
+
+## 9. Hexagonal Architecture에서 외부 호출 격리하기
+
+~~~kotlin
+interface LlmClientPort {
+    fun complete(
+        messages: List<Message>,
+        policyKey: String,
+    ): LlmResult
+}
+~~~
+
+코어는 WebClient, 커넥션 풀, 모델 공급자, 재시도 구현을 알지 않습니다. 인프라 어댑터가 정책 키를 외부 API 요청으로 변환합니다.
+
+~~~mermaid
 flowchart LR
-    subgraph Core["Core (비즈니스 로직)"]
-        UC["UseCase"] --> P["Port 인터페이스"]
-    end
-    subgraph Infra["Infrastructure"]
-        A["Adapter 구현체"] -.->|"implements"| P
-        A --> E["외부 시스템<br/>(OpenAI API)"]
-    end
-    style Core fill:#E3F2FD
-    style Infra fill:#FFF3E0
-```
+    U["Use Case"] --> P["LLM Client Port"]
+    A["WebClient Adapter"] -. implements .-> P
+    A --> E["External LLM API"]
+~~~
+
+이 경계를 두면 모델 공급자나 네트워크 라이브러리를 바꿔도 코어 로직의 변경을 줄일 수 있고, 테스트에서는 포트를 대역으로 교체할 수 있습니다.
 
 ---
 
-## 7. 결과
+## 10. 결론
 
-### 7.1 모델 최적화 효과
+LLM API 최적화는 특정 모델이나 숫자를 복사하는 작업이 아닙니다.
 
-| 항목 | gpt-5-nano (low) | gpt-5-nano (minimal) | gpt-4o-mini |
-|---|---|---|---|
-| 대화 응답 | 기준 | **가장 짧음** | 두 번째 |
-| 대화 요약 | 기준 | **가장 짧음** | 두 번째 |
-| reasoning 지원 | O | O | X |
+1. 실제 작업과 비슷한 입력으로 모델을 비교한다.
+2. 품질·지연·비용·안정성을 함께 본다.
+3. 연결 풀과 타임아웃을 실행 환경에 맞춰 외부화한다.
+4. 재시도는 일시 오류와 전체 시간 예산 안에서만 허용한다.
+5. 외부 API 예외와 구현 세부사항을 어댑터 경계에 가둔다.
+6. 프롬프트와 운영 정책이 관측 데이터로 새지 않도록 한다.
 
-`reasoning_effort`를 `low` → `minimal`로 변경하는 것만으로 대화 응답과 요약 지연이 모두 유의미하게 줄었습니다.
-
-### 7.2 WebClient 최적화 효과
-
-| 최적화 항목 | 적용 전 | 적용 후 | 개선 |
-|---|---|---|---|
-| 커넥션 재사용 | 매번 TCP/TLS handshake | 풀에서 즉시 획득 | 반복 연결 비용 제거 |
-| 응답 데이터 크기 | 원본 전송 | gzip 압축 | 전송량 감소 |
-| 요청 페이로드 | null 필드 포함 | null 필드 제외 | 전송량 감소 |
-| 타임아웃 | 무한 대기 | 계층별 타임아웃 | 장애 전파 차단 |
-| Rate Limit 처리 | 즉시 실패 | 제한된 지수 백오프 | 일시 오류 자동 복구 |
-
-### 7.3 안정성 개선
-
-| 항목 | 개선 전 | 개선 후 |
-|---|---|---|
-| 무한 대기 | 발생 가능 | 타임아웃으로 방지 |
-| Rate Limit | 사용자에게 즉시 에러 | 자동 재시도 후 복구 |
-| 서버 일시 장애 | 사용자에게 즉시 에러 | 503 자동 재시도 |
-| 모델 변경 | 코드 수정 + 재배포 | DB 변경으로 즉시 반영 |
-| 커넥션 누수 | 관리 부재 | `maxIdleTime`, `maxLifeTime`, `evictInBackground`로 관리 |
-
----
-
-## 8. 결론
-
-### 8.1 배운 점
-
-**1. API 응답 시간의 가장 큰 변수는 모델과 파라미터입니다.**
-
-WebClient를 아무리 최적화해도, 모델 자체가 느리면 한계가 있습니다. gpt-5-nano의 `reasoning_effort`를 `low`에서 `minimal`로 한 단계 낮추는 것만으로 응답 시간이 크게 줄었습니다. 작업의 복잡도에 맞는 `reasoning_effort`를 선택하는 것이 성능 최적화의 첫 번째 단계입니다.
-
-**2. 기본 설정은 프로덕션 설정이 아닙니다.**
-
-WebClient의 기본 설정은 빠른 개발을 위한 것이지, 프로덕션 환경에서의 안정성과 성능을 보장하지 않습니다. 커넥션 풀, 타임아웃, 재시도, 압축 — 이 네 가지는 외부 API를 호출하는 모든 서비스에서 기본적으로 구성해야 합니다.
-
-**3. 재시도 대상을 정확히 필터링해야 합니다.**
-
-429(Rate Limit)와 503(일시적 장애)만 재시도 대상으로 한정해야 합니다. 400(잘못된 요청)이나 401(인증 실패)을 재시도하면 서버 부하만 가중됩니다.
-
-**4. 성능 최적화는 측정에서 시작합니다.**
-
-"느리다"는 감각적 판단이 아닌, 구간별 정확한 측정 데이터를 바탕으로 병목 지점을 식별해야 합니다. `[OpenAI-Metrics]` 로그를 통해 모델별 응답 시간을 실측하고, 이 데이터를 기반으로 `reasoning_effort` 조정과 WebClient 최적화를 결정한 것이 효과적인 개선의 출발점이었습니다.
-
-### 8.2 마무리
-
-외부 API 호출 최적화는 **"어떤 모델을 어떤 설정으로 호출하는가"** 와 **"어떻게 호출하는가"** 두 축으로 나뉩니다. 전자는 모델 선택과 `reasoning_effort` 같은 파라미터 튜닝이고, 후자는 Connection Pool, 타임아웃, 재시도, 압축 같은 네트워크 계층 최적화입니다. 둘 다 놓치지 않아야 외부 API에 의존하는 서비스의 성능과 안정성을 동시에 확보할 수 있습니다.
-
-이 글이 비슷한 문제를 겪고 계신 분들에게 도움이 되었으면 합니다. 궁금한 점이나 개선할 부분이 있다면 언제든지 댓글로 남겨주세요.
-
----
-
-## 참고 자료
-
-- [Spring WebFlux WebClient 공식 문서](https://docs.spring.io/spring-framework/reference/web/webflux-webclient.html)
-- [Reactor Netty Connection Pool](https://projectreactor.io/docs/netty/release/reference/index.html#connection-pool)
-- [Reactor Retry 가이드](https://projectreactor.io/docs/core/release/reference/#_retrying)
-- [Exponential Backoff and Jitter (AWS Architecture Blog)](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/)
-- [OpenAI API Rate Limits](https://platform.openai.com/docs/guides/rate-limits)
-- [OpenAI Reasoning Models](https://platform.openai.com/docs/guides/reasoning)
+이 글의 코드와 표는 설계 방법을 설명하기 위한 예시입니다. 어떤 모델과 값을 실제로 사용하는지는 공개 범위에서 제외했습니다.
