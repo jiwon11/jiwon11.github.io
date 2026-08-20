@@ -26,6 +26,9 @@ Jobdori는 사용자가 채용 공고(Job Description, 이하 JD)를 등록하�
 2. **네트워크 안전성**: URL·IP 검증, 리다이렉트 홉별 재검증, 타임아웃과 응답 크기 제한
 3. **서비스 통합**: Core Port 분리, GraphQL 오류 계약, 직접 붙여넣기 폴백, 구조화 로그와 테스트
 
+> 크롤러의 실제 운영 제한값, User-Agent, 오류 코드, 프롬프트 키와 내부 테스트 경로는 공개용 이름으로 일반화했습니다. 코드의 보안 경계와 설계 원리는 동일합니다.
+{: .prompt-info }
+
 ![채용 공고 페이지가 보안 검증을 거쳐 구조화 데이터로 변환되는 모습](/assets/images/posts/2026-07-14-jd-crawler-implementation/thumbnail.jpg)
 
 <small>JD 크롤러는 HTML 파서 하나가 아니라, 신뢰할 수 없는 입력을 제한하면서 여러 문서 구조를 단계적으로 해석하는 파이프라인이었다.</small>
@@ -238,7 +241,7 @@ Kotlin과 Spring Boot 기반 API 개발
 서버 애플리케이션 개발 경험
 ```
 
-이 텍스트가 후속 `JD_META_EXTRACTION` 프롬프트의 입력이 됩니다. 사이트별 JSON을 AI가 직접 해석하게 두지 않고, 크롤러 단계에서 공통 형식으로 정규화했습니다.
+이 텍스트가 후속 메타 추출 프롬프트의 입력이 됩니다. 사이트별 JSON을 AI가 직접 해석하게 두지 않고, 크롤러 단계에서 공통 형식으로 정규화했습니다.
 
 ### 3.3 2순위: schema.org `JobPosting` JSON-LD
 
@@ -372,25 +375,25 @@ private val restClient = RestClient.builder()
                 connection.instanceFollowRedirects = false
             }
         }.apply {
-            setConnectTimeout(Duration.ofSeconds(5))
-            setReadTimeout(Duration.ofSeconds(10))
+            setConnectTimeout(properties.connectTimeout)
+            setReadTimeout(properties.readTimeout)
         },
     )
     .build()
 ```
 
-| 설정 | 값 | 방어하려는 상황 |
+| 설정 | 값 결정 기준 | 방어하려는 상황 |
 |---|---:|---|
-| Connect timeout | 5초 | DNS·TCP 연결이 끝나지 않는 상황 |
-| Read timeout | 10초 | 연결 후 응답 본문이 오지 않는 상황 |
-| Redirect limit | 최대 5회 | 순환·과도한 리다이렉트 |
-| Body limit | 3,000,000 bytes | 큰 응답에 의한 메모리 사용 증가 |
+| Connect timeout | 네트워크 관측값과 요청 예산 | DNS·TCP 연결이 끝나지 않는 상황 |
+| Read timeout | 대상 페이지의 응답 분포 | 연결 후 응답 본문이 오지 않는 상황 |
+| Redirect limit | 제한된 홉 수 | 순환·과도한 리다이렉트 |
+| Body limit | 허용 가능한 메모리 예산 | 큰 응답에 의한 메모리 사용 증가 |
 
 타임아웃은 크롤 성공률을 높이는 옵션이라기보다, 느린 외부 사이트가 API 서버의 처리 자원을 계속 점유하지 않게 하는 경계입니다.
 
 ### 4.2 응답 전체를 읽은 뒤 자르면 이미 늦다
 
-응답 크기 제한은 문자열 변환 후 `take(max)`를 적용하는 방식으로는 충분하지 않습니다. 그 시점에는 이미 큰 응답을 메모리에 올린 뒤이기 때문입니다. 입력 스트림을 8KB 청크로 읽으면서 상한에 도달하면 중단했습니다.
+응답 크기 제한은 문자열 변환 후 `take(max)`를 적용하는 방식으로는 충분하지 않습니다. 그 시점에는 이미 큰 응답을 메모리에 올린 뒤이기 때문입니다. 입력 스트림을 고정 크기 청크로 읽으면서 상한에 도달하면 중단했습니다.
 
 ```kotlin
 private fun readLimited(
@@ -398,7 +401,7 @@ private fun readLimited(
     maxBytes: Int,
 ): ByteArray {
     val out = ByteArrayOutputStream()
-    val chunk = ByteArray(8192)
+    val chunk = ByteArray(DEFAULT_BUFFER_SIZE)
     var total = 0
 
     while (true) {
@@ -424,10 +427,11 @@ private fun readLimited(
 ```kotlin
 @ConfigurationProperties(prefix = "jd.crawler")
 data class JdCrawlerProperties(
-    val userAgent: String =
-        "Mozilla/5.0 (compatible; JobdoriBot/1.0)",
-    val minBodyLength: Int = JdPolicy.MIN_JD_BODY_LENGTH,
-    val maxBodyBytes: Int = 3_000_000,
+    val userAgent: String,
+    val minBodyLength: Int,
+    val maxBodyBytes: Int,
+    val connectTimeout: Duration,
+    val readTimeout: Duration,
 )
 ```
 
@@ -439,9 +443,9 @@ data class JdCrawlerProperties(
 
 | 정책 | 기준 | 위치 | 목적 |
 |---|---|---|---|
-| `maxBodyBytes = 3,000,000` | 원본 HTTP 응답 바이트 | Infrastructure | 메모리·과대 응답 방어 |
-| `MIN_JD_BODY_LENGTH = 500` | 정제된 본문 문자 수 | Core | 의미 있는 본문 최소 기준 |
-| `MAX_JD_LENGTH = 10,000` | 정제된 본문 문자 수 | Core | AI 입력·저장 범위 제한 |
+| `maxBodyBytes` | 원본 HTTP 응답 바이트 | Infrastructure | 메모리·과대 응답 방어 |
+| `minBodyLength` | 정제된 본문 문자 수 | Core | 의미 있는 본문 최소 기준 |
+| `maxJdLength` | 정제된 본문 문자 수 | Core | AI 입력·저장 범위 제한 |
 
 HTML에는 태그, CSS, 스크립트가 포함되므로 원본 바이트와 정제된 본문 길이는 같지 않습니다. 두 제한을 하나로 합치면 네트워크 방어와 비즈니스 입력 정책이 서로 얽힙니다.
 
@@ -537,13 +541,13 @@ private fun fetchHtml(startUrl: String): ByteArray? {
                             ?.let { URI(url).resolve(it).toString() }
                             ?: throw JdCrawlException(
                                 "리다이렉트 위치 없음: $url",
-                                JdCrawlErrorCode.E422_JD_FETCH_FAILED,
+                                CrawlErrorCode.REDIRECT_FAILED,
                             ),
                     )
                     status.is4xxClientError ->
                         throw JdCrawlException(
                             "접근 불가: $url",
-                            JdCrawlErrorCode.E422_JD_ACCESS_DENIED,
+                            CrawlErrorCode.ACCESS_DENIED,
                         )
                     !status.is2xxSuccessful -> Fetched(null)
                     else -> Fetched(
@@ -564,7 +568,7 @@ private fun fetchHtml(startUrl: String): ByteArray? {
 }
 ```
 
-상대 경로 `Location`도 `URI.resolve`로 현재 URL 기준의 절대 주소로 바꾼 뒤 검증합니다. 최대 리다이렉트 횟수는 5회로 제한했습니다.
+상대 경로 `Location`도 `URI.resolve`로 현재 URL 기준의 절대 주소로 바꾼 뒤 검증합니다. 최대 리다이렉트 횟수는 설정값으로 제한했습니다.
 
 <div class="notice--warning" markdown="1">
 **⚠️ 애플리케이션 레벨 검증만으로 SSRF 방어가 완성되지는 않는다**
@@ -578,23 +582,23 @@ private fun fetchHtml(startUrl: String): ByteArray? {
 
 ### 6.1 모든 실패를 500으로 만들지 않기
 
-크롤링 실패의 원인에 따라 사용자가 취해야 할 행동이 다릅니다. 에러 코드를 네 가지로 나눴습니다.
+크롤링 실패의 원인에 따라 사용자가 취해야 할 행동이 다릅니다. 공개용 예시에서는 오류를 네 범주로 나눴습니다.
 
-| 에러 코드 | HTTP 상태 | 발생 조건 | 사용자 안내 |
-|---|---:|---|---|
-| `jd_invalid_url` | 400 | 스킴 오류, 내부 주소, 호스트 해석 실패 | URL 확인 |
-| `jd_access_denied` | 422 | 대상 페이지가 4xx 반환 | 원문 직접 붙여 넣기 |
-| `jd_fetch_failed` | 422 | 네트워크·5xx·짧은 본문·리다이렉트 실패 | 원문 직접 붙여 넣기 |
-| `jd_not_a_posting` | 422 | AI가 채용 공고로 판단하지 못함 | 공고 주소·내용 확인 |
+| 오류 범주 | 응답 분류 | 발생 조건 | 사용자 안내 |
+|---|---|---|---|
+| `INVALID_URL` | 클라이언트 오류 | 스킴 오류, 내부 주소, 호스트 해석 실패 | URL 확인 |
+| `ACCESS_DENIED` | 처리 불가 | 대상 페이지가 접근 거부 응답 | 원문 직접 붙여 넣기 |
+| `FETCH_FAILED` | 처리 불가 | 네트워크·서버 오류·짧은 본문·리다이렉트 실패 | 원문 직접 붙여 넣기 |
+| `NOT_A_POSTING` | 처리 불가 | AI가 채용 공고로 판단하지 못함 | 공고 주소·내용 확인 |
 
-4xx 응답은 접근 거부로 보존하고, 네트워크 오류와 5xx는 본문 없음으로 처리해 최종적으로 `jd_fetch_failed`가 되게 했습니다.
+접근 거부 응답은 원인을 보존하고, 네트워크 오류와 서버 오류는 본문 없음으로 처리해 최종적으로 수집 실패 범주가 되게 했습니다.
 
 ```kotlin
 when {
     status.is4xxClientError ->
         throw JdCrawlException(
             "접근 불가: $url",
-            JdCrawlErrorCode.E422_JD_ACCESS_DENIED,
+            CrawlErrorCode.ACCESS_DENIED,
         )
 
     !status.is2xxSuccessful -> Fetched(null)
@@ -607,11 +611,11 @@ when {
 }
 ```
 
-GraphQL에서는 422 오류를 내부 서버 오류가 아니라 잘못된 요청 흐름으로 매핑했습니다. 프론트엔드는 에러 코드에 따라 붙여넣기 화면으로 사용자를 안내할 수 있습니다.
+GraphQL에서는 예상 가능한 크롤링 오류를 내부 서버 오류와 구분되는 클라이언트 처리 범주로 매핑했습니다. 프론트엔드는 에러 종류에 따라 붙여넣기 화면으로 사용자를 안내할 수 있습니다.
 
 ### 6.2 HTTP 200이 크롤 성공을 의미하지 않는다
 
-로그인 페이지나 접근 안내 페이지도 HTTP 200을 반환할 수 있습니다. 따라서 상태 코드만 보고 성공으로 처리하지 않고, 최종 추출 본문이 최소 500자를 만족하는지 확인합니다.
+로그인 페이지나 접근 안내 페이지도 HTTP 200을 반환할 수 있습니다. 따라서 상태 코드만 보고 성공으로 처리하지 않고, 최종 추출 본문이 설정된 최소 길이를 만족하는지 확인합니다.
 
 ```kotlin
 if (body.length < properties.minBodyLength) {
@@ -621,7 +625,7 @@ if (body.length < properties.minBodyLength) {
     }
     throw JdCrawlException(
         "본문 수집 실패(붙여넣기로 입력): $url",
-        JdCrawlErrorCode.E422_JD_FETCH_FAILED,
+        CrawlErrorCode.FETCH_FAILED,
     )
 }
 ```
@@ -634,7 +638,7 @@ val meta = extractJdMetaService.extractFromBody(singleBody)
 if (!meta.isJobPosting || meta.hasNoJdSubstance()) {
     throw JdCrawlException(
         "채용 공고로 인식되지 않는 내용입니다.",
-        JdCrawlErrorCode.E422_JD_NOT_A_POSTING,
+        CrawlErrorCode.NOT_A_POSTING,
     )
 }
 ```
@@ -690,7 +694,7 @@ val fields = linkedMapOf<String, Any?>(
 
 Datadog에서는 `success`, `latencyMs`, `bodyLength`, `error.kind`를 숫자·facet으로 집계할 수 있습니다. 크롤링 실패율이 높아졌는지, 특정 시점부터 본문 길이가 급격히 줄었는지를 확인할 수 있는 기반입니다.
 
-### 7.2 저장 없이 확인하는 테스트 엔드포인트
+### 7.2 저장 없이 확인하는 내부 테스트 도구
 
 실제 채용 사이트의 결과를 빠르게 확인하기 위해 `local`, `dev`, `test` 프로필에서만 열리는 테스트 엔드포인트를 만들었습니다.
 
@@ -704,10 +708,10 @@ class TestJdCrawlController(
 )
 ```
 
-`POST /test-jd-crawl?url=...`을 호출하면 저장 없이 다음을 한 번에 확인할 수 있습니다.
+배포 프로필로 제한한 내부 테스트 도구에서는 저장 없이 다음을 한 번에 확인할 수 있습니다. 실제 경로는 공개용 글에서 제외했습니다.
 
 1. 크롤링된 원문
-2. `JD_META_EXTRACTION` 프롬프트의 구조화 결과
+2. 메타 추출 프롬프트의 구조화 결과
 3. 실패 시 에러 코드와 메시지
 
 파서가 텍스트를 가져오는 것과 그 텍스트가 AI 추출에 적합한지는 다른 문제입니다. 두 결과를 한 화면에서 비교할 수 있게 해 실제 사이트별 피드백 시간을 줄였습니다.
@@ -739,13 +743,12 @@ verify(exactly = 1) { urlGuard.validate(start) }
 verify(exactly = 1) { urlGuard.validate(redirectTarget) }
 ```
 
-이번 글을 작성하며 다시 실행한 테스트 결과는 다음과 같습니다.
+이번 글을 작성하며 관련 테스트가 모두 통과하는 것을 다시 확인했습니다. 클래스 이름과 개수는 공개용으로 일반화했습니다.
 
-| 테스트 클래스 | 검증 수 | 결과 |
-|---|---:|---|
-| `StaticJdCrawlerClientTest` | 8 | 모두 통과 |
-| `JdUrlGuardTest` | 7 | 모두 통과 |
-| 합계 | **15** | **실패 0, 오류 0** |
+| 테스트 범위 | 결과 |
+|---|---|
+| HTTP 수집·파싱 경계 | 모두 통과 |
+| URL·IP 보안 가드 | 모두 통과 |
 
 주요 검증 항목은 다음과 같습니다.
 
@@ -753,9 +756,9 @@ verify(exactly = 1) { urlGuard.validate(redirectTarget) }
 - 요청 전 URL 가드 호출
 - 리다이렉트 홉별 재검증
 - User-Agent 전송
-- 403 접근 거부 매핑
-- 짧은 본문의 `jd_fetch_failed` 처리
-- 500 응답의 수집 실패 처리
+- 접근 거부 응답 매핑
+- 짧은 본문의 `FETCH_FAILED` 처리
+- 서버 오류 응답의 수집 실패 처리
 - `maxBodyBytes` 이후 응답 미수집
 - `file`, `ftp`, `gopher` 스킴 차단
 - 루프백, 링크 로컬, 사설, 와일드카드 주소 차단
@@ -764,9 +767,9 @@ verify(exactly = 1) { urlGuard.validate(redirectTarget) }
 실행 명령은 다음과 같습니다.
 
 ```bash
-./gradlew :jobdori-infrastructure:client:test \
-  --tests "com.jobdori.infrastructure.client.jd.StaticJdCrawlerClientTest" \
-  --tests "com.jobdori.infrastructure.client.jd.JdUrlGuardTest"
+./gradlew :infrastructure:client:test \
+  --tests "*CrawlerClientTest" \
+  --tests "*UrlGuardTest"
 ```
 
 ---
@@ -777,10 +780,10 @@ verify(exactly = 1) { urlGuard.validate(redirectTarget) }
 
 | 입력 형태 | 처리 전략 | 폴백 |
 |---|---|---|
-| Next.js `initialData` | 명시적 DTO로 9개 섹션 조립 | JSON-LD → DOM |
+| Next.js `initialData` | 명시적 DTO로 필요한 섹션 조립 | JSON-LD → DOM |
 | JSON-LD | 단일·배열·`@graph` 후보에서 제목·설명 추출 | DOM |
 | 일반 HTML | 노이즈 제거 후 본문 컨테이너 우선 추출 | 전체 `body` |
-| 충분하지 않은 본문 | 500자 미만이면 실패 | 직접 붙여 넣기 안내 |
+| 충분하지 않은 본문 | 최소 길이 미만이면 실패 | 직접 붙여 넣기 안내 |
 
 특정 CSS 셀렉터 하나로 모든 사이트를 맞추는 대신, **정확한 구조부터 느슨한 구조로 내려가는 폴백 체인**을 만들었습니다. 각 파서는 실패를 독점하지 않고 다음 전략에 기회를 넘깁니다.
 
@@ -791,10 +794,10 @@ verify(exactly = 1) { urlGuard.validate(redirectTarget) }
 | 비 HTTP 프로토콜 | `http`, `https`만 허용 |
 | 내부 네트워크 접근 | 모든 DNS 결과의 주소 범주 검사 |
 | 리다이렉트 SSRF 우회 | 자동 추적 비활성화, 홉별 재검증 |
-| 무한 리다이렉트 | 최대 5회 제한 |
-| 느린 외부 서버 | 연결 5초, 읽기 10초 타임아웃 |
-| 과대 응답 | 스트림 단계에서 3MB 상한 |
-| 의미 없는 200 응답 | 정제 본문 최소 500자 검증 |
+| 무한 리다이렉트 | 설정된 횟수로 제한 |
+| 느린 외부 서버 | 연결·읽기 타임아웃 분리 |
+| 과대 응답 | 스트림 단계에서 크기 상한 적용 |
+| 의미 없는 200 응답 | 정제 본문 최소 길이 검증 |
 
 이 방어가 모든 네트워크 공격을 해결하는 것은 아닙니다. 특히 DNS rebinding과 인프라 수준의 egress 통제는 남은 과제입니다. 다만 사용자 URL을 곧바로 요청하는 초기 형태와 비교하면, 애플리케이션에서 통제할 수 있는 주요 경계가 명시됐습니다.
 
@@ -802,9 +805,9 @@ verify(exactly = 1) { urlGuard.validate(redirectTarget) }
 
 | 상황 | 이전에 생길 수 있는 결과 | 현재 처리 |
 |---|---|---|
-| 사이트가 크롤러를 차단 | 일반 서버 오류 | `jd_access_denied` + 붙여넣기 안내 |
-| 본문을 충분히 찾지 못함 | 빈 JD 또는 AI 추출 실패 | `jd_fetch_failed` + 붙여넣기 안내 |
-| 채용 공고가 아닌 페이지 | 잘못된 JD 저장 가능 | `jd_not_a_posting`으로 저장 차단 |
+| 사이트가 크롤러를 차단 | 일반 서버 오류 | `ACCESS_DENIED` + 붙여넣기 안내 |
+| 본문을 충분히 찾지 못함 | 빈 JD 또는 AI 추출 실패 | `FETCH_FAILED` + 붙여넣기 안내 |
+| 채용 공고가 아닌 페이지 | 잘못된 JD 저장 가능 | `NOT_A_POSTING`으로 저장 차단 |
 | 여러 공고가 섞인 본문 | 임의의 한 공고 저장 가능 | 후보 목록 반환 후 사용자 선택 |
 
 크롤러의 목표를 “모든 사이트를 반드시 성공시킨다”로 잡지 않았습니다. 정적 수집으로 안전하게 처리할 수 있는 범위를 지원하고, 그 범위를 벗어나면 사용자가 직접 붙여 넣어 같은 등록 파이프라인을 계속 사용할 수 있게 했습니다.

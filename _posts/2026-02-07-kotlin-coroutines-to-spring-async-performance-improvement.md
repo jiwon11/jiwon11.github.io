@@ -19,22 +19,25 @@ image:
 1. **OpenAI 모델 최적화**: `reasoning_effort` 파라미터 튜닝과 모델 비교를 통한 응답 속도 개선
 2. **WebClient 최적화**: Connection Pool, Timeout 계층화, gzip 압축, 지수 백오프 재시도를 통한 네트워크 효율 및 안정성 개선
 
+> 운영 정책과 인프라 설정은 공개 가능한 형태로 일반화했습니다. 대화 횟수, 토큰 상한, 풀 크기, 타임아웃·재시도 값은 실제 값이 아니라 설정 프로퍼티 이름으로 표현합니다. 성능 수치는 동일 기준의 상대값으로 정규화했습니다.
+{: .prompt-info }
+
 ---
 
 ## 1. 배경: AI 대화 서비스와 OpenAI API 의존도
 
 ### 1.1 서비스 소개
 
-duurian은 AI 페르소나 기반의 대화 서비스입니다. 사용자가 AI 페르소나와 하루 최대 5턴의 대화를 나누고, 마지막 턴이 완료되면 AI가 오늘의 대화 내용을 분석하여 대화 요약을 생성합니다.
+duurian은 AI 페르소나 기반의 대화 서비스입니다. 사용자가 AI 페르소나와 일별로 정해진 횟수의 대화를 나누고, 마지막 턴이 완료되면 AI가 오늘의 대화 내용을 분석하여 대화 요약을 생성합니다.
 
 서비스의 핵심 기능 대부분이 OpenAI API에 의존하고 있습니다.
 
 | 기능 | OpenAI API 호출 | 설명 |
 |---|---|---|
 | 대화 응답 생성 | 매 턴마다 | 사용자 메시지에 대한 AI 후속 응답 생성 |
-| 대화 요약 생성 | 5턴 완료 시 | 오늘 전체 대화 내용 요약 |
+| 대화 요약 생성 | 마지막 턴 완료 시 | 오늘 전체 대화 내용 요약 |
 
-하루에 사용자 1명당 최소 4회(대화) + 1회(요약) = **5회의 OpenAI API 호출**이 발생합니다. 사용자 수가 증가하면 API 호출 빈도도 비례하여 늘어나므로, **외부 API 호출의 효율성과 안정성**이 서비스 전체의 성능을 좌우하는 구조입니다.
+사용자별로 턴마다 대화 호출이 발생하고, 마지막에는 요약 호출이 추가됩니다. 사용자 수가 증가하면 API 호출 빈도도 비례하여 늘어나므로, **외부 API 호출의 효율성과 안정성**이 서비스 전체의 성능을 좌우하는 구조입니다.
 
 ### 1.2 초기 상태: gpt-5-nano + reasoning_effort: low
 
@@ -57,7 +60,7 @@ fun openAiWebClient(): WebClient {
 val request = ChatCompletionRequest(
     model = "gpt-5-nano",
     messages = openAiMessages,
-    maxCompletionTokens = 4000,
+    maxCompletionTokens = openAiProperties.maxCompletionTokens,
     reasoningEffort = "low"
 )
 ```
@@ -70,12 +73,12 @@ val request = ChatCompletionRequest(
 
 **gpt-5-nano (reasoning_effort: low) — 초기 설정**
 
-| 기능 | 평균 응답 시간 | 샘플 수 |
-|---|---|---|
-| 대화 응답 생성 | **4,325.2ms** | 5건 |
-| 대화 요약 생성 | **6,272ms** | 1건 |
+| 기능 | 초기 관측 결과 |
+|---|---|
+| 대화 응답 생성 | 사용자가 지연을 체감하는 수준 |
+| 대화 요약 생성 | 대화 응답보다 더 긴 지연 |
 
-대화 응답에 4초 이상, 요약에 6초 이상이 걸리고 있었습니다. 사용자가 매 턴마다 4초 이상 기다려야 하는 것은 대화 경험에 큰 영향을 미칩니다.
+응답을 기다리는 시간이 대화 경험에 영향을 줄 만큼 길었습니다.
 
 이 문제를 해결하기 위해 **모델/파라미터 최적화**와 **WebClient 최적화**를 동시에 진행했습니다.
 
@@ -106,11 +109,11 @@ OpenAI의 reasoning 모델(gpt-5-nano 등)은 `reasoning_effort` 파라미터를
 
 다양한 모델과 `reasoning_effort` 조합을 프로덕션에서 측정했습니다.
 
-| 모델 | reasoning_effort | 대화 응답 평균 | 대화 요약 평균 |
+| 모델 | reasoning_effort | 대화 응답 | 대화 요약 |
 |---|---|---|---|
-| gpt-5-nano | low | 4,325.2ms (5건) | 6,272ms (1건) |
-| gpt-5-nano | minimal | **1,382.4ms** (5건) | **1,110ms** (1건) |
-| gpt-4o-mini | - | 1,819.8ms (10건) | 1,338.7ms (3건) |
+| gpt-5-nano | low | 기준 | 기준 |
+| gpt-5-nano | minimal | **가장 짧음** | **가장 짧음** |
+| gpt-4o-mini | - | 두 번째 | 두 번째 |
 
 ```mermaid
 flowchart TD
@@ -118,9 +121,9 @@ flowchart TD
     Q --> B
     Q --> C
 
-    A["gpt-5-nano, low<br>응답 <b>4,325ms</b><br>요약 <b>6,272ms</b>"]
-    B["gpt-5-nano, minimal<br>응답 <b>1,382ms</b> (3.1배↓)<br>요약 <b>1,110ms</b> (5.6배↓)"]
-    C["gpt-4o-mini<br>응답 <b>1,820ms</b> (2.4배↓)<br>요약 <b>1,339ms</b> (4.7배↓)"]
+    A["gpt-5-nano, low<br>비교 기준"]
+    B["gpt-5-nano, minimal<br>대화·요약 모두 가장 짧음"]
+    C["gpt-4o-mini<br>두 번째로 짧음"]
 
     style A fill:#FFCDD2,stroke:#C62828,color:#333
     style B fill:#C8E6C9,stroke:#2E7D32,color:#333
@@ -128,7 +131,7 @@ flowchart TD
 ```
 
 핵심 발견:
-- **gpt-5-nano low → minimal**: 대화 응답 약 **3.1배**, 요약 약 **5.6배** 빨라짐
+- **gpt-5-nano low → minimal**: 대화 응답과 요약 모두 유의미하게 단축
 - **gpt-4o-mini**: reasoning 모델이 아니므로 `reasoning_effort` 불필요. 안정적인 성능
 
 `reasoning_effort`를 `low`에서 `minimal`로 한 단계만 낮춰도 응답 시간이 크게 줄어드는 이유는, `low`도 여전히 상당한 reasoning token을 생성하기 때문입니다. `minimal`은 reasoning을 거의 건너뛰고 바로 응답을 생성합니다.
@@ -275,11 +278,11 @@ Reactor Netty의 `ConnectionProvider`를 사용하여 커넥션 풀을 구성합
 
 ```kotlin
 val connectionProvider = ConnectionProvider.builder("openai-pool")
-    .maxConnections(50)                            // 최대 커넥션 수
-    .maxIdleTime(Duration.ofSeconds(20))           // 유휴 커넥션 유지 시간
-    .maxLifeTime(Duration.ofMinutes(5))            // 커넥션 최대 생존 시간
-    .pendingAcquireTimeout(Duration.ofSeconds(60)) // 커넥션 획득 대기 시간
-    .evictInBackground(Duration.ofSeconds(120))    // 유휴 커넥션 백그라운드 제거 주기
+    .maxConnections(networkProperties.poolCapacity)
+    .maxIdleTime(networkProperties.idleTimeout)
+    .maxLifeTime(networkProperties.connectionLifetime)
+    .pendingAcquireTimeout(networkProperties.acquireTimeout)
+    .evictInBackground(networkProperties.evictionInterval)
     .build()
 ```
 
@@ -295,7 +298,7 @@ val connectionProvider = ConnectionProvider.builder("openai-pool")
 요청 2: 풀에서 커넥션 획득 → 요청/응답 → 풀에 반환              ← handshake 생략
 ```
 
-실측 결과, 커넥션 재사용으로 두 번째 이후 요청에서 **150~450ms의 지연을 절감**할 수 있었습니다.
+실측 결과, 커넥션 재사용 후 두 번째 이후 요청에서 반복되던 연결 수립 지연을 줄일 수 있었습니다.
 
 <div class="notice--info" markdown="1">
 **📘 Connection Pool과 TCP/TLS Handshake**
@@ -312,7 +315,7 @@ sequenceDiagram
     S->>C: TCP SYN-ACK
     C->>S: TCP ACK + TLS ClientHello
     S->>C: TLS ServerHello + Certificate
-    C->>S: TLS Finished (~300-450ms 소요)
+    C->>S: TLS Finished (네트워크 RTT만큼 지연)
     C->>S: HTTP Request
     Note over C,S: 풀 있음: 즉시 요청
     C->>S: HTTP Request (기존 연결 재사용, ~0ms)
@@ -320,13 +323,13 @@ sequenceDiagram
 
 각 설정값의 설계 의도:
 
-| 설정 | 값 | 설계 의도 |
+| 설정 | 값 결정 기준 | 설계 의도 |
 |---|---|---|
-| `maxConnections` | 50 | 동시 OpenAI API 호출 상한. 서비스 규모에 맞게 설정 |
-| `maxIdleTime` | 20초 | 유휴 커넥션을 너무 오래 유지하면 서버 측에서 끊을 수 있음 |
-| `maxLifeTime` | 5분 | 오래된 커넥션을 주기적으로 갱신하여 stale connection 방지 |
-| `pendingAcquireTimeout` | 60초 | 풀이 가득 찼을 때 커넥션 획득 대기 상한. OpenAI API의 긴 응답 시간을 고려 |
-| `evictInBackground` | 120초 | 유휴 커넥션을 2분마다 정리. 리소스 누수 방지 |
+| `maxConnections` | 동시 요청량과 외부 API 한도 | 호출 상한을 두어 자원 고갈 방지 |
+| `maxIdleTime` | 서버 keep-alive와 관측값 | 끊어진 유휴 연결 재사용 방지 |
+| `maxLifeTime` | 연결 안정성 관측값 | 오래된 커넥션을 주기적으로 갱신 |
+| `pendingAcquireTimeout` | 허용 가능한 전체 지연 | 풀이 가득 찼을 때 무한 대기 방지 |
+| `evictInBackground` | 유휴 연결 정리 주기 | 불필요한 연결과 리소스 누수 방지 |
 
 <div class="notice--warning" markdown="1">
 **⚠️ Stale Connection**
@@ -340,24 +343,20 @@ Stale Connection은 풀에 유지되고 있지만, 서버 측에서 이미 끊�
 
 ```kotlin
 val httpClient = HttpClient.create(connectionProvider)
-    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5_000) // 1. TCP 연결 타임아웃
-    .responseTimeout(Duration.ofSeconds(60))              // 2. 응답 타임아웃
+    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, networkProperties.connectTimeoutMillis)
+    .responseTimeout(networkProperties.responseTimeout)
     .doOnConnected { conn ->
-        conn.addHandlerLast(
-            ReadTimeoutHandler(60, TimeUnit.SECONDS)      // 3. 읽기 타임아웃
-        )
-        conn.addHandlerLast(
-            WriteTimeoutHandler(10, TimeUnit.SECONDS)     // 4. 쓰기 타임아웃
-        )
+        conn.addHandlerLast(ReadTimeoutHandler(networkProperties.readTimeoutSeconds))
+        conn.addHandlerLast(WriteTimeoutHandler(networkProperties.writeTimeoutSeconds))
     }
     .compress(true)                                       // gzip 압축 활성화
 ```
 
 ```mermaid
 graph LR
-    A["TCP 연결 </br> 5초"] --> B["요청 쓰기 </br> 10초"]
-    B --> C["응답 대기 </br> 60초"]
-    C --> D["응답 읽기 </br> 60초"]
+    A["TCP 연결<br/>connect timeout"] --> B["요청 쓰기<br/>write timeout"]
+    B --> C["응답 대기<br/>response timeout"]
+    C --> D["응답 읽기<br/>read timeout"]
 
     style A fill:#3498DB,stroke:#333,color:#fff
     style B fill:#2ECC71,stroke:#333,color:#fff
@@ -365,12 +364,12 @@ graph LR
     style D fill:#E74C3C,stroke:#333,color:#fff
 ```
 
-| 타임아웃 | 값 | 역할 |
+| 타임아웃 | 값 결정 기준 | 역할 |
 |---|---|---|
-| Connect Timeout | 5초 | TCP 연결 수립 실패를 빠르게 감지 |
-| Write Timeout | 10초 | 요청 전송 중 네트워크 문제 감지 |
-| Response Timeout | 60초 | OpenAI API 응답 대기 상한. 모델에 따라 수초~10초 이상 걸릴 수 있어 여유있게 설정 |
-| Read Timeout | 60초 | 응답 수신 중 네트워크 지연 감지 |
+| Connect Timeout | 네트워크 RTT와 장애 감지 목표 | TCP 연결 수립 실패를 빠르게 감지 |
+| Write Timeout | 최대 요청 크기와 전송 속도 | 요청 전송 중 네트워크 문제 감지 |
+| Response Timeout | 모델별 지연 분포와 사용자 SLA | 외부 API 응답 대기 상한 설정 |
+| Read Timeout | 응답 크기와 수신 속도 | 응답 수신 중 네트워크 지연 감지 |
 
 <div class="notice--warning" markdown="1">
 **⚠️ Timeout Layering**
@@ -401,12 +400,12 @@ HTTP 클라이언트가 `Accept-Encoding: gzip` 헤더를 보내면, 서버는 �
 ```kotlin
 val exchangeStrategies = ExchangeStrategies.builder()
     .codecs { configurer ->
-        configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024) // 10MB
+        configurer.defaultCodecs().maxInMemorySize(networkProperties.maxInMemoryBytes)
     }
     .build()
 ```
 
-WebClient의 기본 메모리 버퍼 크기는 256KB입니다. OpenAI API의 응답은 긴 텍스트를 포함할 수 있으므로 **10MB**로 확보합니다. 이 설정이 없으면 긴 응답에서 `DataBufferLimitException`이 발생합니다.
+OpenAI API의 응답은 긴 텍스트를 포함할 수 있으므로, 관측한 최대 응답 크기에 안전 여유를 더해 버퍼 상한을 설정합니다. 이 설정이 없으면 긴 응답에서 `DataBufferLimitException`이 발생할 수 있습니다.
 
 <div class="notice--warning" markdown="1">
 **⚠️ DataBufferLimitException**
@@ -427,27 +426,27 @@ class OpenAiConfig(
     fun openAiWebClient(): WebClient {
         // 1. Connection Pool 설정
         val connectionProvider = ConnectionProvider.builder("openai-pool")
-            .maxConnections(50)
-            .maxIdleTime(Duration.ofSeconds(20))
-            .maxLifeTime(Duration.ofMinutes(5))
-            .pendingAcquireTimeout(Duration.ofSeconds(60))
-            .evictInBackground(Duration.ofSeconds(120))
+            .maxConnections(openAiProperties.poolCapacity)
+            .maxIdleTime(openAiProperties.idleTimeout)
+            .maxLifeTime(openAiProperties.connectionLifetime)
+            .pendingAcquireTimeout(openAiProperties.acquireTimeout)
+            .evictInBackground(openAiProperties.evictionInterval)
             .build()
 
         // 2. HttpClient 설정 (타임아웃, 압축)
         val httpClient = HttpClient.create(connectionProvider)
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5_000)
-            .responseTimeout(Duration.ofSeconds(60))
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, openAiProperties.connectTimeoutMillis)
+            .responseTimeout(openAiProperties.responseTimeout)
             .doOnConnected { conn ->
-                conn.addHandlerLast(ReadTimeoutHandler(60, TimeUnit.SECONDS))
-                conn.addHandlerLast(WriteTimeoutHandler(10, TimeUnit.SECONDS))
+                conn.addHandlerLast(ReadTimeoutHandler(openAiProperties.readTimeoutSeconds))
+                conn.addHandlerLast(WriteTimeoutHandler(openAiProperties.writeTimeoutSeconds))
             }
             .compress(true)
 
         // 3. 버퍼 크기 설정
         val exchangeStrategies = ExchangeStrategies.builder()
             .codecs { configurer ->
-                configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024)
+                configurer.defaultCodecs().maxInMemorySize(openAiProperties.maxInMemoryBytes)
             }
             .build()
 
@@ -473,8 +472,8 @@ class OpenAiProperties {
     lateinit var apiKey: String
     lateinit var apiUrl: String
     lateinit var model: String
-    var maxTokens: Int = 4000
-    var temperature: Double = 0.7
+    var maxTokens: Int? = null
+    var temperature: Double? = null
 }
 ```
 
@@ -523,14 +522,14 @@ webClient.post()
     .bodyValue(request)
     .retrieve()
     .bodyToMono<ChatCompletionResponse>()
-    .timeout(Duration.ofSeconds(60))
+    .timeout(openAiProperties.requestTimeout)
     .retryWhen(
-        Retry.backoff(10, Duration.ofSeconds(1))       // 최대 10회, 초기 1초 백오프
+        Retry.backoff(openAiProperties.retryCount, openAiProperties.initialBackoff)
             .filter { e ->
                 e is WebClientResponseException.TooManyRequests ||   // 429만
                 e is WebClientResponseException.ServiceUnavailable   // 503만
             }
-            .maxBackoff(Duration.ofSeconds(100))        // 최대 100초 백오프
+            .maxBackoff(openAiProperties.maxBackoff)
             .doBeforeRetry { signal ->
                 log.warn {
                     "OpenAI API 재시도 ${signal.totalRetries() + 1}회: " +
@@ -540,11 +539,11 @@ webClient.post()
     )
 ```
 
-| 항목 | 설정값 | 이유 |
+| 항목 | 값 결정 기준 | 이유 |
 |---|---|---|
-| 최대 재시도 | 10회 | OpenAI Rate Limit은 분 단위로 리셋되므로, 충분한 횟수 확보 |
-| 초기 백오프 | 1초 | 일시적 오류는 곧바로 해소될 수 있으므로, 첫 재시도는 빠르게 |
-| 최대 백오프 | 100초 | Rate Limit 상황에서 충분한 대기 시간 |
+| 최대 재시도 | 사용자 SLA와 전체 요청 시간 | 복구 기회를 주되 요청이 과도하게 길어지지 않게 제한 |
+| 초기 백오프 | 외부 API의 복구 특성 | 일시적 오류 뒤 첫 재시도 간격 설정 |
+| 최대 백오프 | 외부 API 제한과 요청 예산 | 장시간 장애에서 재시도 폭주 방지 |
 | 재시도 대상 | 429, 503 | 재시도로 복구 가능한 일시적 오류만. 다른 4xx/5xx는 재시도 무의미 |
 
 ### 4.3 지수 백오프의 동작 원리
@@ -552,16 +551,10 @@ webClient.post()
 `Retry.backoff`은 **지수적으로 증가하는 대기 시간 + jitter(무작위 변동)** 을 적용합니다.
 
 ```
-재시도 1: ~1초 대기    (초기 백오프)
-재시도 2: ~2초 대기    (x2)
-재시도 3: ~4초 대기    (x2)
-재시도 4: ~8초 대기    (x2)
-재시도 5: ~16초 대기   (x2)
-재시도 6: ~32초 대기   (x2)
-재시도 7: ~64초 대기   (x2)
-재시도 8: ~100초 대기  (maxBackoff 도달)
-재시도 9: ~100초 대기  (maxBackoff 유지)
-재시도 10: ~100초 대기 (maxBackoff 유지)
+재시도 1: initialBackoff
+재시도 2: initialBackoff × 2
+재시도 3: initialBackoff × 4
+... 최대 maxBackoff 안에서 jitter 적용
 ```
 
 Reactor의 `Retry.backoff`은 기본적으로 **jitter factor 0.5**를 적용하여, 대기 시간에 ±50%의 무작위 변동을 줍니다. 이는 여러 요청이 동시에 Rate Limit에 걸렸을 때, 모두 같은 시점에 재시도하여 **thundering herd** 문제를 일으키는 것을 방지합니다.
@@ -598,8 +591,8 @@ flowchart TD
     B -->|503 Service Unavailable| D
     B -->|기타 에러 400, 401, 500 등| E[즉시 실패 - 재시도 없음]
 
-    D -->|10회 이하| F["지수 백오프 대기<br/>1s → 2s → 4s → ... → 100s"]
-    D -->|10회 초과| G[최종 실패 - 예외 발생]
+    D -->|재시도 예산 이내| F["지수 백오프 대기<br/>초기값 → 증가 → 최대값"]
+    D -->|재시도 예산 초과| G[최종 실패 - 예외 발생]
 
     F --> A
 
@@ -631,8 +624,8 @@ flowchart TD
 
 | WebClient 예외 | 도메인 예외 | 의미 |
 |---|---|---|
-| `TimeoutException` | `OpenAiTimeoutException` | 60초 내 응답 없음 |
-| `TooManyRequests` (429) | `OpenAiRateLimitException` | Rate Limit 초과 (10회 재시도 후에도 실패) |
+| `TimeoutException` | `OpenAiTimeoutException` | 설정된 응답 시간 안에 완료되지 않음 |
+| `TooManyRequests` (429) | `OpenAiRateLimitException` | 재시도 예산 이후에도 Rate Limit 지속 |
 | `OpenAiEmptyResponseException` | 그대로 전파 | API는 200이지만 응답 내용이 없음 |
 | 기타 모든 예외 | `OpenAiApiException` | 알 수 없는 API 오류 |
 
@@ -773,21 +766,21 @@ flowchart LR
 
 | 항목 | gpt-5-nano (low) | gpt-5-nano (minimal) | gpt-4o-mini |
 |---|---|---|---|
-| 대화 응답 평균 | 4,325.2ms | **1,382.4ms** | 1,819.8ms |
-| 대화 요약 평균 | 6,272ms | **1,110ms** | 1,338.7ms |
+| 대화 응답 | 기준 | **가장 짧음** | 두 번째 |
+| 대화 요약 | 기준 | **가장 짧음** | 두 번째 |
 | reasoning 지원 | O | O | X |
 
-`reasoning_effort`를 `low` → `minimal`로 변경하는 것만으로 대화 응답 약 **3.1배**, 요약 약 **5.6배** 빨라졌습니다.
+`reasoning_effort`를 `low` → `minimal`로 변경하는 것만으로 대화 응답과 요약 지연이 모두 유의미하게 줄었습니다.
 
 ### 7.2 WebClient 최적화 효과
 
 | 최적화 항목 | 적용 전 | 적용 후 | 개선 |
 |---|---|---|---|
-| 커넥션 재사용 | 매번 TCP/TLS handshake | 풀에서 즉시 획득 | 두 번째 이후 요청 150~450ms 절감 |
-| 응답 데이터 크기 | 원본 100% | gzip 압축 ~30% | **70% 감소** |
-| 요청 페이로드 | null 필드 포함 | null 필드 제외 | **약 40% 감소** |
+| 커넥션 재사용 | 매번 TCP/TLS handshake | 풀에서 즉시 획득 | 반복 연결 비용 제거 |
+| 응답 데이터 크기 | 원본 전송 | gzip 압축 | 전송량 감소 |
+| 요청 페이로드 | null 필드 포함 | null 필드 제외 | 전송량 감소 |
 | 타임아웃 | 무한 대기 | 계층별 타임아웃 | 장애 전파 차단 |
-| Rate Limit 처리 | 즉시 실패 | 10회 지수 백오프 | 자동 복구 |
+| Rate Limit 처리 | 즉시 실패 | 제한된 지수 백오프 | 일시 오류 자동 복구 |
 
 ### 7.3 안정성 개선
 
@@ -807,7 +800,7 @@ flowchart LR
 
 **1. API 응답 시간의 가장 큰 변수는 모델과 파라미터입니다.**
 
-WebClient를 아무리 최적화해도, 모델 자체가 느리면 한계가 있습니다. gpt-5-nano의 `reasoning_effort`를 `low`에서 `minimal`로 한 단계 낮추는 것만으로 응답 시간이 3~5배 빨라졌습니다. 작업의 복잡도에 맞는 `reasoning_effort`를 선택하는 것이 성능 최적화의 첫 번째 단계입니다.
+WebClient를 아무리 최적화해도, 모델 자체가 느리면 한계가 있습니다. gpt-5-nano의 `reasoning_effort`를 `low`에서 `minimal`로 한 단계 낮추는 것만으로 응답 시간이 크게 줄었습니다. 작업의 복잡도에 맞는 `reasoning_effort`를 선택하는 것이 성능 최적화의 첫 번째 단계입니다.
 
 **2. 기본 설정은 프로덕션 설정이 아닙니다.**
 

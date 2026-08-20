@@ -19,10 +19,13 @@ image:
 - 어떤 AI 기능이 느린가?
 - 모델별 토큰 사용량과 비용은 어떻게 달라지는가?
 - 실패가 OpenAI 장애인지 애플리케이션 계측 코드의 문제인지 어떻게 구분하는가?
-- GraphQL 요청이 모두 `POST /api/graphql`로 보일 때 어떤 오퍼레이션이 느린지 어떻게 찾는가?
+- GraphQL 요청이 단일 엔드포인트로 보일 때 어떤 오퍼레이션이 느린지 어떻게 찾는가?
 - 작은 개발 서버에서도 감당할 수 있는 관측성 구성은 어디까지인가?
 
-이번 글에서는 이 질문에 답하기 위해 Datadog을 연동한 과정을 공유합니다. 처음에는 호스트 Agent, APM, JVM 지표, 로그, LLM Observability를 모두 수집하는 구성을 설계했습니다. 하지만 1GB 인스턴스의 배포 제약을 만나 Agentless 구조로 방향을 바꿨고, 그 과정에서 LLM 계측 코드가 실제 AI 호출을 모두 실패시키는 장애도 겪었습니다.
+이번 글에서는 이 질문에 답하기 위해 Datadog을 연동한 과정을 공유합니다. 처음에는 호스트 Agent, APM, JVM 지표, 로그, LLM Observability를 모두 수집하는 구성을 설계했습니다. 하지만 소형 인스턴스의 배포 제약을 만나 Agentless 구조로 방향을 바꿨고, 그 과정에서 LLM 계측 코드가 실제 AI 호출을 모두 실패시키는 장애도 겪었습니다.
+
+> Datadog 리전, 환경·서비스·앱 태그, 로그 이벤트명, GraphQL 경로, 모니터 임계값과 실제 대시보드 수치는 공개용 예시로 일반화했습니다.
+{: .prompt-info }
 
 최종적으로는 다음 두 축에 집중했습니다.
 
@@ -48,11 +51,11 @@ Jobdori 백엔드는 Kotlin과 Spring Boot 기반의 API 서버입니다. REST�
 | API 요청 | 경로, 상태 코드, 처리시간, 사용자, GraphQL 오퍼레이션 | 느린 API와 오류 요청 추적 |
 | 서버 오류 | 에러 종류, 코드, 스택 트레이스, 요청 문맥 | 500 원인 분석 |
 
-기존에도 Sentry로 예외를 수집하고 있었고, 애플리케이션 로그에는 `ai_call`과 `jd_crawl` 같은 이벤트가 남았습니다. 문제는 로그가 “읽을 수 있는 문자열”에 가까웠다는 점입니다.
+기존에도 Sentry로 예외를 수집하고 있었고, 애플리케이션 로그에는 `llm_call`과 `crawler_call` 같은 이벤트가 남았습니다. 문제는 로그가 “읽을 수 있는 문자열”에 가까웠다는 점입니다.
 
 ```text
-ai_call useCase=resume_feedback model=gpt-4o-mini success=true
-latencyMs=1842 retries=0 promptTokens=2120 completionTokens=430 costUsd=0.000576
+llm_call useCase=feature_a model=example-model success=true
+latencyMs=<number> retries=<number> promptTokens=<number> completionTokens=<number> costUsd=<number>
 ```
 
 사람이 한 건을 읽는 데는 충분하지만, 운영에서는 문자열을 넘어 다음 작업이 필요합니다.
@@ -77,7 +80,7 @@ latencyMs=1842 retries=0 promptTokens=2120 completionTokens=430 costUsd=0.000576
 | LLM | LLM Observability 수동 계측 | 프롬프트, 응답, 토큰, 오류 |
 | Actuator | Micrometer StatsD | Tomcat 스레드 같은 애플리케이션 지표 |
 
-개발 환경은 AWS Elastic Beanstalk의 1GB 인스턴스에서 동작하고 있었습니다. 이 제약은 이후 전체 설계를 바꾸는 핵심 변수가 됐습니다.
+개발 환경은 AWS Elastic Beanstalk의 소형 인스턴스에서 동작하고 있었습니다. 이 제약은 이후 전체 설계를 바꾸는 핵심 변수가 됐습니다.
 
 ---
 
@@ -109,7 +112,7 @@ Agent 설치 스크립트를 Elastic Beanstalk의 `.platform/hooks/prebuild`에 
 `dd-java-agent.jar`는 애플리케이션 클래스패스에 넣는 일반 라이브러리가 아닙니다. JVM 시작 시 `-javaagent`로 로딩해야 하므로 별도 Gradle Configuration으로 관리하고 Elastic Beanstalk 배포 번들에 포함했습니다.
 
 ```kotlin
-// jobdori-api/build.gradle.kts
+// application-api/build.gradle.kts
 val ddJavaAgent: Configuration by configurations.creating {
     isTransitive = false
 }
@@ -228,9 +231,9 @@ private fun String.maskPii(): String =
 
 ## 4. 운영 환경의 전환: Agent 기반에서 Agentless로
 
-### 4.1 1GB 인스턴스에서 마주친 현실
+### 4.1 소형 인스턴스에서 마주친 현실
 
-전체 Agent 구성을 개발 서버에 배포하는 과정에서 1GB 인스턴스의 리소스 제약으로 배포가 실패했습니다. 호스트 Agent, Java Agent, 애플리케이션을 모두 유지하면서 APM과 JVM 지표까지 수집하는 초기 설계를 그대로 가져가기 어려웠습니다.
+전체 Agent 구성을 개발 서버에 배포하는 과정에서 인스턴스의 리소스 제약으로 배포가 실패했습니다. 호스트 Agent, Java Agent, 애플리케이션을 모두 유지하면서 APM과 JVM 지표까지 수집하는 초기 설계를 그대로 가져가기 어려웠습니다.
 
 여기서 선택지가 갈렸습니다.
 
@@ -254,16 +257,16 @@ private fun String.maskPii(): String =
 java \
   --enable-native-access=ALL-UNNAMED \
   -javaagent:dd-java-agent.jar \
-  -Ddd.site=us5.datadoghq.com \
-  -Ddd.env=dev \
-  -Ddd.service=jobdori-api \
+  -Ddd.site=$DD_SITE \
+  -Ddd.env=$DEPLOY_ENV \
+  -Ddd.service=$SERVICE_NAME \
   -Ddd.version=$APP_VERSION \
   -Ddd.trace.enabled=true \
   -Ddd.runtime.metrics.enabled=false \
   -Ddd.logs.injection=true \
   -Ddd.llmobs.enabled=true \
   -Ddd.llmobs.agentless.enabled=true \
-  -Ddd.llmobs.ml.app=scoop \
+  -Ddd.llmobs.ml.app=$LLM_APP_NAME \
   -jar application.jar
 ```
 
@@ -352,13 +355,13 @@ try {
 
 ```json
 {
-  "name": "[dev] LLM Obs 계측 파손 (AgentTracer buildSpan null)",
+  "name": "[environment] LLM 계측 파손 감지",
   "type": "log alert",
-  "query": "logs(\"service:jobdori-api \\\"AgentTracer\\\" \\\"buildSpan\\\"\")... > 0"
+  "query": "logs(\"service:$SERVICE_NAME \\\"instrumentation failure\\\"\")..."
 }
 ```
 
-15분 동안 같은 패턴이 한 건이라도 나타나면 계측 구성을 먼저 확인하도록 했습니다. 장애 수정 내용을 운영 신호로 남기지 않으면, 환경변수 변경이나 라이브러리 업데이트 이후 같은 문제가 반복돼도 다시 사용자 오류로 발견하게 됩니다.
+설정된 평가 기간에 같은 패턴이 나타나면 계측 구성을 먼저 확인하도록 했습니다. 장애 수정 내용을 운영 신호로 남기지 않으면, 환경변수 변경이나 라이브러리 업데이트 이후 같은 문제가 반복돼도 다시 사용자 오류로 발견하게 됩니다.
 
 ---
 
@@ -436,10 +439,10 @@ log.atInfo {
 
 | 표현 | 목적 |
 |---|---|
-| `message`의 `ai_call key=value...` | 기존 전문 검색과 사람이 읽는 로그 유지 |
+| `message`의 `llm_call key=value...` | 기존 전문 검색과 사람이 읽는 로그 유지 |
 | JSON 최상위 payload | facet, 숫자 집계, 대시보드 위젯 |
 
-로그 스키마를 바꾸는 순간 대시보드와 모니터 쿼리도 함께 깨질 수 있습니다. 그래서 코드 주석에도 `ai_call`의 키 이름을 함부로 바꾸지 않도록 명시했습니다. 로그 필드는 내부 구현 세부가 아니라 운영 도구가 소비하는 하나의 API가 됐습니다.
+로그 스키마를 바꾸는 순간 대시보드와 모니터 쿼리도 함께 깨질 수 있습니다. 그래서 코드 주석에도 `llm_call`의 키 이름을 함부로 바꾸지 않도록 명시했습니다. 로그 필드는 내부 구현 세부가 아니라 운영 도구가 소비하는 하나의 API가 됐습니다.
 
 ### 6.3 `costUsd`가 문자열이면 합계를 낼 수 없다
 
@@ -471,7 +474,7 @@ private fun costUsd(
 private fun render(fields: Map<String, Any?>): String =
     fields.entries.joinToString(
         separator = " ",
-        prefix = "ai_call ",
+        prefix = "llm_call ",
     ) { (key, value) ->
         "$key=${if (value is Double) "%.6f".format(value) else value}"
     }
@@ -544,7 +547,7 @@ private fun clientIp(request: HttpServletRequest): String? =
 
 ### 7.3 GraphQL은 URL만으로 구분할 수 없다
 
-REST API는 URL로 기능을 구분할 수 있지만 GraphQL 요청은 모두 `POST /api/graphql`로 들어옵니다. URL만 남기면 어떤 query나 mutation이 느렸는지 알 수 없습니다.
+REST API는 URL로 기능을 구분할 수 있지만 GraphQL 요청은 모두 단일 엔드포인트로 들어옵니다. URL만 남기면 어떤 query나 mutation이 느렸는지 알 수 없습니다.
 
 `WebGraphQlInterceptor`에서 operation name을 MDC에 추가했습니다.
 
@@ -593,31 +596,27 @@ must be log-based.
 | AI calls | 성공률, useCase·model별 호출, p50·p95 지연, 비용, 토큰 |
 | JD crawling | 성공률, 성공·실패 추이, p50·p95 지연 |
 | LLM Observability | 스팬 수, 오류율, 지연, 토큰 |
-| Raw logs | `ai_call`, `jd_crawl` 원본 로그 |
+| Raw logs | `llm_call`, `crawler_call` 원본 로그 |
 
-![Datadog LLM Observability의 모델·기능별 지연시간 대시보드](/assets/images/posts/2026-07-28-datadog-observability-integration/llm-observability-latency-dashboard.png)
-
-<small>실제 수집된 스팬을 바탕으로 전체 지연시간 추이와 기능별 평균 지연시간, 모델별 p75·p90·p95를 비교했다.</small>
-
-대시보드에서는 `experienceStarExtraction`이 평균 13.52초로 가장 느린 스팬이었고, 모델별로는 `gpt-4o`의 평균 지연시간이 8.69초로 `gpt-4o-mini`의 3.54초보다 길었습니다. 단순히 “OpenAI 호출이 느리다”에서 그치지 않고 어떤 기능과 모델부터 최적화해야 하는지 우선순위를 정할 수 있게 됐습니다.
+실제 수집된 스팬을 바탕으로 전체 지연시간 추이와 기능별 평균 지연시간, 모델별 백분위수를 비교했습니다. 공개 글에는 운영 기능명과 실측 대시보드 이미지를 포함하지 않았지만, 이 비교 덕분에 “OpenAI 호출이 느리다”에서 그치지 않고 어떤 기능과 모델부터 최적화해야 하는지 우선순위를 정할 수 있었습니다.
 
 ### 8.2 로그 기반 모니터 정의
 
 Datadog UI에서만 모니터를 만들면 설정의 의도와 변경 이력을 코드 리뷰에서 확인하기 어렵습니다. 재현 가능한 시작점이 되도록 JSON 정의를 저장했습니다.
 
-| 모니터 | 조건 | 의도 |
+| 모니터 | 조건 설계 | 의도 |
 |---|---|---|
-| AI 호출 실패 | 10분간 5건 초과 | OpenAI 장애·한도·앱 오류 감지 |
-| JD 크롤링 실패 | 15분간 10건 초과 | 사이트 마크업 변경·차단 감지 |
-| API 서버 오류 | 10분간 5건 초과 | 처리되지 않은 예외 증가 감지 |
-| LLM 계측 파손 | 15분간 0건 초과 | 과거 `buildSpan` 문제 재발 감지 |
+| AI 호출 실패 | 평가 기간과 실패 임계값 | OpenAI 장애·한도·앱 오류 감지 |
+| JD 크롤링 실패 | 평가 기간과 실패 임계값 | 사이트 마크업 변경·차단 감지 |
+| API 서버 오류 | 평가 기간과 오류 임계값 | 처리되지 않은 예외 증가 감지 |
+| LLM 계측 파손 | 오류 패턴 존재 여부 | 과거 계측 문제 재발 감지 |
 
 이 JSON은 환경별 실제 트래픽을 반영한 완성된 임계값이라기보다 dev 환경의 초기 안전망입니다. 운영 데이터가 쌓이면 경고와 심각 임계값, 알림 채널, 재알림 간격을 조정해야 합니다.
 
 <div class="notice--warning" markdown="1">
 **⚠️ service 태그를 먼저 확인해야 한다**
 
-Datadog Forwarder는 CloudWatch 로그 그룹 정보를 바탕으로 service를 추론할 수 있습니다. 코드에서 기대한 `service:jobdori-api`와 실제 유입 로그의 service가 다르면 모든 쿼리가 빈 결과를 냅니다. 모니터 JSON을 가져오기 전에 Logs Explorer의 실제 태그를 확인해야 합니다.
+Datadog Forwarder는 CloudWatch 로그 그룹 정보를 바탕으로 service를 추론할 수 있습니다. 코드에서 기대한 `service:$SERVICE_NAME`과 실제 유입 로그의 service가 다르면 모든 쿼리가 빈 결과를 냅니다. 모니터 JSON을 가져오기 전에 Logs Explorer의 실제 태그를 확인해야 합니다.
 </div>
 
 ---
@@ -627,18 +626,18 @@ Datadog Forwarder는 CloudWatch 로그 그룹 정보를 바탕으로 service를 
 Datadog 연동 코드도 기존 모듈 의존 방향을 깨지 않도록 배치했습니다.
 
 ```text
-jobdori-api
+application-api
 └── support/logging
     ├── DatadogStructuredLogFormatter
     ├── RequestLoggingFilter
     └── GraphQLOperationMdcInterceptor
 
-jobdori-infrastructure/client
+infrastructure/client
 └── ai/openai
     ├── OpenAiChatClientImpl
     └── OpenAiCallMetrics
 
-jobdori-core
+core
 └── Datadog 의존 없음
 
 docs/datadog
@@ -699,11 +698,11 @@ LLM 스팬 생성 실패가 OpenAI 호출 전체를 500으로 만든 경험이 �
 
 **2. 좋은 아키텍처는 운영 제약을 포함해야 합니다.**
 
-Agent 기반 구성이 기능적으로 더 풍부하더라도 1GB 인스턴스에서 안정적으로 운영할 수 없다면 현재 환경의 답은 아닙니다. 로그와 LLM Obs에 집중한 Agentless 구조는 기능을 줄인 타협이지만, 실제로 유지 가능한 선택이었습니다.
+Agent 기반 구성이 기능적으로 더 풍부하더라도 현재 인스턴스에서 안정적으로 운영할 수 없다면 현재 환경의 답은 아닙니다. 로그와 LLM Obs에 집중한 Agentless 구조는 기능을 줄인 타협이지만, 실제로 유지 가능한 선택이었습니다.
 
 **3. 로그 필드는 운영 API입니다.**
 
-`ai_call`의 키 이름 하나를 바꾸면 검색 쿼리, facet, 대시보드, 모니터가 함께 깨집니다. 로그 스키마도 DTO나 외부 API처럼 타입과 호환성을 관리해야 합니다.
+`llm_call`의 키 이름 하나를 바꾸면 검색 쿼리, facet, 대시보드, 모니터가 함께 깨집니다. 로그 스키마도 DTO나 외부 API처럼 타입과 호환성을 관리해야 합니다.
 
 **4. 숫자는 끝까지 숫자로 보존해야 합니다.**
 

@@ -22,6 +22,9 @@ image:
 
 조건부 UPDATE가 해결한 단건 경쟁, Spring Data JPA에서 <code>@Modifying(clearAutomatically = true)</code>를 사용한 이유, 일괄 수령의 부분 성공 정책을 차례로 살펴봅니다. 마지막에는 현재 구현을 검증하면서 찾은 “부분 경합 후 재조회”의 남은 틈도 함께 다룹니다.
 
+> 코드의 상태 전이 구조는 유지하되, 물리 테이블·컬럼·인덱스·관측 지표 이름과 지급량은 공개용 예시로 일반화했습니다.
+{: .prompt-info }
+
 ![데이터베이스 상태 전이를 상징하는 서버 랙](/assets/images/posts/reward-conditional-update/server-rack.jpg)
 
 <small>동시 요청의 최종 판정자는 데이터베이스다. Photo by [panumas nikhomkhai on Pexels](https://www.pexels.com/photo/computer-server-in-data-center-room-17489163/).</small>
@@ -49,7 +52,7 @@ image:
 
 ~~~mermaid
 flowchart LR
-    A["수령 요청"] --> B["UPDATE reward"]
+    A["수령 요청"] --> B["보상 행 조건부 UPDATE"]
     B --> C{"status = PENDING<br/>조건을 만족했는가?"}
     C -->|예| W["affectedRows = 1<br/>이 요청이 승자"]
     C -->|아니오| L["affectedRows = 0<br/>이미 처리됨"]
@@ -101,8 +104,8 @@ sequenceDiagram
     B->>B: 수령 가능
     A->>DB: status = RECEIVED
     B->>DB: status = RECEIVED
-    A->>C: +50
-    B->>C: +50
+    A->>C: 보상 금액 충전
+    B->>C: 보상 금액 충전
 ~~~
 
 두 요청 모두 자신의 메모리 안에서는 올바르게 검사했습니다. 문제는 검사와 변경이 하나의 원자적 연산이 아니라는 점입니다.
@@ -131,10 +134,10 @@ stateDiagram-v2
 허용된 상태 전이가 PENDING → RECEIVED 하나뿐이라면, 현재 상태 조회와 변경을 한 SQL에 넣을 수 있습니다.
 
 ~~~sql
-UPDATE reward
+UPDATE claim_record
 SET status = 'RECEIVED',
-    updated_at = :updatedAt
-WHERE id = :rewardId
+    changed_at = :changedAt
+WHERE id = :claimId
   AND status = 'PENDING';
 ~~~
 
@@ -447,8 +450,8 @@ val chargeCommand = ChargeDurianBulkCommand(
     items = successfulRewards.map { reward ->
         ChargeDurianBulkItem(
             durianType = DurianType.REWARD,
-            providerType = DurianProviderType.REWARD,
-            providerId = reward.id,
+            sourceType = LedgerSourceType.REWARD,
+            sourceId = reward.id,
             productId = reward.durianProductId,
             title = resolveTitleByRewardType(reward.type)
         )
@@ -503,12 +506,12 @@ sequenceDiagram
 PostgreSQL은 실제로 갱신한 행을 <code>RETURNING</code>으로 돌려줄 수 있습니다.
 
 ~~~sql
-UPDATE reward
+UPDATE claim_record
 SET status = 'RECEIVED',
-    updated_at = :updatedAt
+    changed_at = :changedAt
 WHERE id = ANY(:ids)
   AND status = 'PENDING'
-RETURNING id, user_id, type, durian_product_id, updated_at;
+RETURNING id, subject_id, reward_kind, item_id, changed_at;
 ~~~
 
 ~~~mermaid
@@ -536,15 +539,15 @@ val wonIds = rewardIds.filter { rewardId ->
 요청마다 UUID 토큰을 만들고 상태 전이와 함께 저장한 뒤 그 토큰으로 다시 조회합니다.
 
 ~~~sql
-UPDATE reward
+UPDATE claim_record
 SET status = 'RECEIVED',
-    claim_token = :requestToken
+    operation_token = :requestToken
 WHERE id = ANY(:ids)
   AND status = 'PENDING';
 
 SELECT *
-FROM reward
-WHERE claim_token = :requestToken;
+FROM claim_record
+WHERE operation_token = :requestToken;
 ~~~
 
 JPQL 벌크 UPDATE를 유지하면서 승자 집합을 식별할 수 있지만 스키마와 도메인에 처리 토큰이 추가됩니다.
@@ -552,15 +555,15 @@ JPQL 벌크 UPDATE를 유지하면서 승자 집합을 식별할 수 있지만 �
 ### 방법 D. 원장 유일 제약을 2차 방어선으로 둔다
 
 ~~~sql
-CREATE UNIQUE INDEX uq_reward_charge_provider
-ON user_durian_transactions (
-    provider_type,
-    provider_id,
-    transaction_type
+CREATE UNIQUE INDEX uq_asset_ledger_source
+ON asset_ledger (
+    source_type,
+    source_id,
+    entry_type
 )
-WHERE provider_type = 'REWARD'
-  AND transaction_type = 'CHARGE'
-  AND is_deleted = false;
+WHERE source_type = 'REWARD'
+  AND entry_type = 'CREDIT'
+  AND deleted = false;
 ~~~
 
 잘못된 승자 집합이 충전 서비스까지 넘어와도 같은 rewardId의 원장 생성을 DB가 거부합니다. 다만 벌크 중 한 건의 유일성 충돌이 전체 트랜잭션을 롤백할 수 있으므로 충전 커맨드 구성과 오류 정책을 함께 설계해야 합니다.
@@ -665,11 +668,11 @@ flowchart LR
 
 | 메트릭 | 의미 | 이상 신호 |
 |---|---|---|
-| reward.receive.updated | 실제 상태 전이 수 | 보상 생성 대비 지나치게 낮음 |
-| reward.receive.conflict | affected rows 0 | 특정 앱 버전에서 급증 |
-| reward.receive.partial | 일괄 일부 성공 | 단건/일괄 UI 경쟁 또는 재시도 |
-| reward.charge.ledger | REWARD 원장 수 | received와 불일치 |
-| reward.charge.amount | 지급 총량 | 캠페인 기준치 초과 |
+| claim.transition.updated | 실제 상태 전이 수 | 보상 생성 대비 지나치게 낮음 |
+| claim.transition.conflict | affected rows 0 | 특정 앱 버전에서 급증 |
+| claim.transition.partial | 일괄 일부 성공 | 단건/일괄 UI 경쟁 또는 재시도 |
+| claim.credit.ledger | 보상 원장 수 | received와 불일치 |
+| claim.credit.amount | 지급 총량 | 캠페인 기준치 초과 |
 | optimistic.lock.failure | 잔액 version 충돌 | 동일 사용자 병렬 충전 증가 |
 
 ~~~mermaid
@@ -680,7 +683,7 @@ flowchart LR
     R["Reward RECEIVED 수"] --> C
 ~~~
 
-특히 “RECEIVED 보상 수”와 “REWARD CHARGE 원장 수”를 providerId 기준으로 대조하면 상태는 수령됐지만 충전되지 않았거나, 상태 전이보다 원장이 많은 이상을 찾을 수 있습니다.
+특히 “RECEIVED 보상 수”와 “보상 충전 원장 수”를 sourceId 기준으로 대조하면 상태는 수령됐지만 충전되지 않았거나, 상태 전이보다 원장이 많은 이상을 찾을 수 있습니다.
 
 ---
 

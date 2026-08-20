@@ -14,11 +14,14 @@ image:
 
 안녕하세요. duurian 팀에서 백엔드 개발을 담당하고 있는 정지원입니다.
 
-처음 대화 연속일수 보상을 만들 때의 흐름은 직관적이었습니다. 조건을 만족하면 리워드를 생성하고 곧바로 두리안을 충전했습니다. 작은 기능일 때는 한 메서드에서 모든 일이 끝나는 편이 이해하기 쉬웠습니다.
+처음 조건 달성형 보상을 만들 때의 흐름은 직관적이었습니다. 조건을 만족하면 리워드를 생성하고 곧바로 두리안을 충전했습니다. 작은 기능일 때는 한 메서드에서 모든 일이 끝나는 편이 이해하기 쉬웠습니다.
 
-문제는 리워드가 늘면서 시작됐습니다. 일일 대화, 연속 대화, 레벨업, 페르소나 공개처럼 생성 계기가 다양해졌고, 사용자가 직접 “받기”를 누르는 UI도 추가됐습니다. 생성 시점과 수령 시점 모두에서 충전이 가능해지자 같은 보상이 서로 다른 경로를 통해 두 번 충전되는 사고가 발생했습니다.
+문제는 리워드가 늘면서 시작됐습니다. 여러 조건형·이벤트형 보상으로 생성 계기가 다양해졌고, 사용자가 직접 “받기”를 누르는 UI도 추가됐습니다. 생성 시점과 수령 시점 모두에서 충전이 가능해지자 같은 보상이 서로 다른 경로를 통해 두 번 충전되는 사고가 발생했습니다.
 
 이 글은 이 문제를 단순한 중복 호출 버그로 보지 않고, 리워드의 생성·수령·재화 충전 책임을 다시 정의한 과정을 다룹니다.
+
+> 보상 트리거, 구간, 지급량, 타입 이름과 원장 필드는 공개용 예시로 일반화했습니다. 수령형과 즉시 지급형을 분리한 설계 원칙만 실제 구조와 동일합니다.
+{: .prompt-info }
 
 ![분리된 모듈을 상징하는 블록](/assets/images/posts/reward-responsibility/building-blocks.jpg)
 
@@ -36,7 +39,7 @@ image:
 
 ## 1. 사고를 한 장으로 요약하면
 
-운영에서 기대한 변화는 +50 두리안이었지만 실제로는 +100이 반영됐습니다.
+운영에서 기대한 변화는 한 번의 충전이었지만 실제로는 두 번 반영됐습니다.
 
 ~~~mermaid
 sequenceDiagram
@@ -46,11 +49,11 @@ sequenceDiagram
     participant C as 두리안 충전
     participant B as 사용자 잔액
 
-    E->>C: 동일 보상으로 +50
+    E->>C: 동일 보상으로 금액 충전
     C->>B: 잔액 반영
-    R->>C: 동일 보상으로 다시 +50
+    R->>C: 동일 보상으로 다시 충전
     C->>B: 잔액 반영
-    Note over B: 기대 +50 / 실제 +100
+    Note over B: 기대 1회 / 실제 2회
 ~~~
 
 처음에는 “충전 메서드가 두 번 호출됐다”가 원인처럼 보였습니다. 더 정확한 원인은 다음과 같았습니다.
@@ -68,11 +71,11 @@ sequenceDiagram
 
 ## 2. 처음 설계가 틀렸다기보다 요구사항이 달라졌다
 
-초기 연속 대화 보상은 “조건 달성 즉시 지급”이었습니다.
+초기 조건형 보상은 “조건 달성 즉시 지급”이었습니다.
 
 ~~~mermaid
 flowchart LR
-    C["연속일수 계산"] --> P["보상 상품 조회"]
+    C["업무 조건 계산"] --> P["보상 상품 조회"]
     P --> R["Reward 생성"]
     R --> D["두리안 즉시 충전"]
     D --> B["잔액 반영"]
@@ -103,47 +106,47 @@ flowchart LR
 
 | 도메인 | 핵심 질문 | 대표 데이터 |
 |---|---|---|
-| Reward | 왜, 어떤 조건으로, 어떤 보상을 받을 권리가 생겼는가? | type, status, productId |
-| UserDurian | 실제 잔액이 얼마나 변했고 그 출처는 무엇인가? | balance, transaction, provider |
+| Claim | 왜, 어떤 조건으로, 어떤 보상을 받을 권리가 생겼는가? | kind, status, itemId |
+| Asset | 실제 잔액이 얼마나 변했고 그 출처는 무엇인가? | balance, ledger, source |
 
 ~~~mermaid
 classDiagram
-    class Reward {
+    class Claim {
         UUID id
-        UUID userId
-        RewardType type
-        RewardStatus status
-        UUID durianProductId
+        UUID subjectId
+        ClaimKind kind
+        ClaimStatus status
+        UUID itemId
     }
 
-    class ProductDurian {
+    class RewardItem {
         UUID id
         int durianBase
         int durianBonus
         int duration
     }
 
-    class UserDurian {
-        UUID userId
-        int balancePaid
-        int balanceFree
+    class AssetBalance {
+        UUID subjectId
+        int paid
+        int free
         long version
     }
 
-    class UserDurianTransaction {
-        UUID providerId
-        DurianProviderType providerType
+    class AssetLedger {
+        UUID sourceId
+        LedgerSourceType sourceType
         int amount
         int balanceBefore
         int balanceAfter
     }
 
-    Reward --> ProductDurian : 어떤 상품인가
-    UserDurianTransaction --> Reward : providerId
-    UserDurian --> UserDurianTransaction : 잔액 변화의 원장
+    Claim --> RewardItem : 어떤 상품인가
+    AssetLedger --> Claim : sourceId
+    AssetBalance --> AssetLedger : 잔액 변화의 원장
 ~~~
 
-Reward는 재화 그 자체가 아닙니다. “상품 X를 받을 수 있는 권리”를 나타냅니다. 실제 재화 변화는 <code>UserDurian</code>과 <code>UserDurianTransaction</code>이 담당합니다.
+Claim은 재화 그 자체가 아닙니다. “상품 X를 받을 수 있는 권리”를 나타냅니다. 실제 재화 변화는 잔액과 원장이 담당합니다.
 
 <div class="notice--info" markdown="1">
 **분리 후의 핵심 문장**
@@ -196,45 +199,40 @@ ChargeDurianUseCase
 
 ## 5. 생성 책임: 조건을 판정하고 PENDING을 만든다
 
-대화 보상 생성은 다음 조건을 처리합니다.
+조건형 보상 생성은 다음 흐름으로 처리합니다. 구체적인 트리거와 구간 값은 설정된 정책으로 치환했습니다.
 
 ~~~mermaid
 flowchart TD
-    A["대화 보상 생성 시도"] --> B{오늘 이미 생성됐는가?}
+    A["조건형 보상 생성 시도"] --> B{동일 업무 키로 이미 생성됐는가?}
     B -->|예| X["스킵"]
-    B -->|아니오| C["연속일수 계산"]
-    C --> D{1일 이상인가?}
+    B -->|아니오| C["업무 조건 계산"]
+    C --> D{지급 조건을 만족하는가?}
     D -->|아니오| X
-    D -->|예| Q{저품질 대화인가?}
-    Q -->|예| S["DAY1 미지급 이력 저장"]
-    Q -->|아니오| R1["DAY1 Reward 생성"]
-    S --> M["7·14·28일 조건 확인"]
+    D -->|예| Q{제외 조건에 해당하는가?}
+    Q -->|예| S["미지급 사유 기록"]
+    Q -->|아니오| R1["정책에 맞는 Reward 생성"]
+    S --> M["다음 정책 구간 확인"]
     R1 --> M
-    M --> R2["조건 충족 시 연속 Reward 생성"]
+    M --> R2["추가 조건 충족 시 Reward 생성"]
 ~~~
 
 실제 생성 메서드는 Reward를 저장한 뒤 결과만 반환합니다. 이 경로에는 두리안 충전 호출이 없습니다.
 
 ~~~kotlin
-private fun createRewardIfExists(
+private fun createClaimIfEligible(
     command: CreateRewardCommand,
-    feature: RewardFeature,
-    condition: RewardCondition,
+    policyKey: RewardPolicyKey,
 ): CommandRewardResult? {
-    val featureReward =
-        queryFeatureRewardPort.findByFeatureAndCondition(
-            feature,
-            condition
-        ) ?: return null
+    val policy = rewardPolicyPort.findByKey(policyKey) ?: return null
 
     val product =
         queryProductDurianPort.findById(
-            featureReward.durianProductId
+            policy.productId
         ) ?: return null
 
     val reward = Reward.create(
         userId = command.userId,
-        type = RewardType.CONVERSATION,
+        type = RewardType.CLAIMABLE,
         durianProductId = product.id
     )
 
@@ -258,12 +256,12 @@ private fun createRewardIfExists(
 
 ~~~mermaid
 stateDiagram-v2
-    [*] --> PENDING: 대화·레벨업 조건 달성
+    [*] --> PENDING: 수령형 조건 달성
     PENDING --> RECEIVED: 사용자가 수령
     RECEIVED --> [*]
 ~~~
 
-레벨업 보상도 같은 규칙을 따릅니다. 레벨 상승과 기존 동일 상품 보상 여부를 검사한 뒤 PENDING Reward만 생성합니다.
+다른 수령형 보상도 같은 규칙을 따릅니다. 각 정책 조건과 기존 동일 업무 키 여부를 검사한 뒤 PENDING Reward만 생성합니다.
 
 ---
 
@@ -349,7 +347,7 @@ flowchart LR
     R["리워드 수령"] --> C
     A["관리자 지급"] --> C
     P["쿠폰"] --> C
-    C --> T["UserDurianTransaction 저장"]
+    C --> T["AssetLedger 저장"]
     C --> U["UserDurian 잔액 저장"]
 ~~~
 
@@ -360,8 +358,8 @@ private fun processingDurian(
     productId: UUID,
     userId: UUID,
     durianType: DurianType,
-    providerType: DurianProviderType,
-    providerId: UUID,
+    sourceType: LedgerSourceType,
+    sourceId: UUID,
     meta: String?,
 ): GetUserDurianBalanceResult {
     val productDurian = queryProductDurianPort.findById(productId)
@@ -380,18 +378,18 @@ private fun processingDurian(
         productDurian.duration.toLong()
     )
 
-    val chargeTransaction = UserDurianTransaction.createCharge(
+    val chargeTransaction = AssetLedger.createCredit(
         userId = userId,
         durianType = durianType,
-        providerType = providerType,
-        providerId = providerId,
+        sourceType = sourceType,
+        sourceId = sourceId,
         amount = totalAmount,
         balanceBefore = currentTotalBalance,
         expiresAt = expiresAt,
         meta = meta
     )
 
-    commandUserDurianTransactionPort.save(chargeTransaction)
+    commandAssetLedgerPort.save(chargeTransaction)
 
     val updatedUserDurian = if (durianType.isFree()) {
         userDurian.copy(
@@ -412,22 +410,22 @@ private fun processingDurian(
 }
 ~~~
 
-### providerType과 providerId가 남기는 것
+### sourceType과 sourceId가 남기는 것
 
 | 필드 | 보상 충전 예시 | 의미 |
 |---|---|---|
-| providerType | REWARD | 어떤 도메인에서 시작됐는가 |
-| providerId | reward.id | 어떤 보상이 원인이었는가 |
-| transactionType | CHARGE | 증가·차감 중 무엇인가 |
-| amount | 50 | 얼마가 변했는가 |
-| balanceBefore / After | 100 / 150 | 전후 잔액 |
+| sourceType | REWARD | 어떤 도메인에서 시작됐는가 |
+| sourceId | reward.id | 어떤 보상이 원인이었는가 |
+| entryType | CREDIT | 증가·차감 중 무엇인가 |
+| amount | 정책으로 결정 | 얼마가 변했는가 |
+| balanceBefore / After | 계산된 값 | 전후 잔액 |
 
 이 정보 덕분에 잔액 숫자 하나만 보는 대신 “어떤 보상 때문에 언제 얼마나 증가했는지”를 추적할 수 있습니다.
 
 <div class="notice--warning" markdown="1">
 **현재 제약의 정확한 범위**
 
-거래 엔티티에는 <code>(providerType, providerId, transactionType)</code> 유일 제약이 선언되어 있지 않습니다. 따라서 원장 자체가 보상 충전의 중복을 최종 차단하는 구조는 아닙니다. 현재의 1차 중복 차단선은 Reward의 PENDING → RECEIVED 조건부 UPDATE입니다.
+거래 엔티티에는 출처와 거래 종류를 묶은 유일 제약이 선언되어 있지 않습니다. 따라서 원장 자체가 보상 충전의 중복을 최종 차단하는 구조는 아닙니다. 현재의 1차 중복 차단선은 Reward의 PENDING → RECEIVED 조건부 UPDATE입니다.
 </div>
 
 ---
@@ -494,7 +492,7 @@ override fun chargeDurianBulk(
     var free = userDurian.balanceFree
     var total = userDurian.balanceTotal
 
-    val transactions = mutableListOf<UserDurianTransaction>()
+    val transactions = mutableListOf<AssetLedger>()
 
     for (item in command.items) {
         val product = products[item.productId]
@@ -504,11 +502,11 @@ override fun chargeDurianBulk(
             product.duration.toLong()
         )
 
-        transactions += UserDurianTransaction.createCharge(
+        transactions += AssetLedger.createCredit(
             userId = command.userId,
             durianType = item.durianType,
-            providerType = item.providerType,
-            providerId = item.providerId,
+            sourceType = item.sourceType,
+            sourceId = item.sourceId,
             amount = amount,
             balanceBefore = total,
             expiresAt = expiresAt,
@@ -520,7 +518,7 @@ override fun chargeDurianBulk(
         total += amount
     }
 
-    commandUserDurianTransactionPort.saveAll(transactions)
+    commandAssetLedgerPort.saveAll(transactions)
     val updatedUserDurian = commandUserDurianPort.save(
         userDurian.copy(balancePaid = paid, balanceFree = free)
     )
@@ -547,18 +545,18 @@ override fun chargeDurianBulk(
 
 ## 10. 모든 보상이 같은 정책을 따르는 것은 아니다
 
-현재 코드에서 대화 보상과 레벨업 보상은 PENDING으로 생성되고 사용자가 수령할 때 충전됩니다. 그러나 페르소나 최초 공개 보상은 예외입니다.
+현재 코드에는 사용자가 직접 수령하는 보상과 조건 달성 즉시 지급되는 보상이 함께 있습니다. 실제 보상 트리거 이름은 공개용 예시에서 A·B·C 유형으로 일반화했습니다.
 
 ~~~mermaid
 flowchart LR
     subgraph Claimable["사용자 수령형"]
-        C["대화·레벨업 조건"] --> P["PENDING"]
+        C["조건형 A·B"] --> P["PENDING"]
         P --> R["수령"]
         R --> D["충전"]
     end
 
     subgraph Immediate["즉시 지급형"]
-        O["페르소나 최초 공개"] --> I["RECEIVED 생성"]
+        O["조건형 C"] --> I["RECEIVED 생성"]
         I --> IC["즉시 충전"]
     end
 ~~~
@@ -566,7 +564,7 @@ flowchart LR
 ~~~kotlin
 val reward = Reward.create(
     userId = command.userId,
-    type = RewardType.PERSONA,
+    type = RewardType.IMMEDIATE,
     durianProductId = product.id,
     status = RewardStatus.RECEIVED
 )
@@ -578,7 +576,7 @@ chargeDurianUseCase.chargeDurianByReward(
         userId = command.userId,
         rewardId = savedReward.id,
         productId = product.id,
-        title = DurianTransactionTitle.REWARD_PERSONA_PUBLIC
+        title = LedgerTitle.REWARD_IMMEDIATE
     )
 )
 ~~~
@@ -587,9 +585,9 @@ chargeDurianUseCase.chargeDurianByReward(
 
 | 보상 타입 | 생성 상태 | 사용자 수령 필요 | 충전 시작 위치 |
 |---|---|---:|---|
-| CONVERSATION | PENDING | 예 | ReceiveRewardService |
-| LEVEL_UP | PENDING | 예 | ReceiveRewardService |
-| PERSONA 공개 | RECEIVED | 아니오 | CreateRewardService |
+| CLAIMABLE_A | PENDING | 예 | ReceiveRewardService |
+| CLAIMABLE_B | PENDING | 예 | ReceiveRewardService |
+| IMMEDIATE_C | RECEIVED | 아니오 | CreateRewardService |
 
 책임 분리는 코드 모양을 통일하는 일이 아니라 제품 정책을 정확히 드러내는 일입니다. 즉시 지급형과 수령형이 모두 필요하다면 타입이나 지급 정책을 명시적으로 모델링하는 편이 다음 개선 방향입니다.
 
@@ -608,7 +606,7 @@ flowchart LR
         CP["CommandRewardPort"]
         QP["QueryRewardPort"]
         DP["CommandUserDurianPort"]
-        TP["CommandUserDurianTransactionPort"]
+        TP["CommandAssetLedgerPort"]
     end
 
     subgraph Infra["PostgreSQL Adapter"]
@@ -649,7 +647,7 @@ flowchart LR
 
 ### 12.2 거래 원장의 유일 제약 부재
 
-같은 rewardId를 원인으로 하는 CHARGE 원장이 두 번 생성되는 것을 DB 제약으로 막지 않습니다. 수령 상태 전이가 뚫리거나 다른 즉시 지급 경로가 추가되면 원장 계층만으로는 방어하지 못합니다.
+같은 rewardId를 원인으로 하는 CREDIT 원장이 두 번 생성되는 것을 DB 제약으로 막지 않습니다. 수령 상태 전이가 뚫리거나 다른 즉시 지급 경로가 추가되면 원장 계층만으로는 방어하지 못합니다.
 
 ### 12.3 사용자 잔액의 동시 갱신
 
@@ -659,7 +657,7 @@ flowchart LR
 flowchart TD
     G["중복 방지 레이어"] --> A["생성: 업무 키 UNIQUE"]
     G --> B["수령: 상태 조건 UPDATE"]
-    G --> C["원장: provider 유일 키"]
+    G --> C["원장: source 유일 키"]
     G --> D["잔액: version 또는 잠금"]
 
     style B fill:#c8e6c9,stroke:#2e7d32,color:#111
@@ -688,11 +686,11 @@ PENDING과 RECEIVED는 목록 화면을 위한 라벨이 아닙니다. 충전을
 
 ### 13.4 원장은 잔액만큼 중요하다
 
-재화 시스템에서 “현재 얼마인가”만으로는 운영 사고를 분석할 수 없습니다. providerType과 providerId를 포함한 거래 원장이 있어야 변화의 원인을 역추적할 수 있습니다.
+재화 시스템에서 “현재 얼마인가”만으로는 운영 사고를 분석할 수 없습니다. sourceType과 sourceId를 포함한 거래 원장이 있어야 변화의 원인을 역추적할 수 있습니다.
 
 ### 13.5 예외 정책은 숨기지 말아야 한다
 
-페르소나 공개 보상은 여전히 즉시 지급입니다. 모든 타입을 억지로 같은 흐름에 넣기보다 어떤 정책이 왜 예외인지 드러내는 편이 유지보수에 유리합니다.
+일부 보상은 여전히 즉시 지급입니다. 모든 타입을 억지로 같은 흐름에 넣기보다 어떤 정책이 왜 예외인지 드러내는 편이 유지보수에 유리합니다.
 
 ---
 

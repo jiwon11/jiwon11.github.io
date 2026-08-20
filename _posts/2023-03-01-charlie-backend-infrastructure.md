@@ -17,6 +17,9 @@ image:
 
 이 글에서는 제가 직접 기여한 부분들을 중심으로, **왜 그 기술을 선택했는지**, **어떤 문제가 있었는지**, **어떻게 해결했는지**를 정리해 보려고 합니다.
 
+> 이 글의 코드와 다이어그램은 공개 가능한 수준으로 일반화했습니다. 인증 수명, 활동량 임계값, 기본 그룹 식별자, 물리 스키마명과 API 경로는 실제 운영값 대신 설정 상수 또는 예시 이름을 사용합니다.
+{: .prompt-info }
+
 ---
 
 ## 목차
@@ -122,14 +125,14 @@ export class AuthService {
   constructor(@Inject(authConfig.KEY) private config: ConfigType<typeof authConfig>) {}
 
   async transformPassword(user: CreateUserDto): Promise<void> {
-    user.password = await bcrypt.hash(user.password, 10);
+    user.password = await bcrypt.hash(user.password, this.config.passwordHashCost);
     return Promise.resolve();
   }
 
   async createJWT(userId: string): Promise<string> {
     const payload = { id: userId };
     return jwt.sign(payload, this.config.secret, {
-      expiresIn: "1y",
+      expiresIn: this.config.accessTokenTtl,
     });
   }
 
@@ -152,18 +155,18 @@ export class AuthService {
 
 **설계 결정 포인트들:**
 
-- **비밀번호 해싱**: `bcrypt`의 salt rounds를 `10`으로 설정했습니다. 보안성과 성능 사이의 트레이드오프인데, 10이면 해싱에 약 100ms 정도 걸립니다. 회원가입/로그인 시에만 실행되므로 충분히 감당 가능한 수준이었습니다.
+- **비밀번호 해싱**: `bcrypt`의 cost factor는 운영 환경에서 측정한 해싱 시간과 보안 기준을 바탕으로 설정값에서 주입했습니다. 회원가입/로그인 시에만 실행되더라도 서버 자원과 공격 비용 사이의 균형을 주기적으로 재측정해야 합니다.
 
 > **📘 bcrypt와 Salt Rounds**
 >
 > bcrypt는 **의도적으로 느린** 해시 함수로, brute-force 공격을 어렵게 만듭니다. Salt Rounds(cost factor)가 1 증가할 때마다 연산 시간이 2배가 됩니다. Salt는 각 비밀번호에 추가되는 랜덤 값으로, 같은 비밀번호라도 다른 해시값이 나오게 합니다.
 {: .prompt-info }
 
-| Salt Rounds | 소요 시간 | 용도 |
+| Cost 수준 | 상대 소요 시간 | 용도 |
 |---|---|---|
-| 10 | ~100ms | 웹 애플리케이션 (권장) |
-| 12 | ~400ms | 높은 보안 요구 |
-| 14 | ~1.6s | 오프라인 시스템 |
+| 낮음 | 짧음 | 개발·성능 측정 기준선 |
+| 중간 | 보통 | 일반 웹 애플리케이션 |
+| 높음 | 김 | 높은 보안 요구 환경 |
 
 - **페이로드 최소화**: `{ id: userId }`만 담았습니다. JWT는 Base64 인코딩이라 누구나 디코딩할 수 있기 때문에, 민감 정보(이메일, 닉네임 등)는 넣지 않았습니다.
 
@@ -178,22 +181,22 @@ export class AuthService {
 | Payload | 사용자 정보 (Claims) | `{"id":"user123","exp":1700000000}` |
 | Signature | 위변조 검증 | HMAC-SHA256(header + payload, secret) |
 
-### JWT 만료 기간 1년, Refresh Token 없는 구조의 선택과 한계
+### 장기 JWT와 Refresh Token 없는 구조의 선택과 한계
 
-`expiresIn: "1y"`는 보안 리스크를 인지한 상태에서 내린 트레이드오프였습니다.
+장기 Access Token은 보안 리스크를 인지한 상태에서 내린 트레이드오프였습니다.
 
 **당시 판단의 맥락:**
 
 먼저 데이터 유실 측면에서는, 토큰이 만료되더라도 걸음수 데이터가 사라지지는 않습니다. 클라이언트가 마지막 로그인 날짜부터 오늘까지의 걸음수를 배치로 전송하는 구조이기 때문에, 재로그인 후에 밀린 데이터를 일괄 동기화할 수 있었습니다. 서버에서도 `upsert`로 처리하므로 중복 문제도 없었습니다.
 
-그렇다면 왜 1년으로 설정했는가? **재로그인 자체가 이탈 포인트**가 될 수 있다고 판단했기 때문입니다. 토큰이 만료되면 사용자는 앱을 열었을 때 로그인 화면을 만나게 되는데, 이때 "귀찮아서 그냥 안 쓰지"라는 이탈이 걱정됐습니다. Apple Sign-In은 Face ID 한 번이면 되지만, 일반 이메일 가입자는 비밀번호를 기억해야 합니다.
+그렇다면 왜 만료 기간을 길게 설정했는가? **재로그인 자체가 이탈 포인트**가 될 수 있다고 판단했기 때문입니다. 토큰이 만료되면 사용자는 앱을 열었을 때 로그인 화면을 만나게 되는데, 이때 "귀찮아서 그냥 안 쓰지"라는 이탈이 걱정됐습니다. Apple Sign-In은 Face ID 한 번이면 되지만, 일반 이메일 가입자는 비밀번호를 기억해야 합니다.
 
 **하지만 이건 Refresh Token으로 해결할 수 있는 문제였습니다.** Access Token을 짧게 설정하고, 클라이언트에서 401 응답 시 Refresh Token으로 자동 갱신하면 사용자는 재로그인을 경험하지 않습니다. 당시에도 이 방식을 알고 있었지만, 구현 범위가 서버와 클라이언트 양쪽에 걸쳐 있었습니다:
 
 | 구현 항목 | 담당 | 설명 |
 |:---|:---|:---|
 | Refresh Token 저장소 | 서버 | Redis 또는 DB에 토큰 저장/관리 |
-| 토큰 갱신 API | 서버 | `/auth/refresh` 엔드포인트 추가 |
+| 토큰 갱신 API | 서버 | 갱신 전용 엔드포인트 추가 |
 | 401 자동 갱신 인터셉터 | **iOS** | 만료 시 Refresh → 원래 요청 재시도 |
 | Token Rotation | 서버 | 갱신 시 Refresh Token도 재발급 |
 | 토큰 무효화 | 서버 | 로그아웃/비밀번호 변경 시 폐기 |
@@ -206,7 +209,7 @@ export class AuthService {
 
 ```mermaid
 flowchart TD
-    A["Access Token 1년 만료<br/>Refresh Token 없음"] --> B["리스크 1: 토큰 탈취 시<br/>최대 1년간 악용 가능"]
+    A["장기 Access Token<br/>Refresh Token 없음"] --> B["리스크 1: 토큰 탈취 시<br/>만료 전까지 악용 가능"]
     A --> C["리스크 2: 서버 측에서<br/>토큰을 강제 무효화할 수 없음"]
     A --> D["리스크 3: 비밀번호 변경해도<br/>기존 토큰이 여전히 유효"]
 
@@ -227,7 +230,7 @@ flowchart TD
 
 | 항목 | 당시 구현 | 개선 방향 |
 |:---|:---|:---|
-| **Access Token 만료** | 1년 | **15분 ~ 1시간** |
+| **Access Token 만료** | 장기 설정 | **짧은 수명 + 위험 기반 조정** |
 | **Refresh Token** | 없음 | **Redis에 저장, 2주 만료** |
 | **토큰 갱신** | 없음 | **iOS 인터셉터에서 401 시 자동 갱신** |
 | **토큰 무효화** | 불가 (DB 조회로 우회) | **Redis에서 Refresh Token 삭제** |
@@ -317,7 +320,7 @@ flowchart TD
     style M fill:#e8f5e9
 ```
 
-**여기서 고민했던 점**은 `getUserInfo()` 호출이 **매 요청마다 DB 조회**를 발생시킨다는 것이었습니다. [앞서 JWT 섹션](#jwt-만료-기간-1년-refresh-token-없는-구조의-선택과-한계)에서 언급한 "서버 측에서 토큰을 강제 무효화할 수 없는" 문제를 이 DB 조회로 부분적으로 방어하는 구조입니다. 사용자 수가 더 많았다면 Redis에 사용자 존재 여부를 캐싱하는 방식을 고려했을 것 같습니다.
+**여기서 고민했던 점**은 `getUserInfo()` 호출이 **매 요청마다 DB 조회**를 발생시킨다는 것이었습니다. [앞서 JWT 섹션](#장기-jwt와-refresh-token-없는-구조의-선택과-한계)에서 언급한 "서버 측에서 토큰을 강제 무효화할 수 없는" 문제를 이 DB 조회로 부분적으로 방어하는 구조입니다. 사용자 수가 더 많았다면 Redis에 사용자 존재 여부를 캐싱하는 방식을 고려했을 것 같습니다.
 
 ### 회원가입 플로우
 
@@ -332,7 +335,7 @@ async create(createUserDto: CreateUserDto): Promise<userToken> {
     data: { ...createUserDto, nickname: createUserDto.userId },
   });
   await this.logService.createUserStats(createdUser.id);          // 3. UserStats 초기화
-  await this.houseSerivce.enterHouse(111111, createdUser.id);     // 4. 기본 하우스 입장
+  await this.groupService.enterDefaultGroup(DEFAULT_GROUP_ID, createdUser.id); // 4. 기본 그룹 입장
   result.accessToken = await this.authService.createJWT(createdUser.id);  // 5. JWT 발급
   if (process.env.NODE_ENV === "production") {
     discoard(createdUser.userId);                                 // 6. Discord 알림
@@ -353,7 +356,7 @@ sequenceDiagram
     participant HS as HouseService
     participant CS as CharlieService
 
-    C->>UC: POST /user/signup
+    C->>UC: 회원가입 API 요청
     UC->>US: create(createUserDto)
     US->>AS: transformPassword (bcrypt hash)
     AS-->>US: hashed password
@@ -361,7 +364,7 @@ sequenceDiagram
     PS-->>US: new User
     US->>LS: createUserStats(userId)
     LS-->>US: UserStats 초기화 완료
-    US->>HS: enterHouse(111111, userId)
+    US->>HS: enterDefaultGroup(DEFAULT_GROUP_ID, userId)
     HS-->>US: 기본 하우스 입장 완료
     US->>AS: createJWT(userId)
     AS-->>US: JWT token
@@ -371,7 +374,7 @@ sequenceDiagram
     UC-->>C: 201 Created
 ```
 
-**기본 하우스(code: 111111)**: 모든 사용자가 가입하면 자동으로 입장하는 공용 하우스입니다. "소셜" 앱인데 처음 가입하면 친구가 아무도 없어서 쓸쓸할 수 있으니, 모든 사용자가 공유하는 하우스를 만들어서 바로 랭킹 경쟁을 경험할 수 있게 했습니다.
+**기본 그룹**: 모든 사용자가 가입하면 자동으로 입장하는 공용 그룹입니다. "소셜" 앱인데 처음 가입하면 친구가 아무도 없어서 쓸쓸할 수 있으니, 모든 사용자가 공유하는 그룹을 만들어서 바로 랭킹 경쟁을 경험할 수 있게 했습니다. 실제 식별자는 설정 상수로 관리했습니다.
 
 **Discord 웹훅 알림**: Production 환경에서만 신규 가입자가 생기면 Discord 채널에 알림을 보냈습니다. 초기 스타트업이라 "오늘 몇 명이 가입했나"를 실시간으로 확인하는 게 팀 분위기에 중요했거든요.
 
@@ -444,7 +447,7 @@ sequenceDiagram
 
     C->>A: Apple Sign-In 버튼 클릭
     A-->>C: Authorization Code 반환
-    C->>S: POST /apple/login<br/>(authorizationCode)
+    C->>S: 소셜 로그인 API 요청<br/>(authorizationCode)
     S->>S: Client Secret 생성<br/>(JWT 기반, 6개월 유효)
     S->>A: Authorization Code +<br/>Client Secret으로 토큰 교환
     A-->>S: Access Token +<br/>Refresh Token + ID Token
@@ -472,28 +475,27 @@ Apple Sign-In 구현에서 고민했던 점들:
 
 ### 배경: 걸음수 데이터 흐름
 
-서비스의 핵심 데이터 흐름은, 클라이언트(iOS)에서 며칠치 걸음수를 모아서 한 번에 `POST /log`로 보내는 **Write-Behind 배치 전송** 방식이었습니다. 각 걸음수 기록은 Prisma의 `upsert`로 DB에 저장되고, `@@unique([date, userId])`로 날짜+사용자 조합의 유일성을 보장했습니다.
+서비스의 핵심 데이터 흐름은, 클라이언트(iOS)에서 며칠치 걸음수를 모아서 활동 기록 API로 한 번에 보내는 **Write-Behind 배치 전송** 방식이었습니다. 각 활동 기록은 Prisma의 `upsert`로 DB에 저장되고, 기록일+사용자 조합의 유일성을 보장했습니다.
 
 ```prisma
-// prisma/schema.prisma
-model Log {
-  id        Int           @id @default(autoincrement())
-  date      DateTime      @default(now())
-  steps     Int
-  level     Level
-  initLevel Log_initLevel
-  userId    String
-  loggedIn  Boolean
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+// 공개용으로 이름을 일반화한 Prisma 예시
+model ActivityRecord {
+  id            Int           @id @default(autoincrement())
+  recordedAt    DateTime      @default(now())
+  activityValue Int
+  currentState  ActivityState
+  initialState  ActivityState
+  accountId     String
+  synced        Boolean
 
-  @@unique([date, userId], name: "userDate")
-  @@index([userId], map: "Log_userId_fkey")
+  @@unique([recordedAt, accountId])
+  @@index([accountId])
 }
 ```
 
 > **📘 upsert와 멱등성(Idempotency)**
 >
-> **upsert**는 INSERT + UPDATE를 합친 연산으로, 레코드가 없으면 생성하고 있으면 갱신합니다. **멱등성(Idempotency)**은 동일한 요청을 여러 번 보내도 결과가 같은 성질입니다. `@@unique([date, userId])`로 유일성을 보장하면 같은 날짜의 데이터가 중복 생성되지 않아, 네트워크 재시도나 클라이언트 중복 전송에 안전하게 대응할 수 있습니다.
+> **upsert**는 INSERT + UPDATE를 합친 연산으로, 레코드가 없으면 생성하고 있으면 갱신합니다. **멱등성(Idempotency)**은 동일한 요청을 여러 번 보내도 결과가 같은 성질입니다. 기록일+사용자 복합 유일성으로 같은 날짜의 데이터가 중복 생성되지 않아, 네트워크 재시도나 클라이언트 중복 전송에 안전하게 대응할 수 있습니다.
 {: .prompt-info }
 
 이 Log 데이터를 기반으로 사용자 통계를 계산해야 했는데, 여기서 문제가 시작됐습니다.
@@ -506,51 +508,51 @@ model Log {
 
 ```typescript
 // src/log/log.service.ts
-private calculateCurrentInitLevel(previousLog: Log): Level {
+private calculateInitialState(previousRecord: ActivityRecord): ActivityState {
   let currentInitLevelIndex: number;
-  const previousLevel = previousLog ? previousLog.level : "overweight";
-  const previousLevelIndex = Object.keys(Level).indexOf(previousLevel);
-  if (previousLog) {
-    if (previousLog.steps < 6000) {
-      // 전날 6000보 미만이면 레벨 1단계 하락
+  const previousLevel = previousRecord ? previousRecord.currentState : DEFAULT_STATE;
+  const previousLevelIndex = Object.keys(ActivityState).indexOf(previousLevel);
+  if (previousRecord) {
+    if (previousRecord.activityValue < DECREASE_THRESHOLD) {
+      // 전날 활동량이 하한 미만이면 상태 1단계 하락
       currentInitLevelIndex = previousLevelIndex > 0
         ? previousLevelIndex - 1 : previousLevelIndex;
     }
   }
   currentInitLevelIndex = currentInitLevelIndex !== undefined
     ? currentInitLevelIndex : previousLevelIndex;
-  return Level[Object.keys(Level)[currentInitLevelIndex]];
+  return ActivityState[Object.keys(ActivityState)[currentInitLevelIndex]];
 }
 ```
 
-전날 걸음수가 **6,000보 미만**이면 레벨이 1단계 하락합니다. `Level` enum은 `veryObese(0) → obese(1) → overweight(2) → healthy(3) → veryHealthy(4)` 순서라서, 인덱스를 1 줄이는 것이 곧 하락입니다.
+전날 활동량이 **하한 임계값 미만**이면 상태가 1단계 하락합니다. 상태 enum은 낮음에서 높음 순서로 정렬되어 있어, 인덱스를 1 줄이는 것이 곧 하락입니다. 실제 임계값과 상태명은 공개용 예시에서 제외했습니다.
 
 **2단계 — level 계산** (오늘 걸음수 기준):
 
 ```typescript
 // src/log/log.service.ts
-private calculateLevel(currentLog: LogEntity): Level {
+private calculateState(currentRecord: ActivityRecord): ActivityState {
   let currentLevelIndex: number;
-  const currentInitLevelIndex = Object.keys(Level).indexOf(currentLog.initLevel);
-  if (currentLog.steps >= 10000) {
-    // 오늘 10000보 이상이면 레벨 1단계 상승
-    currentLevelIndex = currentInitLevelIndex < 4
+  const currentInitLevelIndex = Object.keys(ActivityState).indexOf(currentRecord.initialState);
+  if (currentRecord.activityValue >= INCREASE_THRESHOLD) {
+    // 오늘 활동량이 상한 이상이면 상태 1단계 상승
+    currentLevelIndex = currentInitLevelIndex < MAX_STATE_INDEX
       ? currentInitLevelIndex + 1 : currentInitLevelIndex;
   } else {
     currentLevelIndex = currentInitLevelIndex;
   }
-  return Level[Object.keys(Level)[currentLevelIndex]];
+  return ActivityState[Object.keys(ActivityState)[currentLevelIndex]];
 }
 ```
 
-오늘 걸음수가 **10,000보 이상**이면 레벨이 1단계 상승합니다.
+오늘 활동량이 **상한 임계값 이상**이면 상태가 1단계 상승합니다.
 
 이 두 규칙을 예시로 보면:
 
 | 시나리오 | 전날 상태 | 오늘 걸음수 | initLevel 계산 | level 계산 |
 |:---|:---|:---|:---|:---|
-| **A: 전날 부족 → 하락** | steps=5,000, level=healthy | 9,000 | healthy→**overweight** (6000 미만→하락) | overweight 유지 (10000 미만) |
-| **B: 오늘 충분 → 상승** | steps=7,000, level=overweight | 10,500 | overweight 유지 (6000 이상) | overweight→**healthy** (10000 이상→상승) |
+| **A: 전날 부족 → 하락** | 하한 미만, 상태 3 | 상한 미만 | 상태 3→**상태 2** | 상태 2 유지 |
+| **B: 오늘 충분 → 상승** | 하한 이상, 상태 2 | 상한 이상 | 상태 2 유지 | 상태 2→**상태 3** |
 
 ### 로그 생성 시 핵심 고민: 동일 날짜 재업로드 대응
 
@@ -588,22 +590,19 @@ log.level = this.calculateLevel(log);
 
 ### Before: 증분(Incremental) 통계 — 처음엔 당연한 선택이었습니다
 
-처음에는 `UserStats` 테이블에 미리 계산된 통계를 저장하고, 새 로그가 들어올 때마다 차분만 더하는 O(1) 방식을 사용했습니다:
+처음에는 별도의 사용자 통계 테이블에 미리 계산된 값을 저장하고, 새 기록이 들어올 때마다 차분만 더하는 O(1) 방식을 사용했습니다:
 
 ```prisma
-// prisma/schema.prisma
-model UserStats {
-  id                 Int      @id @default(autoincrement())
-  accumSteps         Int              // 누적 걸음수
-  maxDailySteps      Int              // 최대 일일 걸음수
-  maxLoginStreak     Int      @default(1)
-  todaySteps         Int      @default(0)
-  weeklySteps        Int      @default(0)
-  lastLoggedInDate   DateTime
-  reachedVeryHealthy Boolean
-  reachedVeryObese   Boolean
-  userId             String   @unique
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+// 공개용으로 이름을 일반화한 Prisma 예시
+model ActivitySummary {
+  id                Int      @id @default(autoincrement())
+  totalValue        Int
+  maxDailyValue     Int
+  maxActiveStreak   Int      @default(1)
+  todayValue        Int      @default(0)
+  weeklyValue       Int      @default(0)
+  lastRecordedAt    DateTime
+  accountId         String   @unique
 }
 ```
 
@@ -692,7 +691,7 @@ D3(수): steps=9,000
 // src/log/log.service.ts
 async calcUserStats(userId: string): Promise<UserStatsEntity> {
   const thisWeekStartDate = moment().startOf("isoWeek").format("YYYY-MM-DD");
-  const userLogs = await this.findByUserId("service", userId, "10000", "0", "asc");
+  const userLogs = await this.findByUserId("service", userId, configuredPageSize, "0", "asc");
   let accumSteps = 0, maxDailySteps = 0, todaySteps = 0,
       weeklySteps = 0, maxLoginStreak = 0,
       reachedVeryObese = false, reachedVeryHealthy = false,
@@ -908,7 +907,7 @@ sequenceDiagram
     participant Server as NestJS
     participant DB as MySQL
 
-    Client->>Server: GET /house/:houseId
+    Client->>Server: 그룹 랭킹 조회 요청
     Server->>DB: 쿼리 1: 멤버 목록 조회
     DB-->>Server: 멤버 10명 반환
 
@@ -944,7 +943,7 @@ Redis를 선택한 결정적 이유는 **PM2 클러스터 모드**였습니다. 
 
 ```mermaid
 flowchart TD
-    A["GET /house/:houseId"] --> B{"Redis에<br/>해당 하우스<br/>캐시 존재?"}
+    A["그룹 랭킹 조회"] --> B{"Redis에<br/>해당 그룹<br/>캐시 존재?"}
     B -->|"Cache Hit"| C["Redis에서<br/>weeklySteps 내림차순<br/>정렬 조회"]
     B -->|"Cache Miss"| D["MySQL에서<br/>멤버 목록 조회<br/>+ calcUserStats × N"]
     D --> E["결과를 Redis에 적재"]
@@ -971,25 +970,25 @@ flowchart TD
 일반 Redis는 key-value 저장소라서 복잡한 쿼리가 어렵지만, **Redis OM(Object Mapping)**을 사용하면 RediSearch 모듈을 활용해서 필드 단위 검색과 정렬이 가능합니다:
 
 ```typescript
-// dist/cache/houseUser.repository.js (원본 TS 소스에서 복원)
-const houseUserSchema = new Schema(HouseUser, {
-  userId: { type: "string" },
-  charlieImageNo: { type: "string" },
-  weeklySteps: { type: "number", sortable: true },  // ← 핵심!
-  houseId: { type: "number" },
-  lastLoggedDate: { type: "string" },
-  nickname: { type: "string" },
+// 공개용으로 이름을 일반화한 Redis OM 예시
+const groupMemberCacheSchema = new Schema(GroupMemberCache, {
+  memberId: { type: "string" },
+  avatarKey: { type: "string" },
+  weeklyMetric: { type: "number", sortable: true },  // ← 핵심!
+  groupId: { type: "number" },
+  lastRecordedAt: { type: "string" },
+  displayName: { type: "string" },
 });
 ```
 
 | 필드 | 타입 | 설명 |
 |:---|:---|:---|
-| `userId` | string | 사용자 식별자 |
-| `weeklySteps` | number, **sortable** | 주간 걸음수 — Redis 내 정렬 인덱스 생성 |
-| `houseId` | number | 하우스 식별자 — 검색 조건으로 사용 |
-| `lastLoggedDate` | string | 마지막 로그 날짜 — 캐시 유효성 체크에 사용 |
+| `memberId` | string | 사용자 식별자 |
+| `weeklyMetric` | number, **sortable** | 주간 활동량 — Redis 내 정렬 인덱스 생성 |
+| `groupId` | number | 그룹 식별자 — 검색 조건으로 사용 |
+| `lastRecordedAt` | string | 마지막 기록 날짜 — 캐시 유효성 체크에 사용 |
 
-`weeklySteps: { type: "number", sortable: true }`가 핵심입니다. `sortable: true`로 설정하면 Redis 내부적으로 해당 필드에 대한 **정렬 인덱스**를 생성합니다. 이 덕분에 `.sortDescending("weeklySteps")`으로 Redis 안에서 바로 랭킹 정렬이 가능합니다.
+`weeklyMetric: { type: "number", sortable: true }`가 핵심입니다. `sortable: true`로 설정하면 Redis 내부적으로 해당 필드에 대한 **정렬 인덱스**를 생성합니다. 이 덕분에 `.sortDescending("weeklyMetric")`으로 Redis 안에서 바로 랭킹 정렬이 가능합니다.
 
 ### 캐시 서비스 주요 메서드
 
@@ -997,54 +996,54 @@ const houseUserSchema = new Schema(HouseUser, {
 
 ```typescript
 // dist/cache/cache.service.js (원본 TS 소스에서 복원)
-async getHouseUsers(houseId) {
-  await this.houseUserRepository.createIndex();
-  const townUsers = await this.houseUserRepository.search()
-    .where("houseId").eq(houseId)
-    .sortDescending("weeklySteps")  // Redis 내부에서 정렬!
+async getGroupMembers(groupId) {
+  await this.groupMemberCacheRepository.createIndex();
+  const members = await this.groupMemberCacheRepository.search()
+    .where("groupId").eq(groupId)
+    .sortDescending("weeklyMetric")  // Redis 내부에서 정렬!
     .return.all();
-  const townUserJsonList = [];
-  for (const townUser of townUsers) {
-    townUser.updateUserSteps;       // 주간 걸음수 유효성 체크
-    const townUserJson = townUser.toJSON();
-    townUserJson.rank = townUsers.indexOf(townUser) + 1;
-    townUserJsonList.push(townUserJson);
+  const result = [];
+  for (const member of members) {
+    member.refreshWeeklyMetric;
+    const item = member.toJSON();
+    item.rank = members.indexOf(member) + 1;
+    result.push(item);
   }
-  return townUserJsonList;
+  return result;
 }
 ```
 
-SQL로 치면 `SELECT * FROM houseUsers WHERE houseId = ? ORDER BY weeklySteps DESC`에 해당하는 쿼리를 **Redis 안에서 바로 수행**합니다.
+SQL로 치면 “그룹 식별자로 필터링한 뒤 주간 활동량 내림차순으로 정렬”하는 쿼리를 **Redis 안에서 바로 수행**합니다. 물리 테이블과 필드명은 공개용 예시에서 제외했습니다.
 
 **주간 걸음수 유효성 체크:**
 
 ```typescript
-// dist/cache/houseUser.repository.js (원본 TS 소스에서 복원)
-class HouseUser extends Entity {
-  get updateUserSteps() {
+// 공개용으로 이름을 일반화한 Redis OM 예시
+class GroupMemberCache extends Entity {
+  get refreshWeeklyMetric() {
     const thisWeekStartDate = moment().startOf("isoWeek").format("YYYY-MM-DD");
-    this.weeklySteps = moment(this.lastLoggedDate).format("YYYY-MM-DD") >= thisWeekStartDate
-      ? this.weeklySteps
+    this.weeklyMetric = moment(this.lastRecordedAt).format("YYYY-MM-DD") >= thisWeekStartDate
+      ? this.weeklyMetric
       : 0;  // 지난 주 데이터면 0으로 처리
     return;
   }
 }
 ```
 
-`lastLoggedDate`가 이번 주 월요일 이전이면 `weeklySteps`를 0으로 처리합니다. 캐시에 저장된 값이 지난 주 데이터일 수 있기 때문입니다.
+`lastRecordedAt`이 이번 주 월요일 이전이면 `weeklyMetric`을 0으로 처리합니다. 캐시에 저장된 값이 지난 주 데이터일 수 있기 때문입니다.
 
 **Cache Miss — DB 조회 후 Redis에 적재:**
 
 ```typescript
 // dist/cache/cache.service.js (원본 TS 소스에서 복원)
-async initHouseUsers(houseId, houseUsers) {
+async initGroupMembers(groupId, members) {
   let count = 0;
-  for await (const houseUser of houseUsers) {
-    const userEntity = this.houseUserRepository.createEntity({
-      ...houseUser,
-      houseId,
+  for await (const member of members) {
+    const cacheEntity = this.groupMemberCacheRepository.createEntity({
+      ...member,
+      groupId,
     });
-    await this.houseUserRepository.save(userEntity);
+    await this.groupMemberCacheRepository.save(cacheEntity);
     count += 1;
   }
   return count;
@@ -1158,6 +1157,7 @@ flowchart TD
 
 **시크릿 관리**: `build-args`를 통해 GitHub Secrets에 저장된 환경변수를 Docker 빌드 시점에 주입합니다:
 
+{% raw %}
 ```yaml
 # .github/workflows/main.yml
 - name: Build and push
@@ -1171,6 +1171,7 @@ flowchart TD
       "DATABASE_URL_ARG=${{ secrets.DATABASE_URL }}"
       "SECRET_ARG=${{ secrets.SECRET }}"
 ```
+{% endraw %}
 
 **Self-hosted Runner**: 배포 대상 서버에 GitHub Actions Runner를 설치해서 `runs-on: [self-hosted, label-production]`으로 직접 배포합니다. 별도의 SSH 연결이나 배포 스크립트 없이 Runner가 서버에서 직접 Docker 명령을 실행하는 구조입니다.
 
@@ -1414,7 +1415,7 @@ Sentry로 에러를 잡기 시작하고 나서야 "이렇게 많은 에러가 �
 
 | 항목 | 당시 선택 | 지금이라면 |
 |:---|:---|:---|
-| 인증 | Access Token only (1년 만료) | **Access + Refresh Token** 분리 |
+| 인증 | 장기 Access Token only | **Access + Refresh Token** 분리 |
 | 통계 집계 | 앱에서 forEach 순회 | **DB 집계 함수** (SUM, MAX) 활용 |
 | 캐시 전략 | Cache-Aside (무효화 없음) | Cache-Aside + **TTL 기반 자동 만료** |
 | 모니터링 | Sentry → NewRelic (순차 도입) | **처음부터 APM 포함** 도구 선택 |
