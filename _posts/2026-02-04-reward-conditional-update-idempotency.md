@@ -1,5 +1,5 @@
 ---
-title: "중복 리워드 수령 방지 개발기 — 조회 후 저장 대신 상태 조건 UPDATE를 선택한 이유"
+title: "Spring Data JPA의 상태 조건 UPDATE를 통한 중복 처리 방지 개발기"
 date: 2026-02-04
 category: 개발기
 tags: [spring-boot, kotlin, spring-data-jpa, postgres, concurrency, idempotency, reward]
@@ -10,13 +10,13 @@ image:
   thumbnail: /assets/images/posts/reward-conditional-update/server-rack.jpg
 ---
 
-# 중복 리워드 수령 방지 개발기 — 조회 후 저장 대신 상태 조건 UPDATE를 선택한 이유
+# Spring Data JPA의 상태 조건 UPDATE를 통한 중복 처리 방지 개발기
 
-안녕하세요. 백엔드 개발자 정지원입니다.
+상태를 확인한 후 엔티티를 저장하는 코드는 한 요청만 들어올 때에는 문제없이 동작합니다. 하지만 같은 자원을 여러 요청이 동시에 변경하면 두 요청이 모두 이전 상태를 읽을 수 있습니다.
 
-이 글은 상태를 가진 자원을 여러 요청이 동시에 변경할 때 조건부 UPDATE로 경쟁을 해결하는 일반적인 패턴을 다룹니다. 리워드라는 이름을 사용하지만 실제 서비스의 상태명, 오류 정책, 일괄 처리 규칙, 상품 정보, 원장 구조와 운영 지표는 포함하지 않습니다.
+이번 글에서는 이 문제를 재현하고, Spring Data JPA의 상태 조건 UPDATE로 중복 처리를 막는 과정을 정리해보겠습니다.
 
-> **공개 범위 안내**
+> **예제 코드 안내**
 >
 > 아래의 엔티티·테이블·컬럼·상태·메트릭 이름은 모두 가상 예시입니다. 실제 구현의 상태 전이, API 응답, 재시도, 부분 성공 여부를 설명하지 않으며 특정 서비스 정책과 대응되지 않습니다.
 {: .prompt-info }
@@ -28,16 +28,16 @@ image:
 <div class="notice--info" markdown="1">
 **관련 개발기**
 
-1. [AI 대화 후처리 개선기](/posts/ai-conversation-post-processing-pipeline/)
-2. [리워드 생성·수령·충전 책임 분리](/posts/reward-creation-receipt-charge-responsibility/)
-3. **상태 조건 UPDATE로 중복 처리 방지** — 현재 글
+1. [Spring Boot와 Kotlin Coroutine을 통한 AI 대화 후처리 개발기](/posts/ai-conversation-post-processing-pipeline/)
+2. [리워드 생성·수령·충전 책임 분리 개발기](/posts/reward-creation-receipt-charge-responsibility/)
+3. **Spring Data JPA 상태 조건 UPDATE 개발기** — 현재 글
 </div>
 
 ---
 
-## 1. Check-Then-Act의 경쟁 창
+## 1. 조회 후 저장에서 생기는 문제
 
-가장 먼저 떠올리기 쉬운 구현은 자원을 조회한 뒤 애플리케이션에서 상태를 확인하고 저장하는 방식입니다.
+먼저 자원을 조회한 뒤 애플리케이션에서 상태를 확인하고 저장하는 코드를 작성해보겠습니다.
 
 ~~~kotlin
 fun process(id: UUID) {
@@ -73,7 +73,7 @@ sequenceDiagram
     B->>D: 상태 변경
 ~~~
 
-각 요청 안의 검사 코드는 틀리지 않았습니다. 다만 검사와 변경 사이에 다른 트랜잭션이 끼어들 수 있습니다.
+각 요청의 검사 코드는 정상적으로 실행됩니다. 문제는 상태를 확인한 시점과 실제로 변경하는 시점 사이에 다른 트랜잭션이 들어올 수 있다는 점입니다.
 
 ~~~text
 SELECT: 현재 전이 가능한가?
@@ -85,9 +85,9 @@ UPDATE: 다음 상태로 변경
 
 ---
 
-## 2. 판정을 UPDATE의 WHERE 절로 옮기기
+## 2. WHERE 절에 상태 조건 넣기
 
-상태 확인과 변경을 한 문장으로 합치면 경쟁 창을 줄일 수 있습니다.
+그럼 상태 확인과 변경을 하나의 UPDATE 문으로 합쳐보겠습니다.
 
 ~~~sql
 UPDATE entitlement_example
@@ -118,9 +118,9 @@ flowchart LR
 
 ---
 
-## 3. Spring Data JPA에서 변경 행 수를 반환하기
+## 3. Spring Data JPA 수정 쿼리 작성하기
 
-JPQL 수정 쿼리는 반환 타입을 <code>Int</code>로 선언해 변경 행 수를 받을 수 있습니다.
+Spring Data JPA에서는 JPQL 수정 쿼리의 반환 타입을 <code>Int</code>로 선언하여 변경된 행 수를 받을 수 있습니다.
 
 ~~~kotlin
 @Modifying(clearAutomatically = true)
@@ -143,7 +143,7 @@ fun transitionIfCurrent(
 
 이 예시는 실제 엔티티·메서드·상태 이름을 사용하지 않습니다. 핵심은 수정 쿼리의 성공 여부를 예외 유무가 아니라 행 수로 판정한다는 점입니다.
 
-### clearAutomatically가 필요한 이유
+### clearAutomatically 설정하기
 
 JPQL 벌크 UPDATE는 영속성 컨텍스트의 엔티티를 거치지 않고 데이터베이스를 직접 수정합니다.
 
@@ -158,9 +158,9 @@ flowchart TD
 
 ---
 
-## 4. 비관적 락과 비교하기
+## 4. 다른 락 방식과 비교하기
 
-조건부 UPDATE만이 유일한 방법은 아닙니다.
+물론 조건부 UPDATE만 사용할 수 있는 것은 아닙니다. 비관적 락과 낙관적 락도 함께 비교해보았습니다.
 
 | 접근 | 장점 | 주의점 |
 |---|---|---|
@@ -173,9 +173,9 @@ flowchart TD
 
 ---
 
-## 5. 일괄 UPDATE의 함정: 행 수만으로 승자를 식별할 수 없다
+## 5. 여러 건 UPDATE 결과 확인하기
 
-여러 ID를 한 번에 갱신하면 affected rows는 “몇 개가 바뀌었는지”만 알려줍니다. “어떤 ID가 바뀌었는지”는 알려주지 않습니다.
+이제 여러 ID를 한 번에 처리해보겠습니다. 이때 affected rows는 몇 건이 변경됐는지는 알려주지만, 어떤 ID가 변경됐는지는 알려주지 않습니다.
 
 ~~~sql
 UPDATE entitlement_example
@@ -186,7 +186,7 @@ WHERE id = ANY(:ids)
 
 후속 조회로 nextState인 모든 행을 가져오면 다른 요청이 먼저 변경한 행까지 섞일 수 있습니다. 상태 변경 뒤 별도의 부수효과가 이어진다면 이번 요청이 실제로 바꾼 행만 식별해야 합니다.
 
-### 대안 A: UPDATE RETURNING
+### UPDATE RETURNING 사용하기
 
 PostgreSQL에서는 실제 갱신한 행의 식별자를 반환할 수 있습니다.
 
@@ -200,7 +200,7 @@ RETURNING id;
 
 장점은 승자 집합이 정확하다는 점입니다. 단점은 네이티브 쿼리와 결과 매핑 때문에 데이터베이스 종속성이 생긴다는 점입니다.
 
-### 대안 B: ID별 조건부 UPDATE
+### ID별로 조건부 UPDATE 실행하기
 
 ~~~kotlin
 val transitionedIds =
@@ -216,7 +216,7 @@ val transitionedIds =
 
 구현은 단순하지만 요청 수가 늘어납니다. 처리 대상의 상한과 호출 빈도를 측정해 판단해야 합니다.
 
-### 대안 C: 작업 토큰
+### 작업 토큰 남기기
 
 상태 변경과 함께 요청별 토큰을 기록하고 그 토큰으로 다시 조회할 수도 있습니다.
 
@@ -234,9 +234,9 @@ WHERE id = ANY(:ids)
 
 ---
 
-## 6. 부수효과에는 별도의 멱등성 경계가 필요하다
+## 6. 후속 작업의 중복 막기
 
-상태 전이 뒤 잔액 변경, 원장 생성, 알림 같은 부수효과가 이어질 수 있습니다. 상태 전이만 안전하다고 전체 흐름이 자동으로 멱등해지는 것은 아닙니다.
+상태 변경 이후에는 다른 저장 작업이나 알림 같은 후속 작업이 이어질 수 있습니다. 상태 UPDATE가 한 번만 성공하더라도 후속 작업까지 자동으로 한 번만 실행되는 것은 아닙니다.
 
 ~~~mermaid
 flowchart LR
@@ -261,9 +261,9 @@ WHERE deleted = false;
 
 ---
 
-## 7. 테스트해야 할 동시성 시나리오
+## 7. 동시성 테스트 작성하기
 
-동시성 테스트는 단순히 스레드를 여러 개 만드는 것보다 같은 시점에 시작하도록 동기화하는 것이 중요합니다.
+코드를 수정한 후에는 여러 작업이 최대한 같은 시점에 시작하도록 동시성 테스트를 작성하였습니다.
 
 ~~~kotlin
 val ready = CountDownLatch(workerCount)
@@ -290,7 +290,7 @@ start.countDown()
 
 ---
 
-## 8. 운영에서 관찰할 신호
+## 8. 운영 지표 확인하기
 
 실제 메트릭 이름과 임계값은 공개하지 않고 다음 범주만 남길 수 있습니다.
 
@@ -306,7 +306,7 @@ start.countDown()
 
 ---
 
-## 9. 배운 점
+## 9. 마무리
 
 **트랜잭션은 경쟁을 자동으로 없애지 않는다.**
 
@@ -324,4 +324,4 @@ start.countDown()
 
 한 계층의 방어만 믿지 않고 원장이나 결과 저장소에도 유일성을 둬야 합니다.
 
-이 글은 조건부 UPDATE라는 기술 패턴만 설명합니다. 실제 서비스의 상태, 응답, 예외, 일괄 처리와 충전 정책은 공개하지 않습니다.
+이번 글에서는 조회 후 저장에서 발생할 수 있는 동시성 문제를 확인하고, 상태 조건 UPDATE와 변경 행 수를 이용해 처리 결과를 구분해보았습니다. 글의 상태명과 스키마는 예제이지만, 같은 상태를 여러 요청이 동시에 변경하는 기능이라면 동일한 방식으로 검토할 수 있습니다.

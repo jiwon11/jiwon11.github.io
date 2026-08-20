@@ -1,5 +1,5 @@
 ---
-title: "Datadog 관측성 구축기 — LLM Observability부터 구조화 로그까지"
+title: "Spring Boot와 Datadog을 통한 관측성 구축 개발기"
 date: 2026-07-28
 category: 개발기
 tags: [spring-boot, kotlin, datadog, observability, llm-observability, structured-logging, aws, elastic-beanstalk]
@@ -10,11 +10,9 @@ image:
   thumbnail: /assets/images/posts/2026-07-28-datadog-observability-integration/thumbnail.jpg
 ---
 
-# Datadog 관측성 구축기 — LLM Observability부터 구조화 로그까지
+# Spring Boot와 Datadog을 통한 관측성 구축 개발기
 
-안녕하세요. Jobdori 프로젝트에서 백엔드 개발을 맡은 정지원입니다.
-
-서비스에 OpenAI 호출과 채용 공고 크롤링이 들어오면서 단순한 에러 수집만으로는 답하기 어려운 질문이 늘었습니다.
+OpenAI 호출과 채용 공고 크롤링 기능을 운영하면서 예외 로그만으로는 느린 구간과 외부 API 실패 원인을 확인하기 어려웠습니다.
 
 - 어떤 AI 기능이 느린가?
 - 모델별 토큰 사용량과 비용은 어떻게 달라지는가?
@@ -22,9 +20,9 @@ image:
 - GraphQL 요청이 단일 엔드포인트로 보일 때 어떤 오퍼레이션이 느린지 어떻게 찾는가?
 - 작은 개발 서버에서도 감당할 수 있는 관측성 구성은 어디까지인가?
 
-이번 글에서는 이 질문에 답하기 위해 Datadog을 연동한 과정을 공유합니다. 처음에는 호스트 Agent, APM, JVM 지표, 로그, LLM Observability를 모두 수집하는 구성을 설계했습니다. 하지만 소형 인스턴스의 배포 제약을 만나 Agentless 구조로 방향을 바꿨고, 그 과정에서 LLM 계측 코드가 실제 AI 호출을 모두 실패시키는 장애도 겪었습니다.
+이번 글에서는 Spring Boot 애플리케이션에 Datadog을 연결하고, LLM Observability와 구조화 로그를 구성한 과정을 정리해보겠습니다. 처음에는 호스트 Agent를 중심으로 구성하였지만 실행 환경의 제약을 확인한 후 Agentless 방식으로 변경하였습니다. 이 과정에서 계측 코드가 실제 AI 호출에 영향을 주는 문제도 함께 수정하였습니다.
 
-> Datadog 리전, 환경·서비스·앱 태그, 로그 이벤트명, GraphQL 경로, 모니터 임계값과 실제 대시보드 수치는 공개용 예시로 일반화했습니다.
+> 예제의 Datadog 리전, 태그, 로그 이벤트명, GraphQL 경로, 모니터 임계값과 대시보드 수치는 임의로 바꾸었습니다.
 {: .prompt-info }
 
 최종적으로는 다음 두 축에 집중했습니다.
@@ -38,9 +36,9 @@ image:
 
 ---
 
-## 1. 배경: 외부 연동이 늘수록 로그의 역할도 달라졌다
+## 1. 기존 로그에서 부족한 점 확인하기
 
-### 1.1 서비스에서 관찰해야 했던 것
+### 1.1 확인할 데이터 정하기
 
 Jobdori 백엔드는 Kotlin과 Spring Boot 기반의 API 서버입니다. REST와 GraphQL 요청을 처리하고, 주요 기능에서 OpenAI API와 외부 채용 공고 페이지를 호출합니다.
 
@@ -68,7 +66,7 @@ latencyMs=<number> retries=<number> promptTokens=<number> completionTokens=<numb
 
 즉, 로그를 단순한 기록이 아니라 **집계 가능한 관측 데이터**로 바꿔야 했습니다.
 
-### 1.2 처음 세운 목표
+### 1.2 수집 범위 정하기
 
 처음에는 Datadog의 기능을 넓게 활용하는 구성을 설계했습니다.
 
@@ -84,9 +82,9 @@ latencyMs=<number> retries=<number> promptTokens=<number> completionTokens=<numb
 
 ---
 
-## 2. 첫 번째 설계: 호스트 Agent를 중심으로 모두 연결하기
+## 2. Datadog Agent 연결하기
 
-### 2.1 Agent 기반 아키텍처
+### 2.1 Agent 기반 구조 구성하기
 
 처음 설계한 흐름은 모든 데이터를 같은 호스트의 Datadog Agent로 보내는 방식이었습니다.
 
@@ -107,7 +105,7 @@ Agent 설치 스크립트를 Elastic Beanstalk의 `.platform/hooks/prebuild`에 
 
 이 구조의 장점은 명확했습니다. 호스트, JVM, 요청, 데이터베이스, 외부 호출, 로그를 하나의 트레이스 문맥으로 연결할 수 있습니다.
 
-### 2.2 Java Agent를 애플리케이션 의존성과 분리하기
+### 2.2 Java Agent 의존성 분리하기
 
 `dd-java-agent.jar`는 애플리케이션 클래스패스에 넣는 일반 라이브러리가 아닙니다. JVM 시작 시 `-javaagent`로 로딩해야 하므로 별도 Gradle Configuration으로 관리하고 Elastic Beanstalk 배포 번들에 포함했습니다.
 
@@ -146,9 +144,9 @@ dependencies {
 
 ---
 
-## 3. LLM Observability 수동 계측
+## 3. LLM Observability 직접 연결하기
 
-### 3.1 자동 계측 대신 수동 계측을 선택한 이유
+### 3.1 OpenAI 호출 지점에 Span 추가하기
 
 OpenAI 공식 SDK를 사용했다면 지원 범위 안에서 자동 계측을 기대할 수 있습니다. 이 프로젝트는 자체 `OpenAiHttpClient`와 `OpenAiChatClientImpl`을 사용하고 있었기 때문에, 실제 호출 지점에서 LLM 스팬을 직접 시작하고 종료해야 했습니다.
 
@@ -200,7 +198,7 @@ response.usage?.let {
 }
 ```
 
-### 3.2 프롬프트 관측성과 개인정보의 충돌
+### 3.2 프롬프트 개인정보 가리기
 
 LLM Observability의 장점은 실제 입력과 출력을 보면서 품질 문제를 분석할 수 있다는 점입니다. 하지만 이력서와 채용 공고를 다루는 서비스에서 프롬프트를 그대로 전송하면 개인정보가 함께 들어갈 수 있습니다.
 
@@ -229,9 +227,9 @@ private fun String.maskPii(): String =
 
 ---
 
-## 4. 운영 환경의 전환: Agent 기반에서 Agentless로
+## 4. Agentless 방식으로 변경하기
 
-### 4.1 소형 인스턴스에서 마주친 현실
+### 4.1 실행 환경의 리소스 확인하기
 
 전체 Agent 구성을 개발 서버에 배포하는 과정에서 인스턴스의 리소스 제약으로 배포가 실패했습니다. 호스트 Agent, Java Agent, 애플리케이션을 모두 유지하면서 APM과 JVM 지표까지 수집하는 초기 설계를 그대로 가져가기 어려웠습니다.
 
@@ -245,7 +243,7 @@ private fun String.maskPii(): String =
 
 개발 환경에서 가장 필요한 것은 AI 호출과 오류·요청 로그의 가시성이었습니다. 따라서 호스트 Agent를 제거하고 **로그 + LLM Observability**에 집중하는 구성을 선택했습니다.
 
-### 4.2 최종 데이터 흐름
+### 4.2 변경한 데이터 흐름
 
 로그는 Elastic Beanstalk stdout에서 CloudWatch Logs로 전달되고, Datadog Forwarder Lambda가 이를 Datadog으로 보냅니다. LLM 스팬은 `dd-java-agent`의 Agentless LLM Observability 경로로 전송합니다.
 
@@ -281,9 +279,9 @@ Agentless 전환으로 포기한 것도 분명합니다.
 
 ---
 
-## 5. 계측 코드가 실제 기능을 깨뜨린 장애
+## 5. 계측 코드의 실패 분리하기
 
-### 5.1 AI 호출이 전부 500이 된 이유
+### 5.1 계측 예외 확인하기
 
 Agentless 전환 직후 더 큰 문제가 발생했습니다. `DD_TRACE_ENABLED=false`이면서 LLM Observability만 활성화된 조합에서 `LLMObs.startLLMSpan`이 정상 스팬을 만들지 못했고, 계측 시작 과정의 예외가 OpenAI 호출보다 먼저 전파됐습니다.
 
@@ -305,7 +303,7 @@ llmSpan.finish()
 - 토큰 metric 기록
 - 스팬 종료
 
-### 5.2 관측성은 실패해도 비즈니스는 살아 있어야 한다
+### 5.2 계측 실패를 밖으로 전달하지 않기
 
 계측의 모든 단계에 실패 격리를 적용했습니다.
 
@@ -349,7 +347,7 @@ try {
 로그, 메트릭, 트레이스는 장애를 발견하기 위한 보조 시스템입니다. 보조 시스템의 실패가 관찰 대상인 핵심 기능을 중단시키면 의존 방향이 뒤집힙니다. 계측은 가능한 한 fail-open으로 설계해야 합니다.
 </div>
 
-### 5.3 같은 문제를 다시 놓치지 않기
+### 5.3 오류 로그 모니터 추가하기
 
 코드만 고치는 것으로 끝내지 않고, 과거 오류 패턴을 감지하는 로그 모니터 정의를 추가했습니다.
 
@@ -365,9 +363,9 @@ try {
 
 ---
 
-## 6. 문자열 로그를 Datadog 구조화 로그로 바꾸기
+## 6. JSON 구조화 로그 만들기
 
-### 6.1 Datadog 예약 속성에 맞춘 JSON 포맷
+### 6.1 Datadog 필드에 맞추기
 
 Spring Boot의 `StructuredLogFormatter`를 구현해 dev와 prod 프로필의 콘솔 로그를 JSON으로 전환했습니다.
 
@@ -414,7 +412,7 @@ override fun format(event: ILoggingEvent): String {
 
 여기서 필드명은 단순한 취향이 아닙니다. `service`와 `status`, `error.kind`, `error.stack` 같은 속성이 정확해야 Datadog Error Tracking과 기본 facet이 의도대로 동작합니다.
 
-### 6.2 message와 payload를 둘 다 남긴 이유
+### 6.2 message와 payload 나누기
 
 `OpenAiCallMetrics`는 기존 전문 검색 쿼리를 깨뜨리지 않으면서 숫자 필드를 바로 집계할 수 있도록 두 표현을 함께 남깁니다.
 
@@ -444,7 +442,7 @@ log.atInfo {
 
 로그 스키마를 바꾸는 순간 대시보드와 모니터 쿼리도 함께 깨질 수 있습니다. 그래서 코드 주석에도 `llm_call`의 키 이름을 함부로 바꾸지 않도록 명시했습니다. 로그 필드는 내부 구현 세부가 아니라 운영 도구가 소비하는 하나의 API가 됐습니다.
 
-### 6.3 `costUsd`가 문자열이면 합계를 낼 수 없다
+### 6.3 숫자 타입 그대로 전송하기
 
 구조화 로그로 바꾼 뒤에도 비용 합계가 계산되지 않는 문제가 남았습니다. 표시 자릿수를 맞추기 위해 `costUsd`를 미리 문자열로 포맷했기 때문입니다.
 
@@ -484,9 +482,9 @@ private fun render(fields: Map<String, Any?>): String =
 
 ---
 
-## 7. 요청 문맥을 MDC로 연결하기
+## 7. MDC로 요청 로그 연결하기
 
-### 7.1 HTTP 요청마다 필요한 필드
+### 7.1 HTTP 요청 필드 추가하기
 
 로그 한 건만 보고도 어떤 요청에서 발생했는지 알 수 있도록 `OncePerRequestFilter`에서 Datadog 표준 속성을 MDC에 넣었습니다.
 
@@ -528,7 +526,7 @@ try {
 
 처리시간은 Datadog 표준 `duration` 필드의 단위에 맞춰 나노초로 기록했습니다.
 
-### 7.2 프록시와 스레드 재사용을 고려하기
+### 7.2 프록시와 스레드 재사용 처리하기
 
 Elastic Beanstalk의 로드밸런서 뒤에서는 `remoteAddr`이 실제 사용자가 아니라 프록시 주소일 수 있습니다. 따라서 `X-Forwarded-For`의 첫 값을 우선 사용했습니다.
 
@@ -545,7 +543,7 @@ private fun clientIp(request: HttpServletRequest): String? =
 
 그렇다고 `MDC.clear()`를 호출하면 `dd-java-agent`가 주입한 trace/span ID까지 지울 수 있습니다. 애플리케이션이 넣은 키 목록만 선택적으로 제거한 이유입니다.
 
-### 7.3 GraphQL은 URL만으로 구분할 수 없다
+### 7.3 GraphQL Operation 기록하기
 
 REST API는 URL로 기능을 구분할 수 있지만 GraphQL 요청은 모두 단일 엔드포인트로 들어옵니다. URL만 남기면 어떤 query나 mutation이 느렸는지 알 수 없습니다.
 
@@ -568,9 +566,9 @@ override fun intercept(
 
 ---
 
-## 8. 대시보드와 모니터를 코드 가까이에 두기
+## 8. 대시보드와 모니터 정의하기
 
-### 8.1 실제로 들어오는 데이터만 사용하기
+### 8.1 수집된 데이터 먼저 확인하기
 
 Agentless 전환 이후 Datadog 대시보드의 데이터 원천은 두 가지입니다.
 
@@ -600,7 +598,7 @@ must be log-based.
 
 실제 수집된 스팬을 바탕으로 전체 지연시간 추이와 기능별 평균 지연시간, 모델별 백분위수를 비교했습니다. 공개 글에는 운영 기능명과 실측 대시보드 이미지를 포함하지 않았지만, 이 비교 덕분에 “OpenAI 호출이 느리다”에서 그치지 않고 어떤 기능과 모델부터 최적화해야 하는지 우선순위를 정할 수 있었습니다.
 
-### 8.2 로그 기반 모니터 정의
+### 8.2 로그 모니터 추가하기
 
 Datadog UI에서만 모니터를 만들면 설정의 의도와 변경 이력을 코드 리뷰에서 확인하기 어렵습니다. 재현 가능한 시작점이 되도록 JSON 정의를 저장했습니다.
 
@@ -621,7 +619,7 @@ Datadog Forwarder는 CloudWatch 로그 그룹 정보를 바탕으로 service를 
 
 ---
 
-## 9. 모듈 구조 안에서 관측성 책임 나누기
+## 9. 모듈별 계측 책임 나누기
 
 Datadog 연동 코드도 기존 모듈 의존 방향을 깨지 않도록 배치했습니다.
 
@@ -656,7 +654,7 @@ docs/datadog
 
 ---
 
-## 10. 결과
+## 10. 적용 결과 확인하기
 
 ### 10.1 설계 변화
 
@@ -688,9 +686,9 @@ docs/datadog
 
 ---
 
-## 11. 결론
+## 11. 마무리
 
-### 11.1 배운 점
+### 작업하며 확인한 점
 
 **1. 관측성은 핵심 기능보다 약한 의존성이어야 합니다.**
 
@@ -716,9 +714,9 @@ Agent 기반 구성이 기능적으로 더 풍부하더라도 현재 인스턴�
 
 프롬프트와 응답은 디버깅 가치가 높지만 가장 민감한 데이터가 될 수도 있습니다. 마스킹, 권한, 보존 기간을 하나의 문제로 다뤄야 합니다.
 
-### 11.2 마무리
+### 적용을 마치며
 
-이번 Datadog 연동은 “Agent를 설치하고 대시보드를 만든 작업”으로 끝나지 않았습니다. 실제 과정은 훨씬 더 많은 선택의 연속이었습니다.
+Datadog 연동은 Agent를 설치하고 대시보드를 만드는 것으로 끝나지 않았습니다. 실제로 어떤 데이터가 들어오는지 확인하고, 실행 환경에서 유지할 수 있는 범위를 정해야 했습니다.
 
 - 무엇을 관찰할 것인가?
 - 작은 인스턴스에서 어떤 데이터를 포기할 것인가?
@@ -727,9 +725,9 @@ Agent 기반 구성이 기능적으로 더 풍부하더라도 현재 인스턴�
 - 문자열 로그를 어떤 타입과 필드명으로 내보낼 것인가?
 - 운영 설정을 어떻게 다시 만들 수 있게 남길 것인가?
 
-처음의 전체 Agent 설계와 최종 Agentless 구성은 다르지만, 이 전환 덕분에 관측성의 목적을 더 분명히 정리할 수 있었습니다. 모든 것을 수집하는 것보다 서비스의 핵심 위험을 설명할 수 있는 데이터를 안정적으로 남기는 것이 먼저였습니다.
+처음 구성한 Agent 기반 구조와 최종 Agentless 방식은 달랐습니다. 모든 데이터를 수집하기보다 현재 환경에서 안정적으로 전송할 수 있는 로그와 LLM 데이터를 먼저 남기는 방향으로 수정하였습니다.
 
-이 글이 제한된 환경에서 Datadog이나 LLM Observability를 도입하는 분들에게 도움이 되었으면 합니다.
+이번 글에서는 Datadog 연결부터 LLM 계측, 구조화 로그, MDC와 모니터 구성까지 살펴보았습니다. 비슷한 환경에서 Datadog이나 LLM Observability를 연결할 때 참고가 되었으면 합니다.
 
 ---
 
