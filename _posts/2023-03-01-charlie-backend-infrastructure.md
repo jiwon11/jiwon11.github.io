@@ -1,5 +1,5 @@
 ---
-title: "NestJS와 Prisma를 통한 찰리와 걷기 백엔드 개발기"
+title: "찰리와 걷기 백엔드 개발기 — 인증부터 데이터 집계와 배포까지"
 date: 2023-03-01
 categories: [개발기]
 tags: [NestJS, Prisma, MySQL, Redis, Cache-Aside, Docker, GitHub Actions, Sentry, NewRelic, PM2, JWT, Apple Sign-In]
@@ -10,7 +10,7 @@ image:
   alt: 백엔드 인프라를 상징하는 서버
 ---
 
-# NestJS와 Prisma를 통한 찰리와 걷기 백엔드 개발기
+# 찰리와 걷기 백엔드 개발기 — 인증부터 데이터 집계와 배포까지
 
 찰리와 걷기 백엔드를 개발하면서 인증부터 활동 데이터 저장, 통계 집계, 캐시, 배포 자동화까지 여러 기능을 구현하였습니다.
 

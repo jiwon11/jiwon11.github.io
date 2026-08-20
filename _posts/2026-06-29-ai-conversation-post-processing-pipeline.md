@@ -1,5 +1,5 @@
 ---
-title: "Spring Boot와 Kotlin Coroutine을 통한 AI 대화 후처리 개발기"
+title: "AI 대화 후처리를 요청 트랜잭션에서 분리하기"
 date: 2026-06-29
 category: 개발기
 tags: [spring-boot, kotlin, coroutine, event-driven, openai, transaction, architecture]
@@ -10,7 +10,7 @@ image:
   thumbnail: /assets/images/posts/ai-conversation-post-processing/network-cables.jpg
 ---
 
-# Spring Boot와 Kotlin Coroutine을 통한 AI 대화 후처리 개발기
+# AI 대화 후처리를 요청 트랜잭션에서 분리하기
 
 AI 요청을 처리한 후에는 추가 분석이나 데이터 갱신처럼 사용자 응답과 바로 관계없는 작업이 이어질 수 있습니다. 이 작업을 모두 같은 요청에서 실행하면 외부 API를 기다리는 시간까지 응답이 늦어집니다.
 
@@ -26,9 +26,9 @@ AI 요청을 처리한 후에는 추가 분석이나 데이터 갱신처럼 사�
 <div class="notice--info" markdown="1">
 **연관 개발기**
 
-1. **Spring Boot와 Kotlin Coroutine을 통한 AI 대화 후처리 개발기** — 현재 글
-2. [리워드 생성·수령·충전 책임 분리 개발기](/posts/reward-creation-receipt-charge-responsibility/)
-3. [Spring Data JPA 상태 조건 UPDATE 개발기](/posts/reward-conditional-update-idempotency/)
+1. **AI 대화 후처리를 요청 트랜잭션에서 분리하기** — 현재 글
+2. [리워드 생성·수령·충전 책임을 분리한 과정](/posts/reward-creation-receipt-charge-responsibility/)
+3. [상태 조건 UPDATE로 중복 리워드 처리 막기](/posts/reward-conditional-update-idempotency/)
 </div>
 
 ---

@@ -1,5 +1,5 @@
 ---
-title: "Spring Boot와 Datadog을 통한 관측성 구축 개발기"
+title: "Datadog 관측성 구축기 — LLM Observability와 구조화 로그"
 date: 2026-07-28
 category: 개발기
 tags: [spring-boot, kotlin, datadog, observability, llm-observability, structured-logging, aws, elastic-beanstalk]
@@ -10,7 +10,7 @@ image:
   thumbnail: /assets/images/posts/2026-07-28-datadog-observability-integration/thumbnail.jpg
 ---
 
-# Spring Boot와 Datadog을 통한 관측성 구축 개발기
+# Datadog 관측성 구축기 — LLM Observability와 구조화 로그
 
 OpenAI 호출과 채용 공고 크롤링 기능을 운영하면서 예외 로그만으로는 느린 구간과 외부 API 실패 원인을 확인하기 어려웠습니다.
 

@@ -1,5 +1,5 @@
 ---
-title: "Spring Data JPA의 상태 조건 UPDATE를 통한 중복 처리 방지 개발기"
+title: "중복 리워드 처리를 막기 위해 상태 조건 UPDATE를 선택한 이유"
 date: 2026-02-04
 category: 개발기
 tags: [spring-boot, kotlin, spring-data-jpa, postgres, concurrency, idempotency, reward]
@@ -10,7 +10,7 @@ image:
   thumbnail: /assets/images/posts/reward-conditional-update/server-rack.jpg
 ---
 
-# Spring Data JPA의 상태 조건 UPDATE를 통한 중복 처리 방지 개발기
+# 중복 리워드 처리를 막기 위해 상태 조건 UPDATE를 선택한 이유
 
 상태를 확인한 후 엔티티를 저장하는 코드는 한 요청만 들어올 때에는 문제없이 동작합니다. 하지만 같은 자원을 여러 요청이 동시에 변경하면 두 요청이 모두 이전 상태를 읽을 수 있습니다.
 
@@ -28,9 +28,9 @@ image:
 <div class="notice--info" markdown="1">
 **관련 개발기**
 
-1. [Spring Boot와 Kotlin Coroutine을 통한 AI 대화 후처리 개발기](/posts/ai-conversation-post-processing-pipeline/)
-2. [리워드 생성·수령·충전 책임 분리 개발기](/posts/reward-creation-receipt-charge-responsibility/)
-3. **Spring Data JPA 상태 조건 UPDATE 개발기** — 현재 글
+1. [AI 대화 후처리를 요청 트랜잭션에서 분리하기](/posts/ai-conversation-post-processing-pipeline/)
+2. [리워드 생성·수령·충전 책임을 분리한 과정](/posts/reward-creation-receipt-charge-responsibility/)
+3. **상태 조건 UPDATE로 중복 리워드 처리 막기** — 현재 글
 </div>
 
 ---

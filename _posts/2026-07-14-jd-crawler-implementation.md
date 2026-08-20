@@ -1,5 +1,5 @@
 ---
-title: "Spring Boot와 Jsoup을 통한 JD 크롤러 개발기"
+title: "JD 크롤러 구현기 — 정적 HTML 파싱부터 SSRF 방어까지"
 date: 2026-07-14
 tags: [spring-boot, kotlin, jsoup, web-crawling, ssrf, restclient, json-ld, graphql]
 category: 개발기
@@ -10,7 +10,7 @@ image:
   thumbnail: /assets/images/posts/2026-07-14-jd-crawler-implementation/thumbnail.jpg
 ---
 
-# Spring Boot와 Jsoup을 통한 JD 크롤러 개발기
+# JD 크롤러 구현기 — 정적 HTML 파싱부터 SSRF 방어까지
 
 채용 공고를 등록할 때 긴 본문을 직접 복사하지 않고 URL만 입력할 수 있도록 크롤러를 구현하였습니다.
 

@@ -1,5 +1,5 @@
 ---
-title: "Spring WebClient와 Reactor Netty를 통한 OpenAI API 호출 최적화 개발기"
+title: "OpenAI API 호출 최적화 — 모델 비교와 WebClient 튜닝"
 date: 2026-02-07
 tags: [spring-boot, kotlin, webclient, reactor-netty, openai, performance]
 category: 개발기
@@ -10,7 +10,7 @@ image:
   thumbnail: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=600&q=80"
 ---
 
-# Spring WebClient와 Reactor Netty를 통한 OpenAI API 호출 최적화 개발기
+# OpenAI API 호출 최적화 — 모델 비교와 WebClient 튜닝
 
 Kotlin과 Spring WebClient로 OpenAI API를 호출하면서 모델 응답 시간뿐 아니라 연결 생성, 타임아웃과 재시도 설정도 전체 처리 시간에 영향을 준다는 점을 확인하였습니다.
 

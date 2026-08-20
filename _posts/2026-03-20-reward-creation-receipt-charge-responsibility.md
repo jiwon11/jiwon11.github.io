@@ -1,5 +1,5 @@
 ---
-title: "리워드 생성·수령·충전 책임 분리 개발기"
+title: "리워드 생성·수령·충전 책임을 분리한 과정"
 date: 2026-03-20
 category: 개발기
 tags: [spring-boot, kotlin, domain-driven-design, reward, transaction, architecture, postgres]
@@ -10,7 +10,7 @@ image:
   thumbnail: /assets/images/posts/reward-responsibility/building-blocks.jpg
 ---
 
-# 리워드 생성·수령·충전 책임 분리 개발기
+# 리워드 생성·수령·충전 책임을 분리한 과정
 
 리워드 기능을 하나의 메서드에서 처리하면 처음에는 구현하기 쉽습니다. 하지만 생성, 상태 변경과 실제 반영이 한곳에 모이면 수정할 때마다 여러 책임을 함께 확인해야 합니다.
 
@@ -26,9 +26,9 @@ image:
 <div class="notice--info" markdown="1">
 **연관 개발기**
 
-1. [Spring Boot와 Kotlin Coroutine을 통한 AI 대화 후처리 개발기](/posts/ai-conversation-post-processing-pipeline/)
-2. **리워드 생성·수령·충전 책임 분리 개발기** — 현재 글
-3. [Spring Data JPA 상태 조건 UPDATE 개발기](/posts/reward-conditional-update-idempotency/)
+1. [AI 대화 후처리를 요청 트랜잭션에서 분리하기](/posts/ai-conversation-post-processing-pipeline/)
+2. **리워드 생성·수령·충전 책임을 분리한 과정** — 현재 글
+3. [상태 조건 UPDATE로 중복 리워드 처리 막기](/posts/reward-conditional-update-idempotency/)
 </div>
 
 ---
