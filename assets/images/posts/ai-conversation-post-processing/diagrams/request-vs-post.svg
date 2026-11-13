@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 624 288" width="624" height="288" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="request-vs-post-title request-vs-post-desc">
+<title id="request-vs-post-title">요청 안의 작업과 후처리</title>
+<desc id="request-vs-post-desc">사용자 요청을 처리해 결과를 커밋하면 응답할 수 있고, 커밋된 결과를 바탕으로 Task A·B·C 후처리가 따로 실행되는 구조.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="request-vs-post-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="request-vs-post-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="request-vs-post-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="request-vs-post-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="request-vs-post-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="request-vs-post-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="request-vs-post-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="request-vs-post-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="request-vs-post-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<path d="M 152,80 L 184,80" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#request-vs-post-arrow)"/>
+<path d="M 296,80 L 328,80" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#request-vs-post-arrow)"/>
+<path d="M 440,80 L 472,80" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#request-vs-post-arrow)"/>
+<path d="M 384,104 L 384,152" fill="none" stroke="rgba(52,52,60,0.40)" stroke-width="1.2" stroke-dasharray="5,4"/>
+<path d="M 384,152 L 384,200" fill="none" stroke="rgba(52,52,60,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#request-vs-post-arrow-soft)"/>
+<path d="M 384,152 L 268,152 Q 264,152 260,152 L 260,152 Q 256,152 256,156 L 256,200" fill="none" stroke="rgba(52,52,60,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#request-vs-post-arrow-soft)"/>
+<path d="M 384,152 L 504,152 Q 512,152 512,160 L 512,200" fill="none" stroke="rgba(52,52,60,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#request-vs-post-arrow-soft)"/>
+<rect x="392" y="120" width="44" height="16" rx="2" fill="#f6f8fa"/><text x="414" y="132" fill="#757575" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">후처리</text>
+<rect x="40" y="56" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="40" y="56" width="112" height="48" rx="6" fill="rgba(52,52,60,0.06)" stroke="#757575" stroke-width="1"/>
+<text x="96.0" y="84" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">사용자 요청</text>
+<rect x="184" y="56" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="184" y="56" width="112" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="240.0" y="84" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">요청 처리</text>
+<rect x="328" y="56" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="328" y="56" width="112" height="48" rx="6" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="384.0" y="84" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">결과 커밋</text>
+<rect x="472" y="56" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="472" y="56" width="112" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="528.0" y="84" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">응답 가능</text>
+<rect x="200" y="200" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="200" y="200" width="112" height="48" rx="6" fill="rgba(52,52,60,0.02)" stroke="rgba(52,52,60,0.35)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="256.0" y="228" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Task A</text>
+<rect x="328" y="200" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="328" y="200" width="112" height="48" rx="6" fill="rgba(52,52,60,0.02)" stroke="rgba(52,52,60,0.35)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="384.0" y="228" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Task B</text>
+<rect x="456" y="200" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="456" y="200" width="112" height="48" rx="6" fill="rgba(52,52,60,0.02)" stroke="rgba(52,52,60,0.35)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="512.0" y="228" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Task C</text>
+</svg>

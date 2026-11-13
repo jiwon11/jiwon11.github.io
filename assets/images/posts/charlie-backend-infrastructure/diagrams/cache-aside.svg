@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 720 504" width="720" height="504" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="cache-aside-title cache-aside-desc">
+<title id="cache-aside-title">Cache-Aside 조회</title>
+<desc id="cache-aside-desc">조회 요청에서 캐시가 있으면 바로 반환하고, 없으면 DB에서 조회·계산한 결과를 캐시에 저장한 뒤 반환하는 흐름.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="cache-aside-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="cache-aside-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="cache-aside-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="cache-aside-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="cache-aside-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="cache-aside-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="cache-aside-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="cache-aside-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="cache-aside-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<path d="M 360,80 L 360,112" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#cache-aside-arrow)"/>
+<path d="M 440,156 L 520,156" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#cache-aside-arrow)"/>
+<path d="M 360,200 L 360,248" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#cache-aside-arrow)"/>
+<path d="M 360,296 L 360,336" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#cache-aside-arrow)"/>
+<path d="M 360,384 L 360,424" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#cache-aside-arrow)"/>
+<rect x="468" y="138" width="24" height="12" rx="2" fill="#f6f8fa"/><text x="480" y="147" fill="#585858" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.06em">HIT</text>
+<rect x="368" y="218" width="32" height="12" rx="2" fill="#f6f8fa"/><text x="384" y="227" fill="#585858" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.06em">MISS</text>
+<rect x="280" y="40" width="160" height="40" rx="20.0" fill="#f6f8fa"/>
+<rect x="280" y="40" width="160" height="40" rx="20.0" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="360.0" y="64" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">조회 요청</text>
+<polygon points="360.0,112 440,156.0 360.0,200 280,156.0" fill="#f6f8fa"/>
+<polygon points="360.0,112 440,156.0 360.0,200 280,156.0" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="360.0" y="160" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">캐시 존재?</text>
+<rect x="520" y="136" width="160" height="40" rx="20.0" fill="#f6f8fa"/>
+<rect x="520" y="136" width="160" height="40" rx="20.0" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="600.0" y="160" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">캐시 반환</text>
+<rect x="280" y="248" width="160" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="280" y="248" width="160" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="360.0" y="276" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">DB 조회·계산</text>
+<rect x="280" y="336" width="160" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="280" y="336" width="160" height="48" rx="6" fill="rgba(52,52,60,0.05)" stroke="#585858" stroke-width="1"/>
+<text x="360.0" y="364" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">캐시 저장</text>
+<rect x="280" y="424" width="160" height="40" rx="20.0" fill="#f6f8fa"/>
+<rect x="280" y="424" width="160" height="40" rx="20.0" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="360.0" y="448" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">결과 반환</text>
+</svg>

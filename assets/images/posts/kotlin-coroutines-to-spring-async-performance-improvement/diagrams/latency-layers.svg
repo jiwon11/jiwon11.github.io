@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 640 488" width="640" height="488" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="latency-layers-title latency-layers-desc">
+<title id="latency-layers-title">LLM 호출 지연을 나누는 두 계층</title>
+<desc id="latency-layers-desc">LLM 호출 문제를 모델 계층(모델 특성·추론 강도·출력 길이)과 네트워크 계층(Connection Pool·Timeout·Retry·Buffer·Compression)으로 나눈 트리.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="latency-layers-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="latency-layers-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="latency-layers-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="latency-layers-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="latency-layers-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="latency-layers-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="latency-layers-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="latency-layers-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="latency-layers-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<path d="M 184,232 L 208,232" fill="none" stroke="#585858" stroke-width="1.2"/>
+<path d="M 208,232 L 208,132 Q 208,124 216,124 L 232,124" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#latency-layers-arrow)"/>
+<path d="M 208,232 L 208,328 Q 208,336 216,336 L 232,336" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#latency-layers-arrow)"/>
+<path d="M 368,124 L 396,124" fill="none" stroke="#585858" stroke-width="1.2"/>
+<path d="M 396,124 L 396,72 Q 396,64 404,64 L 424,64" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#latency-layers-arrow)"/>
+<path d="M 396,124 L 424,124" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#latency-layers-arrow)"/>
+<path d="M 396,124 L 396,176 Q 396,184 404,184 L 424,184" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#latency-layers-arrow)"/>
+<path d="M 368,336 L 396,336" fill="none" stroke="#585858" stroke-width="1.2"/>
+<path d="M 396,336 L 396,252 Q 396,244 404,244 L 424,244" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#latency-layers-arrow)"/>
+<path d="M 396,336 L 396,312 Q 396,304 404,304 L 424,304" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#latency-layers-arrow)"/>
+<path d="M 396,336 L 396,356 Q 396,364 404,364 L 424,364" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#latency-layers-arrow)"/>
+<path d="M 396,336 L 396,416 Q 396,424 404,424 L 424,424" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#latency-layers-arrow)"/>
+<rect x="40" y="208" width="144" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="40" y="208" width="144" height="48" rx="6" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="112.0" y="236" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">LLM 호출 문제</text>
+<rect x="232" y="100" width="136" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="232" y="100" width="136" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="300.0" y="128" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">모델 계층</text>
+<rect x="232" y="312" width="136" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="232" y="312" width="136" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="300.0" y="340" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">네트워크 계층</text>
+<rect x="424" y="40" width="176" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="424" y="40" width="176" height="48" rx="6" fill="rgba(52,52,60,0.04)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="512.0" y="68" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">모델 특성</text>
+<rect x="424" y="100" width="176" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="424" y="100" width="176" height="48" rx="6" fill="rgba(52,52,60,0.04)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="512.0" y="128" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">추론 강도</text>
+<rect x="424" y="160" width="176" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="424" y="160" width="176" height="48" rx="6" fill="rgba(52,52,60,0.04)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="512.0" y="188" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">출력 길이</text>
+<rect x="424" y="220" width="176" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="424" y="220" width="176" height="48" rx="6" fill="rgba(52,52,60,0.04)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="512.0" y="248" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Connection Pool</text>
+<rect x="424" y="280" width="176" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="424" y="280" width="176" height="48" rx="6" fill="rgba(52,52,60,0.04)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="512.0" y="308" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Timeout</text>
+<rect x="424" y="340" width="176" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="424" y="340" width="176" height="48" rx="6" fill="rgba(52,52,60,0.04)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="512.0" y="368" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Retry</text>
+<rect x="424" y="400" width="176" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="424" y="400" width="176" height="48" rx="6" fill="rgba(52,52,60,0.04)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="512.0" y="428" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Buffer·Compression</text>
+</svg>

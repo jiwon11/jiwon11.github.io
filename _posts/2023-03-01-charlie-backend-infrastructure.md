@@ -3,7 +3,6 @@ title: "찰리와 걷기 백엔드 개발기 — 인증부터 데이터 집계�
 date: 2023-03-01
 categories: [개발기]
 tags: [NestJS, Prisma, MySQL, Redis, Cache-Aside, Docker, GitHub Actions, JWT]
-mermaid: true
 image:
   path: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80"
   thumbnail: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80"
@@ -12,7 +11,7 @@ image:
 
 찰리와 걷기 백엔드를 개발하면서 인증부터 활동 데이터 저장, 통계 집계, 캐시, 배포 자동화까지 여러 기능을 구현했습니다.
 
-이번 글에서는 NestJS와 Prisma로 서버를 구성하고, 운영 과정에서 데이터 조회와 배포 방식을 개선한 과정을 순서대로 정리해보겠습니다.
+이번 글에서는 NestJS와 Prisma로 서버를 구성하고 운영 과정에서 데이터 조회와 배포 방식을 개선한 과정을 순서대로 정리해보겠습니다.
 
 > **예제 코드 안내**
 >
@@ -35,16 +34,9 @@ image:
 | 배포 | GitHub Actions | 반복 가능한 빌드·배포 |
 | 관측성 | 오류 추적, APM | 장애 원인과 병목 구간 파악 |
 
-~~~mermaid
-flowchart LR
-    C["Client"] --> A["Application"]
-    A --> D["Relational DB"]
-    A --> R["Cache"]
-    A --> O["Observability"]
-    P["CI/CD"] --> A
-~~~
-
-NestJS 애플리케이션에서 요청을 처리하고, MySQL에는 원본 데이터를 저장했습니다. Redis는 반복되는 계산 결과를 보관하고, 오류 추적 도구와 APM은 운영 중 발생한 문제를 확인하는 데 사용했습니다.
+![백엔드 구성 요소](/assets/images/posts/charlie-backend-infrastructure/diagrams/system-overview.svg){: .light }
+![백엔드 구성 요소](/assets/images/posts/charlie-backend-infrastructure/diagrams/system-overview-dark.svg){: .dark }
+NestJS 애플리케이션에서 요청을 처리하고 MySQL에는 원본 데이터를 저장했습니다. Redis는 반복되는 계산 결과를 보관하고 오류 추적 도구와 APM은 운영 중 발생한 문제를 확인하는 데 사용했습니다.
 
 ---
 
@@ -81,21 +73,9 @@ function issueAccessToken(subjectId: string, policy: AuthPolicy) {
 
 ### 소셜 로그인 연결하기
 
-~~~mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Application
-    participant I as Identity Provider
-
-    C->>I: 사용자 인증
-    I-->>C: 일회성 코드
-    C->>S: 소셜 로그인 요청
-    S->>I: 코드 교환과 토큰 검증
-    I-->>S: 검증 결과
-    S-->>C: 애플리케이션 토큰 발급
-~~~
-
-공급자용 비밀키는 서버에만 두고, 클라이언트가 전달한 결과를 그대로 신뢰하지 않으며, 토큰의 서명·발급자·대상자를 서버에서 검증해야 합니다.
+![소셜 로그인 흐름](/assets/images/posts/charlie-backend-infrastructure/diagrams/social-login.svg){: .light }
+![소셜 로그인 흐름](/assets/images/posts/charlie-backend-infrastructure/diagrams/social-login-dark.svg){: .dark }
+공급자용 비밀키는 서버에만 두고 클라이언트가 전달한 결과를 그대로 신뢰하지 않으며 토큰의 서명·발급자·대상자를 서버에서 검증해야 합니다.
 
 ---
 
@@ -122,16 +102,9 @@ model ActivitySample {
 1. 동일한 논리적 기록을 식별하는 업무 키가 있어야 한다.
 2. 재시도 시 생성과 갱신이 같은 최종 결과를 만들어야 한다.
 
-~~~mermaid
-flowchart TD
-    A["기록 수신"] --> B{"업무 키가 존재하는가?"}
-    B -->|No| C["새 기록 저장"]
-    B -->|Yes| D["정해진 병합 규칙 적용"]
-    C --> E["집계 갱신"]
-    D --> E
-~~~
-
-병합 규칙은 제품 정책에 따라 달라집니다. 기술적으로 중요한 점은 정책을 애플리케이션 여러 곳에 흩뜨리지 않고 하나의 명시적인 함수와 테스트로 고정하는 것입니다.
+![활동 기록 중복 처리](/assets/images/posts/charlie-backend-infrastructure/diagrams/activity-dedupe.svg){: .light }
+![활동 기록 중복 처리](/assets/images/posts/charlie-backend-infrastructure/diagrams/activity-dedupe-dark.svg){: .dark }
+병합 규칙은 제품 정책에 따라 달라집니다. 기술적으로는 정책을 애플리케이션 여러 곳에 흩뜨리지 않고 하나의 명시적인 함수와 테스트로 고정해야 합니다.
 
 ---
 
@@ -157,7 +130,7 @@ function summarize(samples: ActivitySample[]): ActivitySummary {
 }
 ~~~
 
-어느 방식이 맞는지는 데이터 크기와 수정 빈도에 따라 달라집니다. 중요한 것은 다음 질문을 측정으로 답하는 것입니다.
+어느 방식이 맞는지는 데이터 크기와 수정 빈도에 따라 달라집니다. 다음 질문에는 측정한 값으로 답해야 합니다.
 
 - 사용자 한 명이 가질 수 있는 기록은 얼마나 증가하는가?
 - 정정·재전송은 얼마나 자주 발생하는가?
@@ -170,31 +143,12 @@ function summarize(samples: ActivitySample[]): ActivitySummary {
 
 목록 화면에서 구성원마다 통계를 다시 계산하면 목록을 한 번 조회한 후 구성원 수만큼 추가 쿼리가 실행됩니다.
 
-~~~mermaid
-sequenceDiagram
-    participant C as Client
-    participant A as Application
-    participant D as Database
-
-    C->>A: 목록 조회
-    A->>D: 구성원 목록 조회
-    loop 각 구성원
-        A->>D: 집계 데이터 조회
-    end
-    A-->>C: 정렬된 결과
-~~~
-
+![목록 조회의 N+1 쿼리](/assets/images/posts/charlie-backend-infrastructure/diagrams/n-plus-one.svg){: .light }
+![목록 조회의 N+1 쿼리](/assets/images/posts/charlie-backend-infrastructure/diagrams/n-plus-one-dark.svg){: .dark }
 먼저 JOIN과 일괄 조회를 검토했습니다. 같은 결과를 자주 읽는 구간에는 Cache-Aside 방식도 적용할 수 있습니다.
 
-~~~mermaid
-flowchart TD
-    A["조회 요청"] --> B{"캐시 존재?"}
-    B -->|Hit| C["캐시 반환"]
-    B -->|Miss| D["DB 조회·계산"]
-    D --> E["캐시 저장"]
-    E --> F["결과 반환"]
-~~~
-
+![Cache-Aside 조회](/assets/images/posts/charlie-backend-infrastructure/diagrams/cache-aside.svg){: .light }
+![Cache-Aside 조회](/assets/images/posts/charlie-backend-infrastructure/diagrams/cache-aside-dark.svg){: .dark }
 캐시를 도입할 때 확인해야 할 것은 다음과 같습니다.
 
 - 캐시의 소유자는 누구인가?
@@ -203,23 +157,17 @@ flowchart TD
 - 캐시 장애 시 DB로 폴백할 수 있는가?
 - 정렬·검색이 필요하다면 어떤 자료구조가 맞는가?
 
-캐시는 데이터베이스의 진실을 대체하지 않습니다. 재생성 가능한 파생 데이터만 저장하고, 캐시가 비어 있어도 기능이 동작하도록 설계해야 합니다.
+캐시는 데이터베이스의 진실을 대체하지 않습니다. 재생성 가능한 파생 데이터만 저장하고 캐시가 비어 있어도 기능이 동작하도록 설계해야 합니다.
 
 ---
 
 ## 6. Docker와 GitHub Actions로 배포하기
 
-애플리케이션 실행 환경은 Docker 이미지로 만들고, GitHub Actions에서 빌드와 배포가 이어지도록 구성했습니다.
+애플리케이션 실행 환경은 Docker 이미지로 만들고 GitHub Actions에서 빌드와 배포가 이어지도록 구성했습니다.
 
-~~~mermaid
-flowchart LR
-    A["변경사항 검증"] --> B["이미지 빌드"]
-    B --> C["이미지 저장소"]
-    C --> D["배포 환경 반영"]
-    D --> E["상태 확인"]
-~~~
-
-실무에서 중요했던 원칙은 다음과 같습니다.
+![배포 파이프라인](/assets/images/posts/charlie-backend-infrastructure/diagrams/deploy-pipeline.svg){: .light }
+![배포 파이프라인](/assets/images/posts/charlie-backend-infrastructure/diagrams/deploy-pipeline-dark.svg){: .dark }
+실무에서 중요하게 지킨 원칙은 다섯 가지였습니다.
 
 1. 빌드와 실행 환경을 분리한다.
 2. 비밀값은 이미지 레이어에 포함하지 않는다.
@@ -235,17 +183,8 @@ flowchart LR
 
 오류 추적 도구를 통해 발생한 예외는 확인할 수 있었습니다. 하지만 응답이 느린 요청은 예외를 남기지 않는 경우가 많았습니다. 그래서 APM을 함께 연결하여 DB 조회, 캐시, 외부 호출 중 어느 구간에서 시간이 걸리는지 확인했습니다.
 
-~~~mermaid
-flowchart LR
-    R["Request"] --> A["Application"]
-    A --> Q1["DB Query"]
-    A --> Q2["Cache"]
-    A --> X["External Call"]
-    Q1 --> T["Trace"]
-    Q2 --> T
-    X --> T
-~~~
-
+![APM으로 묶는 요청 구간](/assets/images/posts/charlie-backend-infrastructure/diagrams/apm-trace.svg){: .light }
+![APM으로 묶는 요청 구간](/assets/images/posts/charlie-backend-infrastructure/diagrams/apm-trace-dark.svg){: .dark }
 관측성을 적용할 때도 내부 정책과 사용자 정보를 로그에 직접 남기지 않아야 합니다.
 
 - 사용자 식별자는 가명화한다.

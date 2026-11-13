@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>트랜잭션 범위</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --paper: #151515; --ink: #cccccc; --muted: #a7a7a7; }
+    body { font-family: 'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh;
+           display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 672px; width: 100%; }
+    .eyebrow { font-family: SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace; font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    h1 { font-family: 'Instrument Serif', 'Apple SD Gothic Neo', serif; font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+         letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Nested · Diagram Design</p>
+    <h1>트랜잭션 범위</h1>
+<svg viewBox="0 0 592 344" width="592" height="344" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="transaction-boundary-dark-title transaction-boundary-dark-desc">
+<title id="transaction-boundary-dark-title">트랜잭션 범위</title>
+<desc id="transaction-boundary-dark-desc">허용된 상태 전이, 원장 기록, 잔액 반영은 하나의 원자적 처리 범위에 묶고, 권리 생성은 별도 트랜잭션으로 둘 수 있는 구조.</desc>
+<defs>
+<marker id="transaction-boundary-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="transaction-boundary-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="transaction-boundary-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="transaction-boundary-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="transaction-boundary-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="transaction-boundary-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="transaction-boundary-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="transaction-boundary-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="transaction-boundary-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<rect x="312" y="40" width="240" height="264" rx="8" fill="rgba(138,180,248,0.04)" stroke="rgba(138,180,248,0.50)" stroke-width="1" stroke-dasharray="4,4"/><rect x="324" y="33" width="96" height="14" rx="2" fill="#151515"/><text x="372.0" y="44" fill="#8ab4f8" font-size="11" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">원자적 처리 범위</text>
+<path d="M 432,120 L 432,152" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#transaction-boundary-dark-arrow)"/>
+<path d="M 432,200 L 432,232" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#transaction-boundary-dark-arrow)"/>
+<path d="M 168,172 L 312,172" fill="none" stroke="rgba(204,204,204,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#transaction-boundary-dark-arrow-soft)"/>
+<rect x="184" y="150" width="112" height="16" rx="2" fill="#151515"/><text x="240" y="162" fill="#868686" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">별도 트랜잭션 가능</text>
+<rect x="344" y="72" width="176" height="48" rx="6" fill="#151515"/>
+<rect x="344" y="72" width="176" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="432.0" y="100" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">허용된 상태 전이</text>
+<rect x="344" y="152" width="176" height="48" rx="6" fill="#151515"/>
+<rect x="344" y="152" width="176" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="432.0" y="180" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">원장 기록</text>
+<rect x="344" y="232" width="176" height="48" rx="6" fill="#151515"/>
+<rect x="344" y="232" width="176" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="432.0" y="260" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">잔액 반영</text>
+<rect x="40" y="148" width="128" height="48" rx="6" fill="#151515"/>
+<rect x="40" y="148" width="128" height="48" rx="6" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="104.0" y="176" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">권리 생성</text>
+</svg>
+  </div>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 816 280" width="816" height="280" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="version-history-dark-title version-history-dark-desc">
+<title id="version-history-dark-title">Blog Generator MCP 버전 히스토리</title>
+<desc id="version-history-dark-desc">v1.0 기본 생성기부터 v2.0 인터랙티브 워크플로우, v3.0 Pro Mode, v3.1 instructions_file, v3.2 환경 변수 지원, v4.1 Claude Opus 단일 파이프라인까지의 버전 순서.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="version-history-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="version-history-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="version-history-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="version-history-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="version-history-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="version-history-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="version-history-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="version-history-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="version-history-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<line x1="56" y1="140" x2="760" y2="140" stroke="#a7a7a7" stroke-width="1"/>
+<text x="760" y="252" fill="#868686" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="end">버전 순서 →</text>
+<line x1="88" y1="116" x2="88" y2="136" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<circle cx="88" cy="140" r="4" fill="#cccccc"/>
+<text x="88" y="76" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">v1.0</text>
+<text x="88" y="92" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">기본 생성기 4 도구</text>
+<text x="88" y="108" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Initial commit</text>
+<line x1="216" y1="144" x2="216" y2="160" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<circle cx="216" cy="140" r="4" fill="#cccccc"/>
+<text x="216" y="172" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">v2.0</text>
+<text x="216" y="188" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">인터랙티브 워크플로우</text>
+<text x="216" y="204" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">sql.js 상태 관리</text>
+<text x="216" y="220" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Zod 스키마</text>
+<line x1="344" y1="116" x2="344" y2="136" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<circle cx="344" cy="140" r="4" fill="#cccccc"/>
+<text x="344" y="76" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">v3.0</text>
+<text x="344" y="92" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Pro Mode 도입</text>
+<text x="344" y="108" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Gemini 분석 + Claude 작성</text>
+<line x1="472" y1="144" x2="472" y2="160" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<circle cx="472" cy="140" r="4" fill="#cccccc"/>
+<text x="472" y="172" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">v3.1</text>
+<text x="472" y="188" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">instructions_file</text>
+<text x="472" y="204" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">사용자 정의 작성 지침</text>
+<line x1="600" y1="116" x2="600" y2="136" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<circle cx="600" cy="140" r="4" fill="#cccccc"/>
+<text x="600" y="76" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">v3.2</text>
+<text x="600" y="92" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">환경 변수 지원</text>
+<text x="600" y="108" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">API 키 안전 관리</text>
+<line x1="728" y1="144" x2="728" y2="160" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<circle cx="728" cy="140" r="6" fill="#8ab4f8"/>
+<text x="728" y="172" fill="#8ab4f8" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">v4.1</text>
+<text x="728" y="188" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Claude Opus 단일 파이프라인</text>
+<text x="728" y="204" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">웹 검색 + 썸네일 자동화</text>
+</svg>

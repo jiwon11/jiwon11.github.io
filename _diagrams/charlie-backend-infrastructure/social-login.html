@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>소셜 로그인 흐름</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --paper: #f6f8fa; --ink: #34343c; --muted: #585858; }
+    body { font-family: 'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh;
+           display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 800px; width: 100%; }
+    .eyebrow { font-family: SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace; font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    h1 { font-family: 'Instrument Serif', 'Apple SD Gothic Neo', serif; font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+         letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Sequence · Diagram Design</p>
+    <h1>소셜 로그인 흐름</h1>
+<svg viewBox="0 0 720 432" width="720" height="432" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="social-login-title social-login-desc">
+<title id="social-login-title">소셜 로그인 흐름</title>
+<desc id="social-login-desc">클라이언트가 공급자에서 받은 일회성 코드를 애플리케이션에 전달하면, 애플리케이션이 코드를 교환·검증한 뒤 자체 토큰을 발급하는 순서.</desc>
+<defs>
+<marker id="social-login-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="social-login-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="social-login-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="social-login-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="social-login-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="social-login-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="social-login-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="social-login-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="social-login-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<line x1="120" y1="80" x2="120" y2="408" stroke="rgba(52,52,60,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="360" y1="80" x2="360" y2="408" stroke="rgba(52,52,60,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="600" y1="80" x2="600" y2="408" stroke="rgba(52,52,60,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<path d="M 124,128 L 596,128" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#social-login-arrow)"/>
+<path d="M 596,176 L 124,176" fill="none" stroke="#585858" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#social-login-arrow)"/>
+<path d="M 124,224 L 356,224" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#social-login-arrow)"/>
+<path d="M 364,272 L 596,272" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#social-login-arrow)"/>
+<path d="M 596,320 L 364,320" fill="none" stroke="#585858" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#social-login-arrow)"/>
+<path d="M 356,368 L 124,368" fill="none" stroke="#0056b2" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#social-login-arrow-accent)"/>
+<rect x="444" y="106" width="72" height="16" rx="2" fill="#f6f8fa"/><text x="480" y="118" fill="#585858" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">사용자 인증</text>
+<rect x="444" y="154" width="72" height="16" rx="2" fill="#f6f8fa"/><text x="480" y="166" fill="#585858" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">일회성 코드</text>
+<rect x="190" y="202" width="100" height="16" rx="2" fill="#f6f8fa"/><text x="240" y="214" fill="#585858" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">소셜 로그인 요청</text>
+<rect x="416" y="250" width="128" height="16" rx="2" fill="#f6f8fa"/><text x="480" y="262" fill="#585858" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">코드 교환과 토큰 검증</text>
+<rect x="450" y="298" width="60" height="16" rx="2" fill="#f6f8fa"/><text x="480" y="310" fill="#585858" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">검증 결과</text>
+<rect x="172" y="346" width="136" height="16" rx="2" fill="#f6f8fa"/><text x="240" y="358" fill="#0056b2" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">애플리케이션 토큰 발급</text>
+<rect x="72" y="40" width="96" height="40" rx="6" fill="#f6f8fa"/>
+<rect x="72" y="40" width="96" height="40" rx="6" fill="rgba(52,52,60,0.06)" stroke="#757575" stroke-width="1"/>
+<text x="120.0" y="64" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Client</text>
+<rect x="308" y="40" width="104" height="40" rx="6" fill="#f6f8fa"/>
+<rect x="308" y="40" width="104" height="40" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="360.0" y="64" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Application</text>
+<rect x="532" y="40" width="136" height="40" rx="6" fill="#f6f8fa"/>
+<rect x="532" y="40" width="136" height="40" rx="6" fill="rgba(52,52,60,0.03)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="600.0" y="64" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Identity Provider</text>
+</svg>
+  </div>
+</body>
+</html>

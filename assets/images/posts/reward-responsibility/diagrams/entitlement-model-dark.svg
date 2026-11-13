@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 792 208" width="792" height="208" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="entitlement-model-dark-title entitlement-model-dark-desc">
+<title id="entitlement-model-dark-title">권리·효과·원장 모델</title>
+<desc id="entitlement-model-dark-desc">권리 레코드가 효과의 적용 근거가 되고, 효과가 원장에 변화로 기록되는 세 데이터의 관계.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="entitlement-model-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="entitlement-model-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="entitlement-model-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="entitlement-model-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="entitlement-model-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="entitlement-model-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="entitlement-model-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="entitlement-model-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="entitlement-model-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<path d="M 224,100 L 304,100" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#entitlement-model-dark-arrow)"/>
+<path d="M 488,100 L 568,100" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#entitlement-model-dark-arrow)"/>
+<rect x="234" y="78" width="60" height="16" rx="2" fill="#151515"/><text x="264" y="90" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">적용 근거</text>
+<rect x="498" y="78" width="60" height="16" rx="2" fill="#151515"/><text x="528" y="90" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">변화 기록</text>
+<rect x="40" y="40" width="184" height="128" rx="6" fill="#151515"/>
+<rect x="40" y="40" width="184" height="128" rx="6" fill="rgba(138,180,248,0.12)" stroke="#8ab4f8" stroke-width="1"/>
+<rect x="48" y="48" width="40" height="12" rx="2" fill="none" stroke="#8ab4f8" stroke-opacity="0.45" stroke-width="0.8"/>
+<text x="68" y="57" fill="#8ab4f8" font-size="7" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.08em">ENTITY</text>
+<text x="132.0" y="76" fill="#8ab4f8" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">ExampleEntitlement</text>
+<line x1="40" y1="88" x2="224" y2="88" stroke="#424242" stroke-width="1"/>
+<text x="52" y="108" fill="#a7a7a7" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace">ExampleId id</text>
+<text x="52" y="124" fill="#a7a7a7" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace">SubjectId subjectId</text>
+<text x="52" y="140" fill="#a7a7a7" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace">EvidenceKey evidenceKey</text>
+<text x="52" y="156" fill="#a7a7a7" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace">ExampleState state</text>
+<rect x="304" y="40" width="184" height="112" rx="6" fill="#151515"/>
+<rect x="304" y="40" width="184" height="112" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<rect x="312" y="48" width="40" height="12" rx="2" fill="none" stroke="#cccccc" stroke-opacity="0.45" stroke-width="0.8"/>
+<text x="332" y="57" fill="#cccccc" font-size="7" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.08em">ENTITY</text>
+<text x="396.0" y="76" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">ExampleEffect</text>
+<line x1="304" y1="88" x2="488" y2="88" stroke="#424242" stroke-width="1"/>
+<text x="316" y="108" fill="#a7a7a7" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace">EffectId id</text>
+<text x="316" y="124" fill="#a7a7a7" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace">ExampleId entitlementId</text>
+<text x="316" y="140" fill="#a7a7a7" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace">EffectValue value</text>
+<rect x="568" y="40" width="184" height="112" rx="6" fill="#151515"/>
+<rect x="568" y="40" width="184" height="112" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<rect x="576" y="48" width="40" height="12" rx="2" fill="none" stroke="#cccccc" stroke-opacity="0.45" stroke-width="0.8"/>
+<text x="596" y="57" fill="#cccccc" font-size="7" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.08em">ENTITY</text>
+<text x="660.0" y="76" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">ExampleLedger</text>
+<line x1="568" y1="88" x2="752" y2="88" stroke="#424242" stroke-width="1"/>
+<text x="580" y="108" fill="#a7a7a7" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace">LedgerId id</text>
+<text x="580" y="124" fill="#a7a7a7" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace">ReferenceKey referenceKey</text>
+<text x="580" y="140" fill="#a7a7a7" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace">Delta delta</text>
+</svg>

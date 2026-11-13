@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 720 480" width="720" height="480" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="llm-span-finish-dark-title llm-span-finish-dark-desc">
+<title id="llm-span-finish-dark-title">호출 결과 기록과 스팬 종료</title>
+<desc id="llm-span-finish-dark-desc">OpenAI 호출이 성공하면 ai_call 성공 로그와 annotateIO·setMetrics를, 실패하면 ai_call 실패 로그와 addThrowable을 남기고, 어느 쪽이든 finally에서 finish를 runCatching으로 호출하는 순서.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="llm-span-finish-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="llm-span-finish-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="llm-span-finish-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="llm-span-finish-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="llm-span-finish-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="llm-span-finish-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="llm-span-finish-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="llm-span-finish-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="llm-span-finish-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<line x1="128" y1="80" x2="128" y2="456" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="400" y1="80" x2="400" y2="456" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="616" y1="80" x2="616" y2="456" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<rect x="64" y="112" width="616" height="272" rx="4" fill="rgba(204,204,204,0.025)" stroke="rgba(204,204,204,0.25)" stroke-width="1"/>
+<rect x="64" y="112" width="32" height="16" rx="2" fill="#151515" stroke="rgba(204,204,204,0.25)" stroke-width="1"/>
+<text x="80.0" y="123" fill="#a7a7a7" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.12em">ALT</text>
+<text x="104" y="124" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif">[호출 성공]</text>
+<line x1="72" y1="252" x2="672" y2="252" stroke="rgba(204,204,204,0.22)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="76" y="268" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif">[호출 실패]</text>
+<path d="M 132,176 L 612,176" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#llm-span-finish-dark-arrow)"/>
+<path d="M 132,220 L 396,220" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#llm-span-finish-dark-arrow)"/>
+<path d="M 132,316 L 612,316" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#llm-span-finish-dark-arrow)"/>
+<path d="M 132,360 L 396,360" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#llm-span-finish-dark-arrow)"/>
+<path d="M 132,424 L 396,424" fill="none" stroke="#8ab4f8" stroke-width="1.4" marker-end="url(#llm-span-finish-dark-arrow-accent)"/>
+<rect x="438" y="140" width="140" height="30" rx="2" fill="#151515"/><text x="508" y="152" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">ai_call success=true</text><text x="508" y="166" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">+ token/cost/latency</text>
+<rect x="138" y="198" width="252" height="16" rx="2" fill="#151515"/><text x="264" y="210" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">annotateIO + setMetrics (runCatching)</text>
+<rect x="434" y="280" width="148" height="30" rx="2" fill="#151515"/><text x="508" y="292" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">ai_call success=false</text><text x="508" y="306" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">+ error.kind</text>
+<rect x="172" y="338" width="184" height="16" rx="2" fill="#151515"/><text x="264" y="350" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">addThrowable (runCatching)</text>
+<rect x="162" y="402" width="204" height="16" rx="2" fill="#151515"/><text x="264" y="414" fill="#8ab4f8" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">finish (finally + runCatching)</text>
+<rect x="48" y="40" width="160" height="40" rx="6" fill="#151515"/>
+<rect x="48" y="40" width="160" height="40" rx="6" fill="rgba(138,180,248,0.12)" stroke="#8ab4f8" stroke-width="1.2"/>
+<text x="128.0" y="64" fill="#8ab4f8" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">OpenAiChatClientImpl</text>
+<rect x="340" y="40" width="120" height="40" rx="6" fill="#151515"/>
+<rect x="340" y="40" width="120" height="40" rx="6" fill="rgba(204,204,204,0.03)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="400.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Datadog LLMObs</text>
+<rect x="556" y="40" width="120" height="40" rx="6" fill="#151515"/>
+<rect x="556" y="40" width="120" height="40" rx="6" fill="rgba(204,204,204,0.05)" stroke="#a7a7a7" stroke-width="1"/>
+<text x="616.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Structured Log</text>
+</svg>

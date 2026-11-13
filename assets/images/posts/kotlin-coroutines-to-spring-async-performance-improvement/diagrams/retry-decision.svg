@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 744 432" width="744" height="432" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="retry-decision-title retry-decision-desc">
+<title id="retry-decision-title">재시도 조건 판단</title>
+<desc id="retry-decision-desc">호출이 실패하면 일시 오류인지와 시간 예산이 남았는지 확인해, 둘 다 해당할 때만 Backoff와 Jitter를 거쳐 재시도하고 아니면 즉시 실패로 변환하는 흐름.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="retry-decision-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="retry-decision-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="retry-decision-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="retry-decision-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="retry-decision-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="retry-decision-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="retry-decision-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="retry-decision-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="retry-decision-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<path d="M 200,80 L 200,112" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#retry-decision-arrow)"/>
+<path d="M 200,208 L 200,264" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#retry-decision-arrow)"/>
+<path d="M 288,160 L 368,160" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#retry-decision-arrow)"/>
+<path d="M 480,208 L 480,280 Q 480,288 472,288 L 280,288" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#retry-decision-arrow)"/>
+<path d="M 592,160 L 624,160 Q 632,160 632,168 L 632,264" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#retry-decision-arrow)"/>
+<path d="M 632,312 L 632,352" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#retry-decision-arrow)"/>
+<rect x="208" y="230" width="20" height="12" rx="2" fill="#f6f8fa"/><text x="218" y="239" fill="#585858" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.06em">NO</text>
+<rect x="316" y="142" width="24" height="12" rx="2" fill="#f6f8fa"/><text x="328" y="151" fill="#585858" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.06em">YES</text>
+<rect x="370" y="270" width="20" height="12" rx="2" fill="#f6f8fa"/><text x="380" y="279" fill="#585858" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.06em">NO</text>
+<rect x="640" y="206" width="24" height="12" rx="2" fill="#f6f8fa"/><text x="652" y="215" fill="#585858" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.06em">YES</text>
+<rect x="120" y="40" width="160" height="40" rx="20.0" fill="#f6f8fa"/>
+<rect x="120" y="40" width="160" height="40" rx="20.0" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="200.0" y="64" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">호출 실패</text>
+<polygon points="200.0,112 288,160.0 200.0,208 112,160.0" fill="#f6f8fa"/>
+<polygon points="200.0,112 288,160.0 200.0,208 112,160.0" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="200.0" y="164" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">일시 오류인가?</text>
+<rect x="120" y="264" width="160" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="120" y="264" width="160" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="200.0" y="292" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">즉시 실패 변환</text>
+<polygon points="480.0,112 592,160.0 480.0,208 368,160.0" fill="#f6f8fa"/>
+<polygon points="480.0,112 592,160.0 480.0,208 368,160.0" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="480.0" y="164" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">시간 예산이 남았는가?</text>
+<rect x="560" y="264" width="144" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="560" y="264" width="144" height="48" rx="6" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="632.0" y="292" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Backoff + Jitter</text>
+<rect x="560" y="352" width="144" height="40" rx="20.0" fill="#f6f8fa"/>
+<rect x="560" y="352" width="144" height="40" rx="20.0" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="632.0" y="376" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">재시도</text>
+</svg>

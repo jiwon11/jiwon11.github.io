@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 720 368" width="720" height="368" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="coroutine-scope-title coroutine-scope-desc">
+<title id="coroutine-scope-title">애플리케이션이 관리하는 스코프</title>
+<desc id="coroutine-scope-desc">애플리케이션 스코프 아래에 이벤트별 Job이 있고 각 Job이 Task를 실행하며, 종료 신호가 스코프 전체에 전달되는 구조.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="coroutine-scope-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="coroutine-scope-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="coroutine-scope-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="coroutine-scope-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="coroutine-scope-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="coroutine-scope-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="coroutine-scope-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="coroutine-scope-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="coroutine-scope-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<path d="M 560,80 L 488,80" fill="none" stroke="rgba(52,52,60,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#coroutine-scope-arrow-soft)"/>
+<path d="M 360,104 L 360,136" fill="none" stroke="#585858" stroke-width="1.2"/>
+<path d="M 360,136 L 248,136 Q 240,136 240,144 L 240,168" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#coroutine-scope-arrow)"/>
+<path d="M 360,136 L 472,136 Q 480,136 480,144 L 480,168" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#coroutine-scope-arrow)"/>
+<path d="M 240,216 L 240,248" fill="none" stroke="#585858" stroke-width="1.2"/>
+<path d="M 240,248 L 176,248 Q 168,248 168,256 L 168,280" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#coroutine-scope-arrow)"/>
+<path d="M 240,248 L 304,248 Q 312,248 312,256 L 312,280" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#coroutine-scope-arrow)"/>
+<path d="M 480,216 L 480,280" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#coroutine-scope-arrow)"/>
+<rect x="232" y="56" width="256" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="232" y="56" width="256" height="48" rx="6" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="360.0" y="84" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">애플리케이션이 관리하는 스코프</text>
+<rect x="560" y="56" width="120" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="560" y="56" width="120" height="48" rx="6" fill="rgba(52,52,60,0.04)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="620.0" y="84" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">종료 신호</text>
+<rect x="168" y="168" width="144" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="168" y="168" width="144" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="240.0" y="196" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Event 1 Job</text>
+<rect x="408" y="168" width="144" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="408" y="168" width="144" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="480.0" y="196" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Event 2 Job</text>
+<rect x="104" y="280" width="128" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="104" y="280" width="128" height="48" rx="6" fill="rgba(52,52,60,0.04)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="168.0" y="308" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Task A</text>
+<rect x="248" y="280" width="128" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="248" y="280" width="128" height="48" rx="6" fill="rgba(52,52,60,0.04)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="312.0" y="308" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Task B</text>
+<rect x="416" y="280" width="128" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="416" y="280" width="128" height="48" rx="6" fill="rgba(52,52,60,0.04)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="480.0" y="308" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Task A</text>
+</svg>

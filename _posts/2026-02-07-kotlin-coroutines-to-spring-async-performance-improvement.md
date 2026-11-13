@@ -4,7 +4,6 @@ date: 2026-02-07
 tags: [spring-boot, kotlin, webclient, reactor-netty, openai, performance]
 category: 개발기
 readTime: 12min
-mermaid: true
 image:
   path: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80"
   thumbnail: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=600&q=80"
@@ -25,28 +24,15 @@ Kotlin과 Spring WebClient로 OpenAI API를 호출하면서 모델 응답 시간
 
 먼저 API 호출이 느려지는 구간을 모델과 네트워크로 나누어보았습니다.
 
-~~~mermaid
-flowchart LR
-    P["LLM 호출 문제"] --> M["모델 계층"]
-    P --> N["네트워크 계층"]
-
-    M --> M1["모델 특성"]
-    M --> M2["추론 강도"]
-    M --> M3["출력 길이"]
-
-    N --> N1["Connection Pool"]
-    N --> N2["Timeout"]
-    N --> N3["Retry"]
-    N --> N4["Buffer·Compression"]
-~~~
-
+![LLM 호출 지연을 나누는 두 계층](/assets/images/posts/kotlin-coroutines-to-spring-async-performance-improvement/diagrams/latency-layers.svg){: .light }
+![LLM 호출 지연을 나누는 두 계층](/assets/images/posts/kotlin-coroutines-to-spring-async-performance-improvement/diagrams/latency-layers-dark.svg){: .dark }
 모델 계층은 응답 생성 자체의 비용을 결정합니다. 네트워크 계층은 연결 수립, 대기, 장애 전파, 응답 수신을 제어합니다. 두 층을 분리해서 측정해야 “모델이 느린 것”과 “호출 방식이 비효율적인 것”을 구분할 수 있습니다.
 
 ---
 
 ## 2. 모델 비교하기
 
-모델을 비교할 때에는 간단한 일반 질문보다 애플리케이션에서 사용하는 입력과 비슷한 예제가 필요했습니다. 비교할 때 확인한 항목은 다음과 같습니다.
+모델을 비교할 때에는 간단한 일반 질문보다 애플리케이션에서 사용하는 입력과 비슷한 예제가 필요했습니다. 평가 항목은 다섯 가지로 정했습니다.
 
 | 평가 항목 | 확인할 내용 |
 |---|---|
@@ -126,13 +112,8 @@ val connectionProvider =
 
 Connection Pool을 설정한 후 연결, 쓰기, 응답 대기와 읽기 타임아웃을 각각 나누었습니다. 요청 전체에 하나의 타임아웃만 두면 어느 단계에서 멈췄는지 확인하기 어렵기 때문입니다.
 
-~~~mermaid
-flowchart LR
-    A["Connect"] --> B["Write"]
-    B --> C["Response"]
-    C --> D["Read"]
-~~~
-
+![단계별 타임아웃](/assets/images/posts/kotlin-coroutines-to-spring-async-performance-improvement/diagrams/timeout-phases.svg){: .light }
+![단계별 타임아웃](/assets/images/posts/kotlin-coroutines-to-spring-async-performance-improvement/diagrams/timeout-phases-dark.svg){: .dark }
 ~~~kotlin
 val httpClient =
     HttpClient.create(connectionProvider)
@@ -152,7 +133,7 @@ val httpClient =
         .compress(true)
 ~~~
 
-타임아웃 값은 모델별 지연 분포와 사용자 요청의 시간 예산을 기준으로 결정합니다. 너무 짧으면 정상 응답을 실패로 만들고, 너무 길면 느린 외부 호출이 서버 자원을 오래 점유합니다.
+타임아웃 값은 모델별 지연 분포와 사용자 요청의 시간 예산을 기준으로 결정합니다. 너무 짧으면 정상 응답을 실패로 만들고 너무 길면 느린 외부 호출이 서버 자원을 오래 점유합니다.
 
 ---
 
@@ -194,16 +175,8 @@ fun retrySpec(policy: RetryPolicy): Retry =
         .filter(::isTransientFailure)
 ~~~
 
-~~~mermaid
-flowchart TD
-    A["호출 실패"] --> B{"일시 오류인가?"}
-    B -->|No| C["즉시 실패 변환"]
-    B -->|Yes| D{"시간 예산이 남았는가?"}
-    D -->|No| C
-    D -->|Yes| E["Backoff + Jitter"]
-    E --> F["재시도"]
-~~~
-
+![재시도 조건 판단](/assets/images/posts/kotlin-coroutines-to-spring-async-performance-improvement/diagrams/retry-decision.svg){: .light }
+![재시도 조건 판단](/assets/images/posts/kotlin-coroutines-to-spring-async-performance-improvement/diagrams/retry-decision-dark.svg){: .dark }
 구체적인 오류 목록과 횟수는 외부 API 계약과 사용자 SLA에 따라 달라집니다.
 
 ### 같은 시점의 재시도 분산하기
@@ -263,20 +236,13 @@ interface LlmClientPort {
 
 코어는 WebClient, 커넥션 풀, 모델 공급자, 재시도 구현을 알지 않습니다. 인프라 어댑터가 정책 키를 외부 API 요청으로 변환합니다.
 
-~~~mermaid
-flowchart LR
-    U["Use Case"] --> P["LLM Client Port"]
-    A["WebClient Adapter"] -. implements .-> P
-    A --> E["External LLM API"]
-~~~
-
-이 경계를 두면 모델 공급자나 네트워크 라이브러리를 바꿔도 코어 로직의 변경을 줄일 수 있고, 테스트에서는 포트를 대역으로 교체할 수 있습니다.
+![외부 호출을 Port로 분리](/assets/images/posts/kotlin-coroutines-to-spring-async-performance-improvement/diagrams/llm-client-port.svg){: .light }
+![외부 호출을 Port로 분리](/assets/images/posts/kotlin-coroutines-to-spring-async-performance-improvement/diagrams/llm-client-port-dark.svg){: .dark }
+이 경계를 두면 모델 공급자나 네트워크 라이브러리를 바꿔도 코어 로직의 변경을 줄일 수 있고 테스트에서는 포트를 대역으로 교체할 수 있습니다.
 
 ---
 
 ## 10. 마무리
-
-이번 작업에서 확인한 내용을 정리하면 다음과 같습니다.
 
 1. 실제 작업과 비슷한 입력으로 모델을 비교합니다.
 2. 품질·지연·비용·안정성을 함께 봅니다.
@@ -285,4 +251,4 @@ flowchart LR
 5. 외부 API 예외와 구현 세부사항을 어댑터 경계 안에 둡니다.
 6. 프롬프트와 운영 정책이 관측 데이터로 새지 않도록 합니다.
 
-이번 글에서는 모델 비교부터 Connection Pool, 타임아웃, 버퍼, 재시도와 예외 변환까지 OpenAI API 호출의 전체 흐름을 살펴보았습니다. 예제의 모델명과 설정값은 임의로 바꾸었지만, WebClient 호출이 느리거나 불안정할 때 확인하는 순서는 그대로 적용할 수 있습니다.
+이번 글에서는 모델 비교부터 Connection Pool, 타임아웃, 버퍼, 재시도와 예외 변환까지 OpenAI API 호출의 전체 흐름을 살펴보았습니다. 예제의 모델명과 설정값은 임의로 바꾸었지만 WebClient 호출이 느리거나 불안정할 때 확인하는 순서는 그대로 적용할 수 있습니다.

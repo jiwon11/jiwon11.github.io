@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>상태 저장소 선택</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --paper: #151515; --ink: #cccccc; --muted: #a7a7a7; }
+    body { font-family: 'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh;
+           display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 848px; width: 100%; }
+    .eyebrow { font-family: SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace; font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    h1 { font-family: 'Instrument Serif', 'Apple SD Gothic Neo', serif; font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+         letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Tree · Diagram Design</p>
+    <h1>상태 저장소 선택</h1>
+<svg viewBox="0 0 768 324" width="768" height="324" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="db-choice-dark-title db-choice-dark-desc">
+<title id="db-choice-dark-title">상태 저장소 선택</title>
+<desc id="db-choice-dark-desc">PostgreSQL/MySQL, SQLite, sql.js, 인메모리 Map을 비교해 순수 JS·제로 의존성·WASM인 sql.js를 선택하고 나머지는 각각의 이유로 제외한 결정.</desc>
+<defs>
+<marker id="db-choice-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="db-choice-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="db-choice-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="db-choice-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="db-choice-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="db-choice-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="db-choice-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="db-choice-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="db-choice-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<path d="M 384,88 L 384,120" fill="none" stroke="#a7a7a7" stroke-width="1.2"/>
+<path d="M 384,120 L 128,120 Q 120,120 120,128 L 120,152" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#db-choice-dark-arrow)"/>
+<path d="M 384,120 L 304,120 Q 296,120 296,128 L 296,152" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#db-choice-dark-arrow)"/>
+<path d="M 384,120 L 464,120 Q 472,120 472,128 L 472,152" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#db-choice-dark-arrow)"/>
+<path d="M 384,120 L 640,120 Q 648,120 648,128 L 648,152" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#db-choice-dark-arrow)"/>
+<rect x="304" y="40" width="160" height="48" rx="6" fill="#151515"/>
+<rect x="304" y="40" width="160" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="384.0" y="68" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">DB 선택</text>
+<rect x="40" y="152" width="160" height="72" rx="6" fill="#151515"/>
+<rect x="40" y="152" width="160" height="72" rx="6" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="120.0" y="176" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">PostgreSQL/MySQL</text>
+<text x="120.0" y="192" fill="#868686" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">서버 필요,</text>
+<text x="120.0" y="208" fill="#868686" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">과도한 복잡도</text>
+<rect x="216" y="152" width="160" height="72" rx="6" fill="#151515"/>
+<rect x="216" y="152" width="160" height="72" rx="6" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="296.0" y="176" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">SQLite</text>
+<text x="296.0" y="192" fill="#868686" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">네이티브 바인딩,</text>
+<text x="296.0" y="208" fill="#868686" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">설치 문제</text>
+<rect x="392" y="152" width="160" height="72" rx="6" fill="#151515"/>
+<rect x="392" y="152" width="160" height="72" rx="6" fill="rgba(138,180,248,0.12)" stroke="#8ab4f8" stroke-width="1.2"/>
+<text x="472.0" y="176" fill="#8ab4f8" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">sql.js</text>
+<text x="472.0" y="192" fill="#868686" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">순수 JS, 제로 의존성,</text>
+<text x="472.0" y="208" fill="#868686" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">WASM</text>
+<rect x="568" y="152" width="160" height="72" rx="6" fill="#151515"/>
+<rect x="568" y="152" width="160" height="72" rx="6" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="648.0" y="176" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">인메모리 Map</text>
+<text x="648.0" y="192" fill="#868686" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">프로세스 재시작 시</text>
+<text x="648.0" y="208" fill="#868686" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">데이터 유실</text>
+<line x1="32" y1="276" x2="736" y2="276" stroke="rgba(204,204,204,0.12)" stroke-width="0.8"/>
+<text x="32" y="304" fill="#a7a7a7" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" letter-spacing="0.14em">LEGEND</text>
+<rect x="104" y="292" width="28" height="16" rx="4" fill="rgba(138,180,248,0.12)" stroke="#8ab4f8" stroke-width="1"/>
+<text x="144" y="304" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif">선택</text>
+<rect x="198" y="292" width="28" height="16" rx="4" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="238" y="304" fill="#a7a7a7" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif">제외</text>
+</svg>
+  </div>
+</body>
+</html>

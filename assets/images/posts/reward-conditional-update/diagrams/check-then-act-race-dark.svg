@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 720 456" width="720" height="456" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="check-then-act-race-dark-title check-then-act-race-dark-desc">
+<title id="check-then-act-race-dark-title">조회 후 저장에서 생기는 경쟁</title>
+<desc id="check-then-act-race-dark-desc">두 요청이 같은 시점에 현재 상태를 조회해 둘 다 전이 가능하다는 결과를 받고, 이어서 각각 상태를 변경하는 순서.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="check-then-act-race-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="check-then-act-race-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="check-then-act-race-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="check-then-act-race-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="check-then-act-race-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="check-then-act-race-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="check-then-act-race-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="check-then-act-race-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="check-then-act-race-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<line x1="120" y1="80" x2="120" y2="432" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="360" y1="80" x2="360" y2="432" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="600" y1="80" x2="600" y2="432" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<rect x="64" y="112" width="592" height="192" rx="8" fill="rgba(204,204,204,0.025)" stroke="rgba(204,204,204,0.18)" stroke-width="1"/><rect x="76" y="105" width="72" height="14" rx="2" fill="#151515"/><text x="112.0" y="116" fill="#868686" font-size="11" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">동시에 조회</text>
+<path d="M 124,152 L 596,152" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#check-then-act-race-dark-arrow)"/>
+<path d="M 596,192 L 124,192" fill="none" stroke="#a7a7a7" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#check-then-act-race-dark-arrow)"/>
+<path d="M 364,232 L 596,232" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#check-then-act-race-dark-arrow)"/>
+<path d="M 596,272 L 364,272" fill="none" stroke="#a7a7a7" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#check-then-act-race-dark-arrow)"/>
+<path d="M 124,344 L 596,344" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#check-then-act-race-dark-arrow)"/>
+<path d="M 364,392 L 596,392" fill="none" stroke="#8ab4f8" stroke-width="1.4" marker-end="url(#check-then-act-race-dark-arrow-accent)"/>
+<rect x="428" y="130" width="104" height="16" rx="2" fill="#151515"/><text x="480" y="142" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">1. 현재 상태 조회</text>
+<rect x="442" y="170" width="76" height="16" rx="2" fill="#151515"/><text x="480" y="182" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">2. 전이 가능</text>
+<rect x="428" y="210" width="104" height="16" rx="2" fill="#151515"/><text x="480" y="222" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">3. 현재 상태 조회</text>
+<rect x="442" y="250" width="76" height="16" rx="2" fill="#151515"/><text x="480" y="262" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">4. 전이 가능</text>
+<rect x="442" y="322" width="76" height="16" rx="2" fill="#151515"/><text x="480" y="334" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">5. 상태 변경</text>
+<rect x="442" y="370" width="76" height="16" rx="2" fill="#151515"/><text x="480" y="382" fill="#8ab4f8" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">6. 상태 변경</text>
+<rect x="72" y="40" width="96" height="40" rx="6" fill="#151515"/>
+<rect x="72" y="40" width="96" height="40" rx="6" fill="rgba(204,204,204,0.06)" stroke="#868686" stroke-width="1"/>
+<text x="120.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Request A</text>
+<rect x="312" y="40" width="96" height="40" rx="6" fill="#151515"/>
+<rect x="312" y="40" width="96" height="40" rx="6" fill="rgba(204,204,204,0.06)" stroke="#868686" stroke-width="1"/>
+<text x="360.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Request B</text>
+<rect x="552" y="40" width="96" height="40" rx="6" fill="#151515"/>
+<rect x="552" y="40" width="96" height="40" rx="6" fill="rgba(204,204,204,0.05)" stroke="#a7a7a7" stroke-width="1"/>
+<text x="600.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Database</text>
+</svg>

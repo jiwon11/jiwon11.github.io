@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 840 616" width="840" height="616" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="async-task-dark-title async-task-dark-desc">
+<title id="async-task-dark-title">비동기 작업과 상태 조회</title>
+<desc id="async-task-dark-desc">MCP 서버가 작업을 pending으로 만들고 task_id를 먼저 돌려준 뒤, 백그라운드에서 AI를 호출하며 sql.js DB에 진행 상태를 기록하고, 클라이언트가 blog_get_status로 결과를 조회하는 순서.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="async-task-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="async-task-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="async-task-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="async-task-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="async-task-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="async-task-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="async-task-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="async-task-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="async-task-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<line x1="104" y1="80" x2="104" y2="592" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="328" y1="80" x2="328" y2="592" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="568" y1="80" x2="568" y2="592" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="736" y1="80" x2="736" y2="592" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<rect x="296" y="236" width="488" height="168" rx="8" fill="rgba(204,204,204,0.025)" stroke="rgba(204,204,204,0.18)" stroke-width="1"/><rect x="308" y="229" width="92" height="14" rx="2" fill="#151515"/><text x="354.0" y="240" fill="#868686" font-size="11" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">백그라운드 실행</text>
+<path d="M 108,128 L 324,128" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#async-task-dark-arrow)"/>
+<path d="M 332,168 L 564,168" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#async-task-dark-arrow)"/>
+<path d="M 324,208 L 108,208" fill="none" stroke="#a7a7a7" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#async-task-dark-arrow)"/>
+<path d="M 332,268 L 732,268" fill="none" stroke="#a7a7a7" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#async-task-dark-arrow-open)"/>
+<path d="M 332,308 L 564,308" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#async-task-dark-arrow)"/>
+<path d="M 732,348 L 332,348" fill="none" stroke="#a7a7a7" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#async-task-dark-arrow)"/>
+<path d="M 332,388 L 564,388" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#async-task-dark-arrow)"/>
+<path d="M 108,444 L 324,444" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#async-task-dark-arrow)"/>
+<path d="M 332,484 L 564,484" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#async-task-dark-arrow)"/>
+<path d="M 564,524 L 332,524" fill="none" stroke="#a7a7a7" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#async-task-dark-arrow)"/>
+<path d="M 324,564 L 108,564" fill="none" stroke="#8ab4f8" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#async-task-dark-arrow-accent)"/>
+<rect x="140" y="106" width="152" height="16" rx="2" fill="#151515"/><text x="216" y="118" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">blog_start_draft(...)</text>
+<rect x="366" y="146" width="164" height="16" rx="2" fill="#151515"/><text x="448" y="158" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">작업 생성 (status: pending)</text>
+<rect x="116" y="186" width="200" height="16" rx="2" fill="#151515"/><text x="216" y="198" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">{ task_id, status: &quot;pending&quot; }</text>
+<rect x="600" y="246" width="104" height="16" rx="2" fill="#151515"/><text x="652" y="258" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">AI 호출 (비동기)</text>
+<rect x="336" y="286" width="224" height="16" rx="2" fill="#151515"/><text x="448" y="298" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">status: in_progress, progress: 30</text>
+<rect x="622" y="326" width="60" height="16" rx="2" fill="#151515"/><text x="652" y="338" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">결과 반환</text>
+<rect x="340" y="366" width="216" height="16" rx="2" fill="#151515"/><text x="448" y="378" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">status: completed, result: draft</text>
+<rect x="130" y="422" width="172" height="16" rx="2" fill="#151515"/><text x="216" y="434" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">blog_get_status(task_id)</text>
+<rect x="418" y="462" width="60" height="16" rx="2" fill="#151515"/><text x="448" y="474" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">상태 조회</text>
+<rect x="356" y="502" width="184" height="16" rx="2" fill="#151515"/><text x="448" y="514" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">{ status, progress, result }</text>
+<rect x="168" y="542" width="96" height="16" rx="2" fill="#151515"/><text x="216" y="554" fill="#8ab4f8" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">작업 완료 + 결과</text>
+<rect x="32" y="40" width="144" height="40" rx="6" fill="#151515"/>
+<rect x="32" y="40" width="144" height="40" rx="6" fill="rgba(204,204,204,0.06)" stroke="#868686" stroke-width="1"/>
+<text x="104.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Claude (클라이언트)</text>
+<rect x="280" y="40" width="96" height="40" rx="6" fill="#151515"/>
+<rect x="280" y="40" width="96" height="40" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="328.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">MCP Server</text>
+<rect x="520" y="40" width="96" height="40" rx="6" fill="#151515"/>
+<rect x="520" y="40" width="96" height="40" rx="6" fill="rgba(204,204,204,0.05)" stroke="#a7a7a7" stroke-width="1"/>
+<text x="568.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">sql.js DB</text>
+<rect x="664" y="40" width="144" height="40" rx="6" fill="#151515"/>
+<rect x="664" y="40" width="144" height="40" rx="6" fill="rgba(204,204,204,0.03)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="736.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Gemini/Claude API</text>
+</svg>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 632 504" width="632" height="504" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="usecase-chain-dark-title usecase-chain-dark-desc">
+<title id="usecase-chain-dark-title">유스케이스 사이의 결과 전달</title>
+<desc id="usecase-chain-dark-desc">입력이 Create, Transition, Apply 유스케이스를 차례로 지나며 각 단계의 결과 타입을 다음 단계로 넘기고, 앞의 두 단계는 권리 저장소를, 마지막 단계는 자산 저장소를 사용하는 구조.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="usecase-chain-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="usecase-chain-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="usecase-chain-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="usecase-chain-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="usecase-chain-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="usecase-chain-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="usecase-chain-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="usecase-chain-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="usecase-chain-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<path d="M 240,80 L 240,104" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#usecase-chain-dark-arrow)"/>
+<path d="M 240,144 L 240,168" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#usecase-chain-dark-arrow)"/>
+<path d="M 240,208 L 240,232" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#usecase-chain-dark-arrow)"/>
+<path d="M 240,272 L 240,296" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#usecase-chain-dark-arrow)"/>
+<path d="M 240,336 L 240,360" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#usecase-chain-dark-arrow)"/>
+<path d="M 240,400 L 240,424" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#usecase-chain-dark-arrow)"/>
+<path d="M 448,176 L 408,176 Q 400,176 400,168 L 400,132 Q 400,124 392,124 L 344,124" fill="none" stroke="#a7a7a7" stroke-width="1.2"/>
+<path d="M 448,200 L 408,200 Q 400,200 400,208 L 400,244 Q 400,252 392,252 L 344,252" fill="none" stroke="#a7a7a7" stroke-width="1.2"/>
+<path d="M 448,380 L 344,380" fill="none" stroke="#a7a7a7" stroke-width="1.2"/>
+<rect x="136" y="40" width="208" height="40" rx="6" fill="#151515"/>
+<rect x="136" y="40" width="208" height="40" rx="6" fill="rgba(204,204,204,0.06)" stroke="#868686" stroke-width="1"/>
+<text x="240.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">입력</text>
+<rect x="136" y="104" width="208" height="40" rx="6" fill="#151515"/>
+<rect x="136" y="104" width="208" height="40" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="240.0" y="128" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Create Entitlement</text>
+<rect x="136" y="168" width="208" height="40" rx="6" fill="#151515"/>
+<rect x="136" y="168" width="208" height="40" rx="6" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="240.0" y="192" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">CreatedEntitlement</text>
+<rect x="136" y="232" width="208" height="40" rx="6" fill="#151515"/>
+<rect x="136" y="232" width="208" height="40" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="240.0" y="256" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Transition Entitlement</text>
+<rect x="136" y="296" width="208" height="40" rx="6" fill="#151515"/>
+<rect x="136" y="296" width="208" height="40" rx="6" fill="rgba(138,180,248,0.12)" stroke="#8ab4f8" stroke-width="1.2"/>
+<text x="240.0" y="320" fill="#8ab4f8" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">TransitionedEntitlement</text>
+<rect x="136" y="360" width="208" height="40" rx="6" fill="#151515"/>
+<rect x="136" y="360" width="208" height="40" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="240.0" y="384" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Apply Effect</text>
+<rect x="136" y="424" width="208" height="40" rx="6" fill="#151515"/>
+<rect x="136" y="424" width="208" height="40" rx="6" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="240.0" y="448" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Effect Result</text>
+<rect x="448" y="164" width="144" height="48" rx="6" fill="#151515"/>
+<rect x="448" y="164" width="144" height="48" rx="6" fill="rgba(204,204,204,0.05)" stroke="#a7a7a7" stroke-width="1"/>
+<text x="520.0" y="192" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">권리 저장소</text>
+<rect x="448" y="356" width="144" height="48" rx="6" fill="#151515"/>
+<rect x="448" y="356" width="144" height="48" rx="6" fill="rgba(204,204,204,0.05)" stroke="#a7a7a7" stroke-width="1"/>
+<text x="520.0" y="384" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">자산 저장소</text>
+</svg>

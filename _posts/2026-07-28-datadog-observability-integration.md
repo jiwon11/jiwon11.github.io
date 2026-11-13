@@ -19,7 +19,7 @@ OpenAI 호출과 채용 공고 크롤링 기능을 운영하면서 예외 로그
 - GraphQL 요청이 단일 엔드포인트로 보일 때 어떤 오퍼레이션이 느린지 어떻게 찾는가?
 - 작은 개발 서버에서도 감당할 수 있는 관측성 구성은 어디까지인가?
 
-이번 글에서는 Spring Boot 애플리케이션에 Datadog을 연결하고, LLM Observability와 구조화 로그를 구성한 과정을 정리해보겠습니다. 처음에는 호스트 Agent를 중심으로 구성했지만 실행 환경의 제약을 확인한 후 Agentless 방식으로 변경했습니다. 이 과정에서 계측 코드가 실제 AI 호출에 영향을 주는 문제도 함께 수정했습니다.
+이번 글에서는 Spring Boot 애플리케이션에 Datadog을 연결하고 LLM Observability와 구조화 로그를 구성한 과정을 정리해보겠습니다. 처음에는 호스트 Agent를 중심으로 구성했지만 실행 환경의 제약을 확인한 후 Agentless 방식으로 변경했습니다. 이 과정에서 계측 코드가 실제 AI 호출에 영향을 주는 문제도 함께 수정했습니다.
 
 > 예제의 Datadog 리전, 태그, 로그 이벤트명, GraphQL 경로, 모니터 임계값과 대시보드 수치는 임의로 바꾸었습니다.
 {: .prompt-info }
@@ -35,7 +35,7 @@ OpenAI 호출과 채용 공고 크롤링 기능을 운영하면서 예외 로그
 
 ### 1.1 확인할 데이터 정하기
 
-Jobdori 백엔드는 Kotlin과 Spring Boot 기반의 API 서버입니다. REST와 GraphQL 요청을 처리하고, 주요 기능에서 OpenAI API와 외부 채용 공고 페이지를 호출합니다.
+Jobdori 백엔드는 Kotlin과 Spring Boot 기반의 API 서버입니다. REST와 GraphQL 요청을 처리하고 주요 기능에서 OpenAI API와 외부 채용 공고 페이지를 호출합니다.
 
 | 대상 | 확인하고 싶은 값 | 실패 시 사용자 영향 |
 |---|---|---|
@@ -44,14 +44,14 @@ Jobdori 백엔드는 Kotlin과 Spring Boot 기반의 API 서버입니다. REST�
 | API 요청 | 경로, 상태 코드, 처리시간, 사용자, GraphQL 오퍼레이션 | 느린 API와 오류 요청 추적 |
 | 서버 오류 | 에러 종류, 코드, 스택 트레이스, 요청 문맥 | 500 원인 분석 |
 
-기존에도 Sentry로 예외를 수집하고 있었고, 애플리케이션 로그에는 `llm_call`과 `crawler_call` 같은 이벤트가 남았습니다. 문제는 로그가 “읽을 수 있는 문자열”에 가까웠다는 점입니다.
+기존에도 Sentry로 예외를 수집하고 있었고 애플리케이션 로그에는 `llm_call`과 `crawler_call` 같은 이벤트가 남았습니다. 문제는 로그가 “읽을 수 있는 문자열”에 가까웠다는 점입니다.
 
 ```text
 llm_call useCase=feature_a model=example-model success=true
 latencyMs=<number> retries=<number> promptTokens=<number> completionTokens=<number> costUsd=<number>
 ```
 
-사람이 한 건을 읽는 데는 충분하지만, 운영에서는 문자열을 넘어 다음 작업이 필요합니다.
+사람이 한 건을 읽는 데는 충분하지만 운영에서는 문자열을 넘어 다음 작업이 필요합니다.
 
 - `latencyMs`의 p50, p95 계산
 - `costUsd`의 기간별 합계
@@ -59,7 +59,7 @@ latencyMs=<number> retries=<number> promptTokens=<number> completionTokens=<numb
 - 오류 로그와 HTTP 요청 문맥 연결
 - 특정 조건을 만족하는 로그 기반 알림
 
-즉, 로그를 단순한 기록이 아니라 **집계 가능한 관측 데이터**로 바꿔야 했습니다.
+로그를 단순한 기록이 아니라 집계할 수 있는 관측 데이터로 바꿔야 했습니다.
 
 ### 1.2 수집 범위 정하기
 
@@ -96,7 +96,7 @@ Elastic Beanstalk
     └── LLM Observability 수동 스팬
 ```
 
-Agent 설치 스크립트를 Elastic Beanstalk의 `.platform/hooks/prebuild`에 넣고, 애플리케이션은 `-javaagent` 옵션으로 실행하도록 구성했습니다. Actuator 지표는 Micrometer StatsD를 통해 로컬 `8125` 포트로 보내는 계획이었습니다.
+Agent 설치 스크립트를 Elastic Beanstalk의 `.platform/hooks/prebuild`에 넣고 애플리케이션은 `-javaagent` 옵션으로 실행하도록 구성했습니다. Actuator 지표는 Micrometer StatsD를 통해 로컬 `8125` 포트로 보내는 계획이었습니다.
 
 이 구조의 장점은 명확했습니다. 호스트, JVM, 요청, 데이터베이스, 외부 호출, 로그를 하나의 트레이스 문맥으로 연결할 수 있습니다.
 
@@ -135,7 +135,7 @@ dependencies {
 }
 ```
 
-이 분리는 프로젝트의 모듈 의존 방향도 지켰습니다. core는 Datadog을 전혀 모르고, 외부 OpenAI 구현체가 위치한 infrastructure만 계측 API에 의존합니다.
+이 분리는 프로젝트의 모듈 의존 방향도 지켰습니다. core는 Datadog을 전혀 모르고 외부 OpenAI 구현체가 위치한 infrastructure만 계측 API에 의존합니다.
 
 ---
 
@@ -195,7 +195,7 @@ response.usage?.let {
 
 ### 3.2 프롬프트 개인정보 가리기
 
-LLM Observability의 장점은 실제 입력과 출력을 보면서 품질 문제를 분석할 수 있다는 점입니다. 하지만 이력서와 채용 공고를 다루는 서비스에서 프롬프트를 그대로 전송하면 개인정보가 함께 들어갈 수 있습니다.
+LLM Observability를 쓰면 실제 입력과 출력을 보면서 품질 문제를 분석할 수 있습니다. 하지만 이력서와 채용 공고를 다루는 서비스에서 프롬프트를 그대로 전송하면 개인정보가 함께 들어갈 수 있습니다.
 
 명백한 식별자를 먼저 마스킹했습니다.
 
@@ -235,13 +235,14 @@ private fun String.maskPii(): String =
 | Datadog 기능 제거 | 배포가 가장 단순 | AI·로그 관측성까지 포기 |
 | Agentless로 범위 축소 | 핵심 데이터 유지, 호스트 Agent 제거 | APM·JVM·호스트 지표 포기 |
 
-개발 환경에서 가장 필요한 것은 AI 호출과 오류·요청 로그의 가시성이었습니다. 따라서 호스트 Agent를 제거하고 **로그 + LLM Observability**에 집중하는 구성을 선택했습니다.
+개발 환경에서 가장 필요한 것은 AI 호출과 오류·요청 로그의 가시성이었습니다. 따라서 호스트 Agent를 제거하고 로그와 LLM Observability에 집중하는 구성을 선택했습니다.
 
 ### 4.2 변경한 데이터 흐름
 
-로그는 Elastic Beanstalk stdout에서 CloudWatch Logs로 전달되고, Datadog Forwarder Lambda가 이를 Datadog으로 보냅니다. LLM 스팬은 `dd-java-agent`의 Agentless LLM Observability 경로로 전송합니다.
+로그는 Elastic Beanstalk stdout에서 CloudWatch Logs로 전달되고 Datadog Forwarder Lambda가 이를 Datadog으로 보냅니다. LLM 스팬은 `dd-java-agent`의 Agentless LLM Observability 경로로 전송합니다.
 
-![Datadog 관측성 데이터 흐름](/assets/images/posts/2026-07-28-datadog-observability-integration/observability-flow.svg)
+![Datadog 관측성 데이터 흐름](/assets/images/posts/2026-07-28-datadog-observability-integration/diagrams/observability-flow.svg){: .light }
+![Datadog 관측성 데이터 흐름](/assets/images/posts/2026-07-28-datadog-observability-integration/diagrams/observability-flow-dark.svg){: .dark }
 
 최종 JVM 옵션은 다음과 같습니다. 실제 Procfile에서는 한 줄로 작성했습니다.
 
@@ -271,7 +272,7 @@ Agentless 전환으로 포기한 것도 분명합니다.
 - JVM runtime metrics
 - DogStatsD를 통한 Actuator 지표
 
-관측성 도구를 연동했다고 모든 데이터가 자동으로 들어오는 것은 아닙니다. **현재 전송 경로가 실제로 존재하는 데이터만 대시보드에 사용해야 합니다.** 이 원칙 때문에 이후 대시보드와 모니터도 로그와 LLM Observability만 사용하도록 제한했습니다.
+관측성 도구를 연동했다고 모든 데이터가 자동으로 들어오는 것은 아닙니다. 현재 전송 경로가 실제로 존재하는 데이터만 대시보드에 사용해야 합니다. 이 원칙 때문에 이후 대시보드와 모니터도 로그와 LLM Observability만 사용하도록 제한했습니다.
 
 ---
 
@@ -279,7 +280,7 @@ Agentless 전환으로 포기한 것도 분명합니다.
 
 ### 5.1 계측 예외 확인하기
 
-Agentless 전환 직후 더 큰 문제가 발생했습니다. `DD_TRACE_ENABLED=false`이면서 LLM Observability만 활성화된 조합에서 `LLMObs.startLLMSpan`이 정상 스팬을 만들지 못했고, 계측 시작 과정의 예외가 OpenAI 호출보다 먼저 전파됐습니다.
+Agentless 전환 직후 더 큰 문제가 발생했습니다. `DD_TRACE_ENABLED=false`이면서 LLM Observability만 활성화된 조합에서 `LLMObs.startLLMSpan`이 정상 스팬을 만들지 못했고 계측 시작 과정의 예외가 OpenAI 호출보다 먼저 전파됐습니다.
 
 결과적으로 OpenAI API 자체는 정상이어도 개발 환경의 AI 요청이 모두 500으로 실패했습니다.
 
@@ -335,7 +336,11 @@ try {
 3. 오류 기록 실패는 원래 OpenAI 예외를 덮어쓰지 않는다.
 4. `finally`에서 종료하되 종료 실패도 밖으로 전파하지 않는다.
 
-![LLM 호출과 계측 실패 격리 시퀀스](/assets/images/posts/2026-07-28-datadog-observability-integration/llm-observability-sequence.svg)
+![계측 시작과 OpenAI 호출](/assets/images/posts/2026-07-28-datadog-observability-integration/diagrams/llm-span-start.svg){: .light }
+![계측 시작과 OpenAI 호출](/assets/images/posts/2026-07-28-datadog-observability-integration/diagrams/llm-span-start-dark.svg){: .dark }
+
+![호출 결과 기록과 스팬 종료](/assets/images/posts/2026-07-28-datadog-observability-integration/diagrams/llm-span-finish.svg){: .light }
+![호출 결과 기록과 스팬 종료](/assets/images/posts/2026-07-28-datadog-observability-integration/diagrams/llm-span-finish-dark.svg){: .dark }
 
 > **관측성의 실패 원칙**
 >
@@ -344,7 +349,7 @@ try {
 
 ### 5.3 오류 로그 모니터 추가하기
 
-코드만 고치는 것으로 끝내지 않고, 과거 오류 패턴을 감지하는 로그 모니터 정의를 추가했습니다.
+코드만 고치는 것으로 끝내지 않고 과거 오류 패턴을 감지하는 로그 모니터 정의를 추가했습니다.
 
 ```json
 {
@@ -354,7 +359,7 @@ try {
 }
 ```
 
-설정된 평가 기간에 같은 패턴이 나타나면 계측 구성을 먼저 확인하도록 했습니다. 장애 수정 내용을 운영 신호로 남기지 않으면, 환경변수 변경이나 라이브러리 업데이트 이후 같은 문제가 반복돼도 다시 사용자 오류로 발견하게 됩니다.
+설정된 평가 기간에 같은 패턴이 나타나면 계측 구성을 먼저 확인하도록 했습니다. 장애 수정 내용을 운영 신호로 남기지 않으면 환경변수 변경이나 라이브러리 업데이트 이후 같은 문제가 반복돼도 다시 사용자 오류로 발견하게 됩니다.
 
 ---
 
@@ -371,7 +376,7 @@ logging:
       console: com.jobdori.api.support.logging.DatadogStructuredLogFormatter
 ```
 
-포맷터는 MDC와 이벤트 payload를 먼저 복사하고, Datadog이 이해하는 표준 필드를 명시적으로 채웁니다.
+포맷터는 MDC와 이벤트 payload를 먼저 복사하고 Datadog이 이해하는 표준 필드를 명시적으로 채웁니다.
 
 ```kotlin
 override fun format(event: ILoggingEvent): String {
@@ -447,7 +452,7 @@ private fun costUsd(...): String =
     "%.6f".format(cost)
 ```
 
-Datadog에는 숫자 원본을 보내고, 사람이 읽는 message를 만들 때만 반올림하도록 역할을 나눴습니다.
+Datadog에는 숫자 원본을 보내고 사람이 읽는 message를 만들 때만 반올림하도록 역할을 나눴습니다.
 
 ```kotlin
 private fun costUsd(
@@ -473,7 +478,7 @@ private fun render(fields: Map<String, Any?>): String =
     }
 ```
 
-이 작은 타입 변경으로 `costUsd`의 합계와 평균을 계산할 수 있게 됐습니다. 관측 데이터에서는 값의 내용뿐 아니라 **타입도 스키마의 일부**입니다.
+이 작은 타입 변경으로 `costUsd`의 합계와 평균을 계산할 수 있게 됐습니다. 관측 데이터에서는 값의 내용뿐 아니라 타입도 스키마의 일부입니다.
 
 ---
 
@@ -494,7 +499,7 @@ object MdcKeys {
 }
 ```
 
-요청이 시작될 때 method, URL, client IP를 기록하고, 인증이 완료되면 사용자 ID를 추가합니다. 요청이 끝날 때는 상태 코드와 전체 처리시간을 남깁니다.
+요청이 시작될 때 method, URL, client IP를 기록하고 인증이 완료되면 사용자 ID를 추가합니다. 요청이 끝날 때는 상태 코드와 전체 처리시간을 남깁니다.
 
 ```kotlin
 MDC.put(MdcKeys.HTTP_METHOD, request.method)
@@ -644,7 +649,7 @@ docs/datadog
 | Core | 기존 AI 유스케이스와 client 인터페이스 유지 |
 | Docs | 대시보드·모니터를 재현하기 위한 운영 정의 |
 
-이 구조에서는 Datadog을 제거하거나 다른 관측성 도구로 교체해도 core 유스케이스를 수정할 필요가 없습니다. 관측성은 여러 계층을 가로지르지만, 각 모듈에서는 자신이 소유한 경계의 정보만 추가합니다.
+이 구조에서는 Datadog을 제거하거나 다른 관측성 도구로 교체해도 core 유스케이스를 수정할 필요가 없습니다. 관측성은 여러 계층을 가로지르지만 각 모듈에서는 자신이 소유한 경계의 정보만 추가합니다.
 
 ---
 
@@ -676,7 +681,7 @@ docs/datadog
 - 과거에 겪은 LLM 계측 파손을 별도 모니터로 감지할 수 있다.
 - 현재 데이터 경로에서 얻을 수 없는 APM·JVM 위젯을 대시보드에서 제외했다.
 
-관측성 구축의 결과는 화려한 대시보드 자체가 아니라, 장애가 났을 때 **어디서 무엇을 확인해야 하는지가 코드와 문서에 남은 것**이라고 생각합니다.
+관측성 구축의 결과는 화려한 대시보드 자체가 아니라, 장애가 났을 때 어디서 무엇을 확인해야 하는지가 코드와 문서에 남은 것이라고 생각합니다.
 
 ---
 
@@ -690,7 +695,7 @@ LLM 스팬 생성 실패가 OpenAI 호출 전체를 500으로 만든 경험이 �
 
 **2. 좋은 아키텍처는 운영 제약을 포함해야 한다.**
 
-Agent 기반 구성이 기능적으로 더 풍부하더라도 현재 인스턴스에서 안정적으로 운영할 수 없다면 현재 환경의 답은 아닙니다. 로그와 LLM Obs에 집중한 Agentless 구조는 기능을 줄인 타협이지만, 실제로 유지 가능한 선택이었습니다.
+Agent 기반 구성이 기능적으로 더 풍부하더라도 현재 인스턴스에서 안정적으로 운영할 수 없다면 현재 환경의 답은 아닙니다. 로그와 LLM Obs에 집중한 Agentless 구조는 기능을 줄인 타협이지만 실제로 유지 가능한 선택이었습니다.
 
 **3. 로그 필드는 운영 API다.**
 
@@ -698,7 +703,7 @@ Agent 기반 구성이 기능적으로 더 풍부하더라도 현재 인스턴�
 
 **4. 숫자는 끝까지 숫자로 보존해야 한다.**
 
-`costUsd`를 보기 좋게 포맷한 문자열로 보내자 합계를 낼 수 없었습니다. 저장과 전송에는 원본 숫자를 사용하고, 표현 계층에서만 반올림해야 합니다.
+`costUsd`를 보기 좋게 포맷한 문자열로 보내자 합계를 낼 수 없었습니다. 저장과 전송에는 원본 숫자를 사용하고 표현 계층에서만 반올림해야 합니다.
 
 **5. 많이 수집하는 것보다 실제 경로를 정확히 아는 것이 중요하다.**
 
@@ -710,7 +715,7 @@ Agent 기반 구성이 기능적으로 더 풍부하더라도 현재 인스턴�
 
 ### 적용을 마치며
 
-Datadog 연동은 Agent를 설치하고 대시보드를 만드는 것으로 끝나지 않았습니다. 실제로 어떤 데이터가 들어오는지 확인하고, 실행 환경에서 유지할 수 있는 범위를 정해야 했습니다.
+Datadog 연동은 Agent를 설치하고 대시보드를 만드는 것으로 끝나지 않았습니다. 실제로 어떤 데이터가 들어오는지 확인하고 실행 환경에서 유지할 수 있는 범위를 정해야 했습니다.
 
 - 무엇을 관찰할 것인가?
 - 작은 인스턴스에서 어떤 데이터를 포기할 것인가?

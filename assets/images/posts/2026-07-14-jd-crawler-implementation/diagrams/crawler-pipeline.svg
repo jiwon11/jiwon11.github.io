@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 800 648" width="800" height="648" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="crawler-pipeline-title crawler-pipeline-desc">
+<title id="crawler-pipeline-title">JD URL 등록 파이프라인</title>
+<desc id="crawler-pipeline-desc">URL 입력부터 URL Guard 검증, HTML 수집, __NEXT_DATA__·JSON-LD·Jsoup DOM 순서의 파싱, 본문 정책 검증, AI 구조화와 저장까지의 흐름.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="crawler-pipeline-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="crawler-pipeline-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="crawler-pipeline-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="crawler-pipeline-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="crawler-pipeline-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="crawler-pipeline-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="crawler-pipeline-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="crawler-pipeline-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="crawler-pipeline-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<path d="M 248,76 L 296,76" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#crawler-pipeline-arrow)"/>
+<path d="M 504,76 L 552,76" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#crawler-pipeline-arrow)"/>
+<path d="M 656,112 L 656,136 Q 656,144 648,144 L 216,144 Q 208,144 208,152 L 208,176" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#crawler-pipeline-arrow)"/>
+<path d="M 208,248 L 208,296" fill="none" stroke="rgba(52,52,60,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#crawler-pipeline-arrow-soft)"/>
+<path d="M 208,368 L 208,416" fill="none" stroke="rgba(52,52,60,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#crawler-pipeline-arrow-soft)"/>
+<path d="M 344,212 L 416,212 Q 424,212 424,220 L 424,312 Q 424,320 432,320 L 496,320" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#crawler-pipeline-arrow)"/>
+<path d="M 344,332 L 496,332" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#crawler-pipeline-arrow)"/>
+<path d="M 344,452 L 416,452 Q 424,452 424,444 L 424,352 Q 424,344 432,344 L 496,344" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#crawler-pipeline-arrow)"/>
+<path d="M 628,368 L 628,416" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#crawler-pipeline-arrow)"/>
+<path d="M 628,488 L 628,536" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#crawler-pipeline-arrow)"/>
+<rect x="216" y="264" width="32" height="16" rx="2" fill="#f6f8fa"/><text x="232" y="276" fill="#757575" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">없음</text>
+<rect x="216" y="384" width="32" height="16" rx="2" fill="#f6f8fa"/><text x="232" y="396" fill="#757575" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">없음</text>
+<rect x="40" y="40" width="208" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="40" y="40" width="208" height="72" rx="6" fill="rgba(52,52,60,0.06)" stroke="#757575" stroke-width="1"/>
+<text x="144.0" y="72" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">URL 입력</text>
+<text x="144.0" y="88" fill="#757575" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">GraphQL registerJd</text>
+<rect x="296" y="40" width="208" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="296" y="40" width="208" height="72" rx="6" fill="rgba(0,86,178,0.05)" stroke="rgba(0,86,178,0.50)" stroke-width="1" stroke-dasharray="4,4"/>
+<text x="400.0" y="64" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">URL Guard</text>
+<text x="400.0" y="80" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">HTTP(S) · 공개 IP</text>
+<text x="400.0" y="96" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">리다이렉트 홉마다 재검증</text>
+<rect x="552" y="40" width="208" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="552" y="40" width="208" height="72" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="656.0" y="64" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">HTML 수집</text>
+<text x="656.0" y="80" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">connect 5초 · read 10초</text>
+<text x="656.0" y="96" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">최대 3 MB</text>
+<rect x="72" y="176" width="272" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="72" y="176" width="272" height="72" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<rect x="80" y="182" width="32" height="12" rx="2" fill="none" stroke="#34343c" stroke-opacity="0.45" stroke-width="0.8"/>
+<text x="96.0" y="191" fill="#34343c" font-size="7" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.08em">1순위</text>
+<text x="208.0" y="214" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Next.js __NEXT_DATA__</text>
+<text x="208.0" y="230" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">initialData의 JD 필드 조립</text>
+<rect x="72" y="296" width="272" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="72" y="296" width="272" height="72" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<rect x="80" y="302" width="32" height="12" rx="2" fill="none" stroke="#34343c" stroke-opacity="0.45" stroke-width="0.8"/>
+<text x="96.0" y="311" fill="#34343c" font-size="7" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.08em">2순위</text>
+<text x="208.0" y="334" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">JSON-LD JobPosting</text>
+<text x="208.0" y="350" fill="#757575" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">title · description · company</text>
+<rect x="72" y="416" width="272" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="72" y="416" width="272" height="72" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<rect x="80" y="422" width="32" height="12" rx="2" fill="none" stroke="#34343c" stroke-opacity="0.45" stroke-width="0.8"/>
+<text x="96.0" y="431" fill="#34343c" font-size="7" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.08em">3순위</text>
+<text x="208.0" y="454" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Jsoup DOM 폴백</text>
+<text x="208.0" y="470" fill="#757575" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">.entry-content → article → main</text>
+<rect x="496" y="296" width="264" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="496" y="296" width="264" height="72" rx="6" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="628.0" y="328" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">본문 정책 검증</text>
+<text x="628.0" y="344" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">500자 이상 · 최대 10,000자</text>
+<rect x="496" y="416" width="264" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="496" y="416" width="264" height="72" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="628.0" y="448" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">AI 구조화</text>
+<text x="628.0" y="464" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">분할 → 메타 추출 → 지원 전략</text>
+<rect x="496" y="536" width="264" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="496" y="536" width="264" height="72" rx="6" fill="rgba(52,52,60,0.05)" stroke="#585858" stroke-width="1"/>
+<text x="628.0" y="568" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">JD 저장</text>
+<text x="628.0" y="584" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">원문 · 출처 URL · 구조화 필드</text>
+</svg>

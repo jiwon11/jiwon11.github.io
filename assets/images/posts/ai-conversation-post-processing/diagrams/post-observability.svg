@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 768 380" width="768" height="380" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="post-observability-title post-observability-desc">
+<title id="post-observability-title">후처리 상태와 관측 신호</title>
+<desc id="post-observability-desc">작업 신호가 대기와 실행을 거쳐 성공 또는 실패로 끝나고 실패는 재처리 대기로 가며, 각 단계가 메트릭·구조화 로그·알림·운영 화면으로 관측되는 구조.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="post-observability-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="post-observability-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="post-observability-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="post-observability-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="post-observability-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="post-observability-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="post-observability-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="post-observability-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="post-observability-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<path d="M 152,108 L 184,108" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#post-observability-arrow)"/>
+<path d="M 296,108 L 328,108" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#post-observability-arrow)"/>
+<path d="M 440,100 L 448,100 Q 456,100 456,92 L 456,72 Q 456,64 464,64 L 472,64" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#post-observability-arrow)"/>
+<path d="M 440,116 L 448,116 Q 456,116 456,124 L 456,144 Q 456,152 464,152 L 472,152" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#post-observability-arrow)"/>
+<path d="M 584,152 L 616,152" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#post-observability-arrow)"/>
+<path d="M 240,132 L 240,232" fill="none" stroke="rgba(52,52,60,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#post-observability-arrow-soft)"/>
+<path d="M 384,132 L 384,232" fill="none" stroke="rgba(52,52,60,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#post-observability-arrow-soft)"/>
+<path d="M 528,176 L 528,232" fill="none" stroke="rgba(52,52,60,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#post-observability-arrow-soft)"/>
+<path d="M 672,176 L 672,232" fill="none" stroke="rgba(52,52,60,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#post-observability-arrow-soft)"/>
+<rect x="40" y="84" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="40" y="84" width="112" height="48" rx="6" fill="rgba(52,52,60,0.06)" stroke="#757575" stroke-width="1"/>
+<text x="96.0" y="112" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">작업 신호</text>
+<rect x="184" y="84" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="184" y="84" width="112" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="240.0" y="112" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">대기</text>
+<rect x="328" y="84" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="328" y="84" width="112" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="384.0" y="112" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">실행</text>
+<rect x="472" y="40" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="472" y="40" width="112" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="528.0" y="68" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">성공</text>
+<rect x="472" y="128" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="472" y="128" width="112" height="48" rx="6" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="528.0" y="156" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">실패</text>
+<rect x="616" y="128" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="616" y="128" width="112" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="672.0" y="156" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">재처리 대기</text>
+<rect x="184" y="232" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="184" y="232" width="112" height="48" rx="6" fill="rgba(52,52,60,0.03)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="240.0" y="260" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">메트릭</text>
+<rect x="328" y="232" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="328" y="232" width="112" height="48" rx="6" fill="rgba(52,52,60,0.03)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="384.0" y="260" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">구조화 로그</text>
+<rect x="472" y="232" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="472" y="232" width="112" height="48" rx="6" fill="rgba(52,52,60,0.03)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="528.0" y="260" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">알림</text>
+<rect x="616" y="232" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="616" y="232" width="112" height="48" rx="6" fill="rgba(52,52,60,0.03)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="672.0" y="260" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">운영 화면</text>
+<line x1="32" y1="332" x2="736" y2="332" stroke="rgba(52,52,60,0.12)" stroke-width="0.8"/>
+<text x="32" y="360" fill="#585858" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" letter-spacing="0.14em">LEGEND</text>
+<line x1="104" y1="356" x2="132" y2="356" stroke="#585858" stroke-width="1.2" marker-end="url(#post-observability-arrow)"/>
+<text x="144" y="360" fill="#585858" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif">작업 흐름</text>
+<line x1="223" y1="356" x2="251" y2="356" stroke="rgba(52,52,60,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#post-observability-arrow-soft)"/>
+<text x="263" y="360" fill="#585858" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif">관측 신호</text>
+</svg>

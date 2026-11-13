@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 736 288" width="736" height="288" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="apm-trace-title apm-trace-desc">
+<title id="apm-trace-title">APM으로 묶는 요청 구간</title>
+<desc id="apm-trace-desc">하나의 요청에서 DB 쿼리, 캐시, 외부 호출 구간이 각각 측정되어 하나의 트레이스로 모이는 구조.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="apm-trace-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="apm-trace-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="apm-trace-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="apm-trace-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="apm-trace-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="apm-trace-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="apm-trace-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="apm-trace-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="apm-trace-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<path d="M 152,152 L 200,152" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#apm-trace-arrow)"/>
+<path d="M 336,140 L 356,140 Q 364,140 364,132 L 364,88 Q 364,80 372,80 L 392,80" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#apm-trace-arrow)"/>
+<path d="M 336,152 L 392,152" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#apm-trace-arrow)"/>
+<path d="M 336,164 L 356,164 Q 364,164 364,172 L 364,216 Q 364,224 372,224 L 392,224" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#apm-trace-arrow)"/>
+<path d="M 528,80 L 548,80 Q 556,80 556,88 L 556,132 Q 556,140 564,140 L 584,140" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#apm-trace-arrow)"/>
+<path d="M 528,152 L 584,152" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#apm-trace-arrow)"/>
+<path d="M 528,224 L 548,224 Q 556,224 556,216 L 556,172 Q 556,164 564,164 L 584,164" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#apm-trace-arrow)"/>
+<rect x="40" y="128" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="40" y="128" width="112" height="48" rx="6" fill="rgba(52,52,60,0.06)" stroke="#757575" stroke-width="1"/>
+<text x="96.0" y="156" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Request</text>
+<rect x="200" y="128" width="136" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="200" y="128" width="136" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="268.0" y="156" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Application</text>
+<rect x="392" y="56" width="136" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="392" y="56" width="136" height="48" rx="6" fill="rgba(52,52,60,0.05)" stroke="#585858" stroke-width="1"/>
+<text x="460.0" y="84" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">DB Query</text>
+<rect x="392" y="128" width="136" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="392" y="128" width="136" height="48" rx="6" fill="rgba(52,52,60,0.05)" stroke="#585858" stroke-width="1"/>
+<text x="460.0" y="156" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Cache</text>
+<rect x="392" y="200" width="136" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="392" y="200" width="136" height="48" rx="6" fill="rgba(52,52,60,0.03)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="460.0" y="228" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">External Call</text>
+<rect x="584" y="128" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="584" y="128" width="112" height="48" rx="6" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="640.0" y="156" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Trace</text>
+</svg>

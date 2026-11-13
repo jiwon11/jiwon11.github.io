@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 720 400" width="720" height="400" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="n-plus-one-dark-title n-plus-one-dark-desc">
+<title id="n-plus-one-dark-title">목록 조회의 N+1 쿼리</title>
+<desc id="n-plus-one-dark-desc">목록을 한 번 조회한 뒤 구성원마다 집계 데이터를 다시 조회해 쿼리가 구성원 수만큼 늘어나는 순서.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="n-plus-one-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="n-plus-one-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="n-plus-one-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="n-plus-one-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="n-plus-one-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="n-plus-one-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="n-plus-one-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="n-plus-one-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="n-plus-one-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<line x1="120" y1="80" x2="120" y2="376" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="360" y1="80" x2="360" y2="376" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="600" y1="80" x2="600" y2="376" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<rect x="320" y="208" width="320" height="88" rx="4" fill="rgba(204,204,204,0.025)" stroke="rgba(204,204,204,0.25)" stroke-width="1"/>
+<rect x="320" y="208" width="36" height="16" rx="2" fill="#151515" stroke="rgba(204,204,204,0.25)" stroke-width="1"/>
+<text x="338.0" y="219" fill="#a7a7a7" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.12em">LOOP</text>
+<text x="364" y="220" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif">각 구성원</text>
+<path d="M 124,128 L 356,128" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#n-plus-one-dark-arrow)"/>
+<path d="M 364,176 L 596,176" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#n-plus-one-dark-arrow)"/>
+<path d="M 364,264 L 596,264" fill="none" stroke="#8ab4f8" stroke-width="1.4" marker-end="url(#n-plus-one-dark-arrow-accent)"/>
+<path d="M 356,336 L 124,336" fill="none" stroke="#a7a7a7" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#n-plus-one-dark-arrow)"/>
+<rect x="210" y="106" width="60" height="16" rx="2" fill="#151515"/><text x="240" y="118" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">목록 조회</text>
+<rect x="430" y="154" width="100" height="16" rx="2" fill="#151515"/><text x="480" y="166" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">구성원 목록 조회</text>
+<rect x="430" y="242" width="100" height="16" rx="2" fill="#151515"/><text x="480" y="254" fill="#8ab4f8" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">집계 데이터 조회</text>
+<rect x="204" y="314" width="72" height="16" rx="2" fill="#151515"/><text x="240" y="326" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">정렬된 결과</text>
+<rect x="72" y="40" width="96" height="40" rx="6" fill="#151515"/>
+<rect x="72" y="40" width="96" height="40" rx="6" fill="rgba(204,204,204,0.06)" stroke="#868686" stroke-width="1"/>
+<text x="120.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Client</text>
+<rect x="308" y="40" width="104" height="40" rx="6" fill="#151515"/>
+<rect x="308" y="40" width="104" height="40" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="360.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Application</text>
+<rect x="552" y="40" width="96" height="40" rx="6" fill="#151515"/>
+<rect x="552" y="40" width="96" height="40" rx="6" fill="rgba(204,204,204,0.05)" stroke="#a7a7a7" stroke-width="1"/>
+<text x="600.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Database</text>
+</svg>

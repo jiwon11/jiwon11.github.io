@@ -4,7 +4,6 @@ date: 2026-02-04
 category: 개발기
 tags: [spring-boot, kotlin, spring-data-jpa, postgres, concurrency, idempotency, reward]
 readTime: 16min
-mermaid: true
 image:
   path: /assets/images/posts/reward-conditional-update/server-rack.jpg
   thumbnail: /assets/images/posts/reward-conditional-update/server-rack.jpg
@@ -13,7 +12,7 @@ image:
 
 상태를 확인한 후 엔티티를 저장하는 코드는 한 요청만 들어올 때에는 문제없이 동작합니다. 하지만 같은 자원을 여러 요청이 동시에 변경하면 두 요청이 모두 이전 상태를 읽을 수 있습니다.
 
-이번 글에서는 이 문제를 재현하고, Spring Data JPA의 상태 조건 UPDATE로 중복 처리를 막는 과정을 정리해보겠습니다.
+이번 글에서는 이 문제를 재현하고 Spring Data JPA의 상태 조건 UPDATE로 중복 처리를 막는 과정을 정리해보겠습니다.
 
 > **예제 코드 안내**
 >
@@ -48,25 +47,8 @@ fun process(id: UUID) {
 
 한 요청만 실행될 때는 자연스럽게 동작합니다. 문제는 두 요청이 같은 상태를 동시에 읽을 때입니다.
 
-~~~mermaid
-sequenceDiagram
-    autonumber
-    participant A as Request A
-    participant B as Request B
-    participant D as Database
-
-    par 동시에 조회
-        A->>D: 현재 상태 조회
-        D-->>A: 전이 가능
-    and
-        B->>D: 현재 상태 조회
-        D-->>B: 전이 가능
-    end
-
-    A->>D: 상태 변경
-    B->>D: 상태 변경
-~~~
-
+![조회 후 저장에서 생기는 경쟁](/assets/images/posts/reward-conditional-update/diagrams/check-then-act-race.svg){: .light }
+![조회 후 저장에서 생기는 경쟁](/assets/images/posts/reward-conditional-update/diagrams/check-then-act-race-dark.svg){: .dark }
 각 요청의 검사 코드는 정상적으로 실행됩니다. 문제는 상태를 확인한 시점과 실제로 변경하는 시점 사이에 다른 트랜잭션이 들어올 수 있다는 점입니다.
 
 ~~~text
@@ -75,7 +57,7 @@ SELECT: 현재 전이 가능한가?
 UPDATE: 다음 상태로 변경
 ~~~
 
-<code>@Transactional</code>은 한 트랜잭션 안의 작업을 묶지만, 모든 경쟁 요청을 자동으로 직렬화하지는 않습니다.
+<code>@Transactional</code>은 한 트랜잭션 안의 작업을 묶지만 모든 경쟁 요청을 자동으로 직렬화하지는 않습니다.
 
 ---
 
@@ -98,16 +80,10 @@ WHERE id = :id
 | 1 | 이 요청이 조건을 만족한 행을 변경함 |
 | 0 | 대상이 없거나 현재 상태가 기대와 다름 |
 
-0행을 API에서 어떻게 응답할지는 따로 정해야 합니다. 예외로 처리할 수도 있고, 멱등 성공으로 간주하거나 최신 상태를 돌려줄 수도 있습니다.
+0행을 API에서 어떻게 응답할지는 따로 정해야 합니다. 예외로 처리할 수도 있고 멱등 성공으로 간주하거나 최신 상태를 돌려줄 수도 있습니다.
 
-~~~mermaid
-flowchart LR
-    A["전이 요청"] --> B["조건부 UPDATE"]
-    B --> C{"affected rows"}
-    C -->|1| W["이 요청이 상태 변경"]
-    C -->|0| L["상태 변경 없음"]
-~~~
-
+![affected rows로 판정하기](/assets/images/posts/reward-conditional-update/diagrams/conditional-update-result.svg){: .light }
+![affected rows로 판정하기](/assets/images/posts/reward-conditional-update/diagrams/conditional-update-result-dark.svg){: .dark }
 ---
 
 ## 3. Spring Data JPA 수정 쿼리 작성하기
@@ -133,19 +109,14 @@ fun transitionIfCurrent(
 ): Int
 ~~~
 
-핵심은 수정 쿼리의 성공 여부를 예외 유무가 아니라 행 수로 판정한다는 점입니다.
+수정 쿼리가 성공했는지는 예외 발생 여부가 아니라 변경된 행 수로 판정합니다.
 
 ### clearAutomatically 설정하기
 
 JPQL 벌크 UPDATE는 영속성 컨텍스트의 엔티티를 거치지 않고 데이터베이스를 직접 수정합니다.
 
-~~~mermaid
-flowchart TD
-    A["Persistence Context<br/>old state"] --> C["JPQL Bulk UPDATE"]
-    C --> D["Database<br/>new state"]
-    A -. "그대로 남을 수 있음" .-> E["후속 조회의 혼란"]
-~~~
-
+![벌크 UPDATE와 영속성 컨텍스트](/assets/images/posts/reward-conditional-update/diagrams/bulk-update-context.svg){: .light }
+![벌크 UPDATE와 영속성 컨텍스트](/assets/images/posts/reward-conditional-update/diagrams/bulk-update-context-dark.svg){: .dark }
 <code>clearAutomatically = true</code>를 사용하면 수정 쿼리 뒤 영속성 컨텍스트를 비워 오래된 상태가 다시 사용되는 위험을 줄일 수 있습니다. 다만 이미 변경한 다른 엔티티가 flush되지 않은 상태라면 별도 주의가 필요합니다.
 
 ---
@@ -167,7 +138,7 @@ flowchart TD
 
 ## 5. 여러 건 UPDATE 결과 확인하기
 
-이제 여러 ID를 한 번에 처리해보겠습니다. 이때 affected rows는 몇 건이 변경됐는지는 알려주지만, 어떤 ID가 변경됐는지는 알려주지 않습니다.
+이제 여러 ID를 한 번에 처리해보겠습니다. 이때 affected rows는 몇 건이 변경됐는지는 알려주지만 어떤 ID가 변경됐는지는 알려주지 않습니다.
 
 ~~~sql
 UPDATE entitlement_example
@@ -190,7 +161,7 @@ WHERE id = ANY(:ids)
 RETURNING id;
 ~~~
 
-장점은 승자 집합이 정확하다는 점입니다. 단점은 네이티브 쿼리와 결과 매핑 때문에 데이터베이스 종속성이 생긴다는 점입니다.
+승자 집합을 정확하게 얻을 수 있지만 네이티브 쿼리와 결과 매핑 때문에 데이터베이스 종속성이 생깁니다.
 
 ### ID별로 조건부 UPDATE 실행하기
 
@@ -228,13 +199,8 @@ WHERE id = ANY(:ids)
 
 상태 변경 이후에는 다른 저장 작업이나 알림 같은 후속 작업이 이어질 수 있습니다. 상태 UPDATE가 한 번만 성공하더라도 후속 작업까지 자동으로 한 번만 실행되는 것은 아닙니다.
 
-~~~mermaid
-flowchart LR
-    A["조건부 상태 전이"] --> B["부수효과 명령"]
-    B --> C["멱등 키 검증"]
-    C --> D["원장 또는 결과 저장"]
-~~~
-
+![후속 작업의 멱등성](/assets/images/posts/reward-conditional-update/diagrams/side-effect-idempotency.svg){: .light }
+![후속 작업의 멱등성](/assets/images/posts/reward-conditional-update/diagrams/side-effect-idempotency-dark.svg){: .dark }
 그래서 부수효과를 기록하는 쪽에도 출처 식별자로 유일 제약을 둘 수 있습니다.
 
 ~~~sql
@@ -314,4 +280,4 @@ start.countDown()
 
 한 계층의 방어만 믿지 않고 원장이나 결과 저장소에도 유일성을 둬야 합니다.
 
-이번 글에서는 조회 후 저장에서 발생할 수 있는 동시성 문제를 확인하고, 상태 조건 UPDATE와 변경 행 수를 이용해 처리 결과를 구분해보았습니다. 같은 상태를 여러 요청이 동시에 변경하는 기능이라면 동일한 방식으로 검토할 수 있습니다.
+이번 글에서는 조회 후 저장에서 발생할 수 있는 동시성 문제를 확인하고 상태 조건 UPDATE와 변경 행 수를 이용해 처리 결과를 구분해보았습니다. 같은 상태를 여러 요청이 동시에 변경하는 기능이라면 동일한 방식으로 검토할 수 있습니다.

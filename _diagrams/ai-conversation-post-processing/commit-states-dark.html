@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>커밋 결과에 따른 상태</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --paper: #151515; --ink: #cccccc; --muted: #a7a7a7; }
+    body { font-family: 'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh;
+           display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 736px; width: 100%; }
+    .eyebrow { font-family: SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace; font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    h1 { font-family: 'Instrument Serif', 'Apple SD Gothic Neo', serif; font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+         letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">State machine · Diagram Design</p>
+    <h1>커밋 결과에 따른 상태</h1>
+<svg viewBox="0 0 656 288" width="656" height="288" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="commit-states-dark-title commit-states-dark-desc">
+<title id="commit-states-dark-title">커밋 결과에 따른 상태</title>
+<desc id="commit-states-dark-desc">처리중에서 저장에 성공하면 커밋완료를 거쳐 후처리를 시작하고, 저장에 실패하면 롤백완료로 끝나 후처리가 시작되지 않는 상태 전이.</desc>
+<defs>
+<marker id="commit-states-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="commit-states-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="commit-states-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="commit-states-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="commit-states-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="commit-states-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="commit-states-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="commit-states-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="commit-states-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<path d="M 64,152 L 96,152" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#commit-states-dark-arrow)"/>
+<path d="M 216,140 L 248,140 Q 256,140 256,132 L 256,88 Q 256,80 264,80 L 296,80" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#commit-states-dark-arrow)"/>
+<path d="M 216,164 L 248,164 Q 256,164 256,172 L 256,216 Q 256,224 264,224 L 296,224" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#commit-states-dark-arrow)"/>
+<path d="M 416,80 L 496,80" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#commit-states-dark-arrow)"/>
+<path d="M 556,104 L 556,200" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#commit-states-dark-arrow)"/>
+<path d="M 416,224 L 496,224" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#commit-states-dark-arrow)"/>
+<rect x="188" y="102" width="60" height="16" rx="2" fill="#151515"/><text x="218" y="114" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">저장 성공</text>
+<rect x="188" y="186" width="60" height="16" rx="2" fill="#151515"/><text x="218" y="198" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">저장 실패</text>
+<circle cx="56" cy="152" r="6" fill="#cccccc"/>
+<rect x="96" y="128" width="120" height="48" rx="8" fill="#151515"/>
+<rect x="96" y="128" width="120" height="48" rx="8" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="156.0" y="156" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">처리중</text>
+<rect x="296" y="56" width="120" height="48" rx="8" fill="#151515"/>
+<rect x="296" y="56" width="120" height="48" rx="8" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="356.0" y="84" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">커밋완료</text>
+<rect x="296" y="200" width="120" height="48" rx="8" fill="#151515"/>
+<rect x="296" y="200" width="120" height="48" rx="8" fill="rgba(138,180,248,0.12)" stroke="#8ab4f8" stroke-width="1.2"/>
+<text x="356.0" y="228" fill="#8ab4f8" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">롤백완료</text>
+<rect x="496" y="56" width="120" height="48" rx="8" fill="#151515"/>
+<rect x="496" y="56" width="120" height="48" rx="8" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="556.0" y="84" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">후처리시작</text>
+<rect x="496" y="200" width="120" height="48" rx="8" fill="#151515"/>
+<rect x="496" y="200" width="120" height="48" rx="8" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="556.0" y="228" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">종료</text>
+</svg>
+  </div>
+</body>
+</html>

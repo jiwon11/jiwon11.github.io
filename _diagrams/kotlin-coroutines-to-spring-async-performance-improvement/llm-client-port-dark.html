@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>외부 호출을 Port로 분리</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --paper: #151515; --ink: #cccccc; --muted: #a7a7a7; }
+    body { font-family: 'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh;
+           display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 712px; width: 100%; }
+    .eyebrow { font-family: SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace; font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    h1 { font-family: 'Instrument Serif', 'Apple SD Gothic Neo', serif; font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+         letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · Diagram Design</p>
+    <h1>외부 호출을 Port로 분리</h1>
+<svg viewBox="0 0 632 264" width="632" height="264" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="llm-client-port-dark-title llm-client-port-dark-desc">
+<title id="llm-client-port-dark-title">외부 호출을 Port로 분리</title>
+<desc id="llm-client-port-dark-desc">Use Case는 LLM Client Port에만 의존하고, WebClient Adapter가 이 Port를 구현해 External LLM API를 호출하는 구조.</desc>
+<defs>
+<marker id="llm-client-port-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="llm-client-port-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="llm-client-port-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="llm-client-port-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="llm-client-port-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="llm-client-port-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="llm-client-port-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="llm-client-port-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="llm-client-port-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<path d="M 176,80 L 232,80" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#llm-client-port-dark-arrow)"/>
+<path d="M 312,176 L 312,104" fill="none" stroke="#a7a7a7" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#llm-client-port-dark-arrow)"/>
+<path d="M 392,200 L 440,200" fill="none" stroke="#74b2f3" stroke-width="1.2" marker-end="url(#llm-client-port-dark-arrow-link)"/>
+<rect x="320" y="134" width="60" height="12" rx="2" fill="#151515"/><text x="350" y="143" fill="#a7a7a7" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.06em">IMPLEMENTS</text>
+<rect x="40" y="56" width="136" height="48" rx="6" fill="#151515"/>
+<rect x="40" y="56" width="136" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="108.0" y="84" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Use Case</text>
+<rect x="232" y="56" width="160" height="48" rx="6" fill="#151515"/>
+<rect x="232" y="56" width="160" height="48" rx="6" fill="rgba(138,180,248,0.12)" stroke="#8ab4f8" stroke-width="1.2"/>
+<text x="312.0" y="84" fill="#8ab4f8" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">LLM Client Port</text>
+<rect x="232" y="176" width="160" height="48" rx="6" fill="#151515"/>
+<rect x="232" y="176" width="160" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="312.0" y="204" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">WebClient Adapter</text>
+<rect x="440" y="176" width="152" height="48" rx="6" fill="#151515"/>
+<rect x="440" y="176" width="152" height="48" rx="6" fill="rgba(204,204,204,0.03)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="516.0" y="204" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">External LLM API</text>
+</svg>
+  </div>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>목표 구조</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --paper: #151515; --ink: #cccccc; --muted: #a7a7a7; }
+    body { font-family: 'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh;
+           display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 800px; width: 100%; }
+    .eyebrow { font-family: SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace; font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    h1 { font-family: 'Instrument Serif', 'Apple SD Gothic Neo', serif; font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+         letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Nested · Diagram Design</p>
+    <h1>목표 구조</h1>
+<svg viewBox="0 0 720 360" width="720" height="360" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ecs-target-architecture-dark-title ecs-target-architecture-dark-desc">
+<title id="ecs-target-architecture-dark-title">목표 구조</title>
+<desc id="ecs-target-architecture-dark-desc">ECS 클러스터의 EC2(T3) 컨테이너 인스턴스 안에서 Nginx reverse-proxy-container가 요청을 example-app-container의 3000번 포트로 전달하고, 그 안에서 Node.js 기반 NestJS 애플리케이션이 실행되는 구조.</desc>
+<defs>
+<marker id="ecs-target-architecture-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="ecs-target-architecture-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="ecs-target-architecture-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="ecs-target-architecture-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="ecs-target-architecture-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="ecs-target-architecture-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="ecs-target-architecture-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="ecs-target-architecture-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="ecs-target-architecture-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<rect x="40" y="48" width="640" height="272" rx="8" fill="rgba(204,204,204,0.025)" stroke="rgba(204,204,204,0.18)" stroke-width="1"/><rect x="52" y="41" width="112" height="14" rx="2" fill="#151515"/><text x="108.0" y="51" fill="#868686" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.14em">ECS CLUSTER CONTAINER</text>
+<rect x="72" y="96" width="576" height="192" rx="8" fill="rgba(204,204,204,0.025)" stroke="rgba(204,204,204,0.18)" stroke-width="1"/><rect x="84" y="89" width="112" height="14" rx="2" fill="#151515"/><text x="140.0" y="99" fill="#868686" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.14em">ECS EC2 Container · T3</text>
+<rect x="104" y="152" width="208" height="104" rx="8" fill="rgba(138,180,248,0.04)" stroke="rgba(138,180,248,0.50)" stroke-width="1" stroke-dasharray="4,4"/><rect x="116" y="145" width="128" height="14" rx="2" fill="#151515"/><text x="180.0" y="155" fill="#8ab4f8" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.14em">reverse-proxy-container</text>
+<rect x="408" y="152" width="208" height="104" rx="8" fill="rgba(204,204,204,0.025)" stroke="rgba(204,204,204,0.18)" stroke-width="1"/><rect x="420" y="145" width="116" height="14" rx="2" fill="#151515"/><text x="478.0" y="155" fill="#868686" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.14em">example-app-container</text>
+<path d="M 296,204 L 424,204" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#ecs-target-architecture-dark-arrow)"/>
+<rect x="304" y="168" width="112" height="30" rx="2" fill="#151515"/><text x="360" y="180" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">reverse proxy to</text><text x="360" y="194" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">PORT : 3000</text>
+<rect x="120" y="176" width="176" height="56" rx="6" fill="#151515"/>
+<rect x="120" y="176" width="176" height="56" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="208.0" y="200" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Nginx</text>
+<text x="208.0" y="216" fill="#868686" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">Docker</text>
+<rect x="424" y="176" width="176" height="56" rx="6" fill="#151515"/>
+<rect x="424" y="176" width="176" height="56" rx="6" fill="rgba(138,180,248,0.12)" stroke="#8ab4f8" stroke-width="1.2"/>
+<text x="512.0" y="200" fill="#8ab4f8" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">NestJS</text>
+<text x="512.0" y="216" fill="#868686" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">Node.js · Docker</text>
+</svg>
+  </div>
+</body>
+</html>

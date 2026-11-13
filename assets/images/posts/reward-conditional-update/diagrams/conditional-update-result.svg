@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 768 272" width="768" height="272" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="conditional-update-result-title conditional-update-result-desc">
+<title id="conditional-update-result-title">affected rows로 판정하기</title>
+<desc id="conditional-update-result-desc">전이 요청을 조건부 UPDATE로 실행하고, 변경된 행 수가 1이면 이 요청이 상태를 바꾼 것으로, 0이면 변경이 없는 것으로 판정하는 흐름.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="conditional-update-result-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="conditional-update-result-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="conditional-update-result-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="conditional-update-result-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="conditional-update-result-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="conditional-update-result-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="conditional-update-result-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="conditional-update-result-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="conditional-update-result-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<path d="M 160,136 L 200,136" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#conditional-update-result-arrow)"/>
+<path d="M 344,136 L 384,136" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#conditional-update-result-arrow)"/>
+<path d="M 456,88 L 456,72 Q 456,64 464,64 L 568,64" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#conditional-update-result-arrow)"/>
+<path d="M 456,184 L 456,200 Q 456,208 464,208 L 568,208" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#conditional-update-result-arrow)"/>
+<rect x="504" y="42" width="16" height="16" rx="2" fill="#f6f8fa"/><text x="512" y="54" fill="#585858" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">1</text>
+<rect x="504" y="186" width="16" height="16" rx="2" fill="#f6f8fa"/><text x="512" y="198" fill="#585858" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">0</text>
+<rect x="40" y="112" width="120" height="48" rx="24.0" fill="#f6f8fa"/>
+<rect x="40" y="112" width="120" height="48" rx="24.0" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="100.0" y="140" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">전이 요청</text>
+<rect x="200" y="112" width="144" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="200" y="112" width="144" height="48" rx="6" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="272.0" y="140" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">조건부 UPDATE</text>
+<polygon points="456.0,88 528,136.0 456.0,184 384,136.0" fill="#f6f8fa"/>
+<polygon points="456.0,88 528,136.0 456.0,184 384,136.0" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="456.0" y="140" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">affected rows</text>
+<rect x="568" y="40" width="160" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="568" y="40" width="160" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="648.0" y="68" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">이 요청이 상태 변경</text>
+<rect x="568" y="184" width="160" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="568" y="184" width="160" height="48" rx="6" fill="rgba(52,52,60,0.04)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="648.0" y="212" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">상태 변경 없음</text>
+</svg>

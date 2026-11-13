@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>배포 파이프라인</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --paper: #151515; --ink: #cccccc; --muted: #a7a7a7; }
+    body { font-family: 'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh;
+           display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 848px; width: 100%; }
+    .eyebrow { font-family: SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace; font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    h1 { font-family: 'Instrument Serif', 'Apple SD Gothic Neo', serif; font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+         letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Process · Diagram Design</p>
+    <h1>배포 파이프라인</h1>
+<svg viewBox="0 0 768 128" width="768" height="128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="deploy-pipeline-dark-title deploy-pipeline-dark-desc">
+<title id="deploy-pipeline-dark-title">배포 파이프라인</title>
+<desc id="deploy-pipeline-dark-desc">변경사항 검증, 이미지 빌드, 이미지 저장소, 배포 환경 반영, 상태 확인으로 이어지는 배포 단계.</desc>
+<defs>
+<marker id="deploy-pipeline-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="deploy-pipeline-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="deploy-pipeline-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="deploy-pipeline-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="deploy-pipeline-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="deploy-pipeline-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="deploy-pipeline-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="deploy-pipeline-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="deploy-pipeline-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<path d="M 152,64 L 184,64" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#deploy-pipeline-dark-arrow)"/>
+<path d="M 296,64 L 328,64" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#deploy-pipeline-dark-arrow)"/>
+<path d="M 440,64 L 472,64" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#deploy-pipeline-dark-arrow)"/>
+<path d="M 584,64 L 616,64" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#deploy-pipeline-dark-arrow)"/>
+<rect x="40" y="40" width="112" height="48" rx="6" fill="#151515"/>
+<rect x="40" y="40" width="112" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="96.0" y="68" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">변경사항 검증</text>
+<rect x="184" y="40" width="112" height="48" rx="6" fill="#151515"/>
+<rect x="184" y="40" width="112" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="240.0" y="68" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">이미지 빌드</text>
+<rect x="328" y="40" width="112" height="48" rx="6" fill="#151515"/>
+<rect x="328" y="40" width="112" height="48" rx="6" fill="rgba(204,204,204,0.05)" stroke="#a7a7a7" stroke-width="1"/>
+<text x="384.0" y="68" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">이미지 저장소</text>
+<rect x="472" y="40" width="112" height="48" rx="6" fill="#151515"/>
+<rect x="472" y="40" width="112" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="528.0" y="68" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">배포 환경 반영</text>
+<rect x="616" y="40" width="112" height="48" rx="6" fill="#151515"/>
+<rect x="616" y="40" width="112" height="48" rx="6" fill="rgba(138,180,248,0.12)" stroke="#8ab4f8" stroke-width="1.2"/>
+<text x="672.0" y="68" fill="#8ab4f8" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">상태 확인</text>
+</svg>
+  </div>
+</body>
+</html>

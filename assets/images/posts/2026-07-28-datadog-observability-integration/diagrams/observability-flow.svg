@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 720 568" width="720" height="568" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="observability-flow-title observability-flow-desc">
+<title id="observability-flow-title">Datadog 관측성 데이터 흐름</title>
+<desc id="observability-flow-desc">Spring Boot API의 JSON 구조화 로그는 stdout, CloudWatch Logs, Forwarder Lambda를 거쳐 Datadog Logs로, OpenAI 호출의 수동 스팬은 dd-java-agent의 Agentless 경로로 LLM Observability에 전달되며, 호스트 Agent가 없다는 운영 제약을 함께 표시한다.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="observability-flow-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="observability-flow-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="observability-flow-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="observability-flow-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="observability-flow-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="observability-flow-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="observability-flow-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="observability-flow-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="observability-flow-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<rect x="40" y="136" width="304" height="392" rx="8" fill="rgba(52,52,60,0.025)" stroke="rgba(52,52,60,0.18)" stroke-width="1"/><rect x="52" y="129" width="32" height="14" rx="2" fill="#f6f8fa"/><text x="68.0" y="139" fill="#757575" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.14em">LOGS</text>
+<rect x="376" y="136" width="304" height="312" rx="8" fill="rgba(52,52,60,0.025)" stroke="rgba(52,52,60,0.18)" stroke-width="1"/><rect x="388" y="129" width="44" height="14" rx="2" fill="#f6f8fa"/><text x="410.0" y="139" fill="#757575" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.14em">LLM OBS</text>
+<path d="M 184,64 L 264,64" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#observability-flow-arrow)"/>
+<path d="M 528,64 L 456,64" fill="none" stroke="rgba(52,52,60,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#observability-flow-arrow-soft)"/>
+<path d="M 336,88 L 336,112 Q 336,120 328,120 L 200,120 Q 192,120 192,128 L 192,168" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#observability-flow-arrow)"/>
+<path d="M 384,88 L 384,112 Q 384,120 392,120 L 520,120 Q 528,120 528,128 L 528,168" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#observability-flow-arrow)"/>
+<path d="M 192,216 L 192,240" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#observability-flow-arrow)"/>
+<path d="M 192,288 L 192,312" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#observability-flow-arrow)"/>
+<path d="M 192,360 L 192,384" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#observability-flow-arrow)"/>
+<path d="M 192,432 L 192,456" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#observability-flow-arrow)"/>
+<path d="M 528,216 L 528,240" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#observability-flow-arrow)"/>
+<path d="M 528,288 L 528,312" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#observability-flow-arrow)"/>
+<path d="M 528,368 L 528,392" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#observability-flow-arrow)"/>
+<rect x="462" y="42" width="60" height="16" rx="2" fill="#f6f8fa"/><text x="492" y="54" fill="#757575" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">운영 제약</text>
+<rect x="72" y="168" width="240" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="72" y="168" width="240" height="48" rx="6" fill="rgba(52,52,60,0.05)" stroke="#585858" stroke-width="1"/>
+<text x="192.0" y="196" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Datadog JSON 구조화 로그</text>
+<rect x="72" y="240" width="240" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="72" y="240" width="240" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="192.0" y="268" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Elastic Beanstalk stdout</text>
+<rect x="72" y="312" width="240" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="72" y="312" width="240" height="48" rx="6" fill="rgba(52,52,60,0.03)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="192.0" y="340" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">CloudWatch Logs</text>
+<rect x="72" y="384" width="240" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="72" y="384" width="240" height="48" rx="6" fill="rgba(52,52,60,0.03)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="192.0" y="412" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Datadog Forwarder Lambda</text>
+<rect x="72" y="456" width="240" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="72" y="456" width="240" height="48" rx="6" fill="rgba(52,52,60,0.03)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="192.0" y="484" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Datadog Logs / Monitors</text>
+<rect x="408" y="168" width="240" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="408" y="168" width="240" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="528.0" y="196" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">OpenAI Client</text>
+<rect x="408" y="240" width="240" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="408" y="240" width="240" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="528.0" y="268" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">LLMObs 수동 스팬</text>
+<rect x="408" y="312" width="240" height="56" rx="6" fill="#f6f8fa"/>
+<rect x="408" y="312" width="240" height="56" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="528.0" y="336" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">dd-java-agent</text>
+<text x="528.0" y="352" fill="#757575" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">Agentless LLM Obs</text>
+<rect x="408" y="392" width="240" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="408" y="392" width="240" height="48" rx="6" fill="rgba(52,52,60,0.03)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="528.0" y="420" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Datadog LLM Observability</text>
+<rect x="40" y="40" width="144" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="40" y="40" width="144" height="48" rx="6" fill="rgba(52,52,60,0.06)" stroke="#757575" stroke-width="1"/>
+<text x="112.0" y="68" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">사용자 요청</text>
+<rect x="264" y="40" width="192" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="264" y="40" width="192" height="48" rx="6" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="360.0" y="68" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Spring Boot API</text>
+<rect x="528" y="32" width="152" height="64" rx="6" fill="#f6f8fa"/>
+<rect x="528" y="32" width="152" height="64" rx="6" fill="rgba(0,86,178,0.05)" stroke="rgba(0,86,178,0.50)" stroke-width="1" stroke-dasharray="4,4"/>
+<text x="604.0" y="60" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">호스트 Agent 없음</text>
+<text x="604.0" y="76" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">APM / JVM 지표 미사용</text>
+</svg>

@@ -4,7 +4,6 @@ date: 2026-03-20
 category: 개발기
 tags: [spring-boot, kotlin, domain-driven-design, reward, transaction, architecture, postgres]
 readTime: 14min
-mermaid: true
 image:
   path: /assets/images/posts/reward-responsibility/building-blocks.jpg
   thumbnail: /assets/images/posts/reward-responsibility/building-blocks.jpg
@@ -13,7 +12,7 @@ image:
 
 리워드 기능을 하나의 메서드에서 처리하면 처음에는 구현하기 쉽습니다. 하지만 생성, 상태 변경과 실제 반영이 한곳에 모이면 수정할 때마다 여러 책임을 함께 확인해야 합니다.
 
-이번 글에서는 리워드의 생성·수령·충전 책임을 나누고, 각 단계의 결과를 다음 유스케이스로 전달하는 구조를 정리해보겠습니다.
+이번 글에서는 리워드의 생성·수령·충전 책임을 나누고 각 단계의 결과를 다음 유스케이스로 전달하는 구조를 정리해보겠습니다.
 
 > 아래 도메인 이름, 상태, 처리 순서, 코드와 스키마는 설명을 위해 만든 예제입니다. 실제 보상 조건, 지급량, 수령 방식과 운영 규칙은 포함하지 않았습니다.
 {: .prompt-info }
@@ -43,57 +42,25 @@ image:
 | 상태 전이 | Entitlement Transition | 허용된 이전 상태에서만 다음 상태로 이동한다 |
 | 효과 반영 | Effect Application | 변경 결과와 근거 기록을 함께 남긴다 |
 
-~~~mermaid
-flowchart LR
-    S["사건"] --> C["권리 생성"]
-    C --> T["상태 전이"]
-    T --> E["효과 반영"]
-
-    C -. "생성 조건" .-> CI["중복 근거 확인"]
-    T -. "변경 조건" .-> TI["현재 상태 확인"]
-    E -. "반영 조건" .-> EI["원장과 결과 확인"]
-~~~
-
+![세 책임과 각각의 확인 조건](/assets/images/posts/reward-responsibility/diagrams/responsibility-map.svg){: .light }
+![세 책임과 각각의 확인 조건](/assets/images/posts/reward-responsibility/diagrams/responsibility-map-dark.svg){: .dark }
 화살표는 처리 순서보다 각 책임이 어떤 결과를 다음 책임에 넘기는지를 나타냅니다.
 
 ---
 
 ## 2. 권리와 자산 기록 나누기
 
-권리는 어떤 처리를 실행할 수 있는 근거이고, 자산 기록은 실제로 무엇이 변경됐는지 보여줍니다. 두 개념을 한 레코드에 넣으면 생성 여부와 반영 여부를 구분하기 어려워집니다.
+권리는 어떤 처리를 실행할 수 있는 근거이고 자산 기록은 실제로 무엇이 변경됐는지 보여줍니다. 두 개념을 한 레코드에 넣으면 생성 여부와 반영 여부를 구분하기 어려워집니다.
 
-~~~mermaid
-classDiagram
-    class ExampleEntitlement {
-        ExampleId id
-        SubjectId subjectId
-        EvidenceKey evidenceKey
-        ExampleState state
-    }
-
-    class ExampleEffect {
-        EffectId id
-        ExampleId entitlementId
-        EffectValue value
-    }
-
-    class ExampleLedger {
-        LedgerId id
-        ReferenceKey referenceKey
-        Delta delta
-    }
-
-    ExampleEntitlement --> ExampleEffect : 적용 근거
-    ExampleEffect --> ExampleLedger : 변화 기록
-~~~
-
+![권리·효과·원장 모델](/assets/images/posts/reward-responsibility/diagrams/entitlement-model.svg){: .light }
+![권리·효과·원장 모델](/assets/images/posts/reward-responsibility/diagrams/entitlement-model-dark.svg){: .dark }
 이제 각 데이터가 담당하는 내용을 나누어보겠습니다.
 
 1. 권리 레코드는 생성 근거와 생명주기를 설명합니다.
 2. 효과 객체는 무엇을 반영할지 표현합니다.
 3. 원장은 반영된 변화와 추적 근거를 남깁니다.
 
-이 그림이 물리 테이블 세 개를 반드시 만들어야 한다는 뜻은 아닙니다. 먼저 코드에서 책임을 나누고, 저장 구조는 함께 변경해야 하는 데이터와 조회 비용을 확인한 후 정할 수 있습니다.
+이 그림이 물리 테이블 세 개를 반드시 만들어야 한다는 뜻은 아닙니다. 먼저 코드에서 책임을 나누고 저장 구조는 함께 변경해야 하는 데이터와 조회 비용을 확인한 후 정할 수 있습니다.
 
 ---
 
@@ -126,20 +93,8 @@ interface ApplyEffect {
 
 여기서 <code>TransitionedEntitlement</code>는 “상태 전이에 성공한 대상”만 다음 책임으로 전달하기 위한 타입입니다.
 
-~~~mermaid
-flowchart TB
-    I["입력"] --> UC1["Create Entitlement"]
-    UC1 --> O1["CreatedEntitlement"]
-    O1 --> UC2["Transition Entitlement"]
-    UC2 --> O2["TransitionedEntitlement"]
-    O2 --> UC3["Apply Effect"]
-    UC3 --> O3["Effect Result"]
-
-    DB1[("권리 저장소")] --- UC1
-    DB1 --- UC2
-    DB2[("자산 저장소")] --- UC3
-~~~
-
+![유스케이스 사이의 결과 전달](/assets/images/posts/reward-responsibility/diagrams/usecase-chain.svg){: .light }
+![유스케이스 사이의 결과 전달](/assets/images/posts/reward-responsibility/diagrams/usecase-chain-dark.svg){: .dark }
 이 방식은 다음과 같은 실수를 줄여 줍니다.
 
 - 생성 서비스가 자산 저장소의 세부 구현까지 아는 문제
@@ -152,20 +107,8 @@ flowchart TB
 
 이제 수령 단계의 상태 변경을 살펴보겠습니다. 먼저 상태를 읽고 나중에 저장하면 두 요청이 같은 이전 상태를 확인할 수 있습니다.
 
-~~~mermaid
-sequenceDiagram
-    participant A as 요청 A
-    participant B as 요청 B
-    participant DB as 저장소
-
-    A->>DB: 상태 조회
-    B->>DB: 상태 조회
-    DB-->>A: 같은 이전 상태
-    DB-->>B: 같은 이전 상태
-    A->>DB: 상태 변경
-    B->>DB: 상태 변경 시도
-~~~
-
+![같은 이전 상태를 읽는 두 요청](/assets/images/posts/reward-responsibility/diagrams/double-read-race.svg){: .light }
+![같은 이전 상태를 읽는 두 요청](/assets/images/posts/reward-responsibility/diagrams/double-read-race-dark.svg){: .dark }
 이를 막기 위해 이전 상태를 UPDATE의 WHERE 조건에 포함할 수 있습니다.
 
 ~~~sql
@@ -185,14 +128,8 @@ WHERE id = :id
 
 값만 변경하면 최종 결과는 확인할 수 있지만 어떤 요청으로 변경됐는지 다시 찾기 어렵습니다. 그래서 변경 결과와 근거가 되는 원장 기록을 함께 다루어야 합니다.
 
-~~~mermaid
-flowchart LR
-    V["전이에 성공한 권리"] --> L["원장 항목 생성"]
-    L --> B["잔액 변화"]
-    B --> C["커밋"]
-    L -. "함께 처리할 범위" .- B
-~~~
-
+![원장과 잔액을 함께 처리하기](/assets/images/posts/reward-responsibility/diagrams/ledger-scope.svg){: .light }
+![원장과 잔액을 함께 처리하기](/assets/images/posts/reward-responsibility/diagrams/ledger-scope-dark.svg){: .dark }
 원장 모델은 다음처럼 최소한의 참조 키를 가질 수 있습니다.
 
 ~~~sql
@@ -216,18 +153,8 @@ CREATE TABLE example_asset_ledger (
 
 책임을 세 개로 나누었다고 트랜잭션도 반드시 세 개가 되는 것은 아닙니다. 실패했을 때 함께 되돌려야 하는 작업을 기준으로 트랜잭션 범위를 정했습니다.
 
-~~~mermaid
-flowchart TB
-    subgraph TX["원자적 처리 범위"]
-        T["허용된 상태 전이"]
-        L["원장 기록"]
-        B["잔액 반영"]
-        T --> L --> B
-    end
-
-    C["권리 생성"] -. "별도 트랜잭션 가능" .-> TX
-~~~
-
+![트랜잭션 범위](/assets/images/posts/reward-responsibility/diagrams/transaction-boundary.svg){: .light }
+![트랜잭션 범위](/assets/images/posts/reward-responsibility/diagrams/transaction-boundary-dark.svg){: .dark }
 트랜잭션 범위를 정할 때에는 다음 내용을 확인했습니다.
 
 - 상태는 바뀌었지만 자산은 반영되지 않아도 되는가?
@@ -243,22 +170,8 @@ flowchart TB
 
 헥사고날 구조에서 포트를 지나치게 세분화하면 이름만 다른 인터페이스가 늘어날 수 있습니다. 반대로 하나의 저장 포트에 모든 기능을 모으면 권리와 자산의 변경 이유가 다시 결합됩니다.
 
-~~~mermaid
-flowchart LR
-    APP["Application"]
-    EP["Entitlement Port"]
-    AP["Asset Port"]
-    OP["Operation Record Port"]
-
-    APP --> EP
-    APP --> AP
-    APP --> OP
-
-    EP --> EDB[("Persistence Adapter A")]
-    AP --> ADB[("Persistence Adapter B")]
-    OP --> ODB[("Persistence Adapter C")]
-~~~
-
+![저장 Port 나누기](/assets/images/posts/reward-responsibility/diagrams/storage-ports.svg){: .light }
+![저장 Port 나누기](/assets/images/posts/reward-responsibility/diagrams/storage-ports-dark.svg){: .dark }
 포트의 적절한 크기는 팀과 코드베이스에 따라 다릅니다. 다만 다음 기준은 비교적 재사용하기 좋았습니다.
 
 - 같은 조건을 확인하는 연산은 함께 둔다.
@@ -321,8 +234,6 @@ fun the_same_reference_does_not_create_duplicate_effects() {
 ---
 
 ## 10. 마무리
-
-이번 작업에서 확인한 내용을 정리하면 다음과 같습니다.
 
 1. 권리 생성, 상태 전이, 자산 반영은 서로 다른 책임으로 모델링할 수 있습니다.
 2. 책임 분리와 트랜잭션 분리는 같은 결정이 아닙니다.

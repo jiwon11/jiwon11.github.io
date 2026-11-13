@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 688 576" width="688" height="576" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="standard-sequence-dark-title standard-sequence-dark-desc">
+<title id="standard-sequence-dark-title">Standard 모드 호출 순서</title>
+<desc id="standard-sequence-dark-desc">사용자가 blog_start_draft로 초안을 요청하고, 상태 확인과 피드백 반영을 거쳐 blog_save로 마크다운 파일을 저장하기까지 MCP 서버와 Gemini API가 주고받는 순서.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="standard-sequence-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="standard-sequence-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="standard-sequence-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="standard-sequence-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="standard-sequence-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="standard-sequence-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="standard-sequence-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="standard-sequence-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="standard-sequence-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<line x1="96" y1="80" x2="96" y2="552" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="376" y1="80" x2="376" y2="552" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="600" y1="80" x2="600" y2="552" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<path d="M 100,124 L 372,124" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#standard-sequence-dark-arrow)"/>
+<path d="M 380,160 L 596,160" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#standard-sequence-dark-arrow)"/>
+<path d="M 596,196 L 380,196" fill="none" stroke="#a7a7a7" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#standard-sequence-dark-arrow)"/>
+<path d="M 372,232 L 100,232" fill="none" stroke="#a7a7a7" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#standard-sequence-dark-arrow)"/>
+<path d="M 100,268 L 372,268" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#standard-sequence-dark-arrow)"/>
+<path d="M 372,304 L 100,304" fill="none" stroke="#a7a7a7" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#standard-sequence-dark-arrow)"/>
+<path d="M 100,340 L 372,340" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#standard-sequence-dark-arrow)"/>
+<path d="M 380,376 L 596,376" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#standard-sequence-dark-arrow)"/>
+<path d="M 596,412 L 380,412" fill="none" stroke="#a7a7a7" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#standard-sequence-dark-arrow)"/>
+<path d="M 372,448 L 100,448" fill="none" stroke="#a7a7a7" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#standard-sequence-dark-arrow)"/>
+<path d="M 100,484 L 372,484" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#standard-sequence-dark-arrow)"/>
+<path d="M 372,520 L 100,520" fill="none" stroke="#8ab4f8" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#standard-sequence-dark-arrow-accent)"/>
+<rect x="118" y="102" width="236" height="16" rx="2" fill="#151515"/><text x="236" y="114" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">blog_start_draft(keyword, content)</text>
+<rect x="424" y="138" width="128" height="16" rx="2" fill="#151515"/><text x="488" y="150" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">블로그 초안 생성 요청</text>
+<rect x="458" y="174" width="60" height="16" rx="2" fill="#151515"/><text x="488" y="186" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">초안 반환</text>
+<rect x="196" y="210" width="80" height="16" rx="2" fill="#151515"/><text x="236" y="222" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">task_id 반환</text>
+<rect x="150" y="246" width="172" height="16" rx="2" fill="#151515"/><text x="236" y="258" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">blog_get_status(task_id)</text>
+<rect x="194" y="282" width="84" height="16" rx="2" fill="#151515"/><text x="236" y="294" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">진행률 + 결과</text>
+<rect x="104" y="318" width="264" height="16" rx="2" fill="#151515"/><text x="236" y="330" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">blog_apply_feedback(task_id, feedback)</text>
+<rect x="438" y="354" width="100" height="16" rx="2" fill="#151515"/><text x="488" y="366" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">피드백 반영 요청</text>
+<rect x="452" y="390" width="72" height="16" rx="2" fill="#151515"/><text x="488" y="402" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">수정된 초안</text>
+<rect x="206" y="426" width="60" height="16" rx="2" fill="#151515"/><text x="236" y="438" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">수정 완료</text>
+<rect x="170" y="462" width="132" height="16" rx="2" fill="#151515"/><text x="236" y="474" fill="#a7a7a7" font-size="11" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">blog_save(task_id)</text>
+<rect x="166" y="498" width="140" height="16" rx="2" fill="#151515"/><text x="236" y="510" fill="#8ab4f8" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">마크다운 파일 저장 완료</text>
+<rect x="48" y="40" width="96" height="40" rx="6" fill="#151515"/>
+<rect x="48" y="40" width="96" height="40" rx="6" fill="rgba(204,204,204,0.06)" stroke="#868686" stroke-width="1"/>
+<text x="96.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">사용자</text>
+<rect x="328" y="40" width="96" height="40" rx="6" fill="#151515"/>
+<rect x="328" y="40" width="96" height="40" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="376.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">MCP Server</text>
+<rect x="552" y="40" width="96" height="40" rx="6" fill="#151515"/>
+<rect x="552" y="40" width="96" height="40" rx="6" fill="rgba(204,204,204,0.03)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="600.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Gemini API</text>
+</svg>

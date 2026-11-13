@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 632 264" width="632" height="264" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="llm-client-port-title llm-client-port-desc">
+<title id="llm-client-port-title">외부 호출을 Port로 분리</title>
+<desc id="llm-client-port-desc">Use Case는 LLM Client Port에만 의존하고, WebClient Adapter가 이 Port를 구현해 External LLM API를 호출하는 구조.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="llm-client-port-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="llm-client-port-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="llm-client-port-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="llm-client-port-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="llm-client-port-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="llm-client-port-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="llm-client-port-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="llm-client-port-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="llm-client-port-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<path d="M 176,80 L 232,80" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#llm-client-port-arrow)"/>
+<path d="M 312,176 L 312,104" fill="none" stroke="#585858" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#llm-client-port-arrow)"/>
+<path d="M 392,200 L 440,200" fill="none" stroke="#0070cb" stroke-width="1.2" marker-end="url(#llm-client-port-arrow-link)"/>
+<rect x="320" y="134" width="60" height="12" rx="2" fill="#f6f8fa"/><text x="350" y="143" fill="#585858" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.06em">IMPLEMENTS</text>
+<rect x="40" y="56" width="136" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="40" y="56" width="136" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="108.0" y="84" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Use Case</text>
+<rect x="232" y="56" width="160" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="232" y="56" width="160" height="48" rx="6" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="312.0" y="84" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">LLM Client Port</text>
+<rect x="232" y="176" width="160" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="232" y="176" width="160" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="312.0" y="204" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">WebClient Adapter</text>
+<rect x="440" y="176" width="152" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="440" y="176" width="152" height="48" rx="6" fill="rgba(52,52,60,0.03)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="516.0" y="204" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">External LLM API</text>
+</svg>

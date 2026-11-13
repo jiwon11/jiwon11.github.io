@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 624 128" width="624" height="128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="timeout-phases-dark-title timeout-phases-dark-desc">
+<title id="timeout-phases-dark-title">단계별 타임아웃</title>
+<desc id="timeout-phases-dark-desc">HTTP 호출을 연결, 쓰기, 응답 대기, 읽기의 네 단계로 나눈 순서.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="timeout-phases-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="timeout-phases-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="timeout-phases-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="timeout-phases-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="timeout-phases-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="timeout-phases-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="timeout-phases-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="timeout-phases-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="timeout-phases-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<path d="M 152,64 L 184,64" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#timeout-phases-dark-arrow)"/>
+<path d="M 296,64 L 328,64" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#timeout-phases-dark-arrow)"/>
+<path d="M 440,64 L 472,64" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#timeout-phases-dark-arrow)"/>
+<rect x="40" y="40" width="112" height="48" rx="6" fill="#151515"/>
+<rect x="40" y="40" width="112" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="96.0" y="68" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Connect</text>
+<rect x="184" y="40" width="112" height="48" rx="6" fill="#151515"/>
+<rect x="184" y="40" width="112" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="240.0" y="68" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Write</text>
+<rect x="328" y="40" width="112" height="48" rx="6" fill="#151515"/>
+<rect x="328" y="40" width="112" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="384.0" y="68" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Response</text>
+<rect x="472" y="40" width="112" height="48" rx="6" fill="#151515"/>
+<rect x="472" y="40" width="112" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="528.0" y="68" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Read</text>
+</svg>

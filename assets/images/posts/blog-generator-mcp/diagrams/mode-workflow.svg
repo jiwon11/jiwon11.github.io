@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 832 808" width="832" height="808" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="mode-workflow-title mode-workflow-desc">
+<title id="mode-workflow-title">Standard·Pro 모드 작업 흐름</title>
+<desc id="mode-workflow-desc">다섯 가지 입력 유형이 Standard Mode(Gemini) 또는 Pro Mode(Claude Opus)의 도구 흐름을 거쳐, 피드백 반복 후 로컬 저장이나 GitHub 배포로 출력되는 흐름.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="mode-workflow-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="mode-workflow-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="mode-workflow-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="mode-workflow-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="mode-workflow-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="mode-workflow-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="mode-workflow-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="mode-workflow-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="mode-workflow-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<rect x="40" y="48" width="752" height="88" rx="8" fill="rgba(52,52,60,0.025)" stroke="rgba(52,52,60,0.18)" stroke-width="1"/><rect x="52" y="41" width="60" height="14" rx="2" fill="#f6f8fa"/><text x="82.0" y="52" fill="#757575" font-size="11" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">입력 유형</text>
+<rect x="40" y="160" width="368" height="448" rx="8" fill="rgba(52,52,60,0.025)" stroke="rgba(52,52,60,0.18)" stroke-width="1"/><rect x="280" y="153" width="116" height="14" rx="2" fill="#f6f8fa"/><text x="338.0" y="163" fill="#757575" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.14em">Standard Mode (Gemini)</text>
+<rect x="424" y="160" width="368" height="448" rx="8" fill="rgba(52,52,60,0.025)" stroke="rgba(52,52,60,0.18)" stroke-width="1"/><rect x="664" y="153" width="116" height="14" rx="2" fill="#f6f8fa"/><text x="722.0" y="163" fill="#757575" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.14em">Pro Mode (Claude Opus)</text>
+<rect x="160" y="680" width="512" height="88" rx="8" fill="rgba(52,52,60,0.025)" stroke="rgba(52,52,60,0.18)" stroke-width="1"/><rect x="172" y="673" width="36" height="14" rx="2" fill="#f6f8fa"/><text x="190.0" y="684" fill="#757575" font-size="11" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">출력</text>
+<path d="M 144,136 L 144,184" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 528,136 L 528,184" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 144,224 L 144,248" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 144,288 L 144,304" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 216,344 L 256,344" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 324,324 L 324,276 Q 324,268 316,268 L 232,268" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 144,384 L 144,424" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 144,464 L 144,488" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 144,528 L 144,552" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 528,224 L 528,248" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 528,288 L 528,304" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 600,344 L 632,344" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 708,324 L 708,276 Q 708,268 700,268 L 616,268" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 528,384 L 528,424" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 144,592 L 144,632 Q 144,640 152,640 L 412,640" fill="none" stroke="#585858" stroke-width="1.2"/>
+<path d="M 528,464 L 528,632 Q 528,640 520,640 L 420,640" fill="none" stroke="#585858" stroke-width="1.2"/>
+<path d="M 416,644 L 416,664" fill="none" stroke="#585858" stroke-width="1.2"/>
+<path d="M 416,664 L 304,664 Q 296,664 296,672 L 296,704" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<path d="M 416,664 L 528,664 Q 536,664 536,672 L 536,704" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#mode-workflow-arrow)"/>
+<rect x="224" y="326" width="24" height="12" rx="2" fill="#f6f8fa"/><text x="236" y="335" fill="#585858" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.06em">YES</text>
+<rect x="152" y="398" width="20" height="12" rx="2" fill="#f6f8fa"/><text x="162" y="407" fill="#585858" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.06em">NO</text>
+<rect x="604" y="326" width="24" height="12" rx="2" fill="#f6f8fa"/><text x="616" y="335" fill="#585858" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.06em">YES</text>
+<rect x="536" y="398" width="20" height="12" rx="2" fill="#f6f8fa"/><text x="546" y="407" fill="#585858" font-size="8" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle" letter-spacing="0.06em">NO</text>
+<rect x="56" y="72" width="136" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="56" y="72" width="136" height="48" rx="6" fill="rgba(52,52,60,0.06)" stroke="#757575" stroke-width="1"/>
+<text x="124.0" y="92" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">keyword</text>
+<text x="124.0" y="108" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">키워드/주제</text>
+<rect x="204" y="72" width="136" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="204" y="72" width="136" height="48" rx="6" fill="rgba(52,52,60,0.06)" stroke="#757575" stroke-width="1"/>
+<text x="272.0" y="92" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">code</text>
+<text x="272.0" y="108" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">코드 스니펫</text>
+<rect x="352" y="72" width="136" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="352" y="72" width="136" height="48" rx="6" fill="rgba(52,52,60,0.06)" stroke="#757575" stroke-width="1"/>
+<text x="420.0" y="92" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">memo</text>
+<text x="420.0" y="108" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">메모/노트</text>
+<rect x="500" y="72" width="136" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="500" y="72" width="136" height="48" rx="6" fill="rgba(52,52,60,0.06)" stroke="#757575" stroke-width="1"/>
+<text x="568.0" y="92" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">git_push</text>
+<text x="568.0" y="108" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Git 변경사항</text>
+<rect x="648" y="72" width="136" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="648" y="72" width="136" height="48" rx="6" fill="rgba(52,52,60,0.06)" stroke="#757575" stroke-width="1"/>
+<text x="716.0" y="92" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">notion</text>
+<text x="716.0" y="108" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Notion 페이지</text>
+<rect x="56" y="184" width="176" height="40" rx="6" fill="#f6f8fa"/>
+<rect x="56" y="184" width="176" height="40" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="144.0" y="208" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">blog_start_draft</text>
+<rect x="56" y="248" width="176" height="40" rx="6" fill="#f6f8fa"/>
+<rect x="56" y="248" width="176" height="40" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="144.0" y="272" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">blog_get_status</text>
+<polygon points="144.0,304 216,344.0 144.0,384 72,344.0" fill="#f6f8fa"/>
+<polygon points="144.0,304 216,344.0 144.0,384 72,344.0" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="144.0" y="348" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">피드백?</text>
+<rect x="256" y="324" width="136" height="40" rx="6" fill="#f6f8fa"/>
+<rect x="256" y="324" width="136" height="40" rx="6" fill="rgba(52,52,60,0.04)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="324.0" y="348" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">blog_apply_feedback</text>
+<rect x="56" y="424" width="176" height="40" rx="6" fill="#f6f8fa"/>
+<rect x="56" y="424" width="176" height="40" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="144.0" y="448" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">blog_start_review</text>
+<rect x="56" y="488" width="176" height="40" rx="6" fill="#f6f8fa"/>
+<rect x="56" y="488" width="176" height="40" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="144.0" y="512" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">blog_apply_review_feedback</text>
+<rect x="56" y="552" width="176" height="40" rx="6" fill="#f6f8fa"/>
+<rect x="56" y="552" width="176" height="40" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="144.0" y="576" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">blog_finalize_draft</text>
+<rect x="440" y="184" width="176" height="40" rx="6" fill="#f6f8fa"/>
+<rect x="440" y="184" width="176" height="40" rx="6" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="528.0" y="208" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">blog_start_draft_pro</text>
+<rect x="440" y="248" width="176" height="40" rx="6" fill="#f6f8fa"/>
+<rect x="440" y="248" width="176" height="40" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="528.0" y="272" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">blog_get_status</text>
+<polygon points="528.0,304 600,344.0 528.0,384 456,344.0" fill="#f6f8fa"/>
+<polygon points="528.0,304 600,344.0 528.0,384 456,344.0" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="528.0" y="348" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">피드백?</text>
+<rect x="632" y="324" width="152" height="40" rx="6" fill="#f6f8fa"/>
+<rect x="632" y="324" width="152" height="40" rx="6" fill="rgba(52,52,60,0.04)" stroke="rgba(52,52,60,0.30)" stroke-width="1"/>
+<text x="708.0" y="348" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">blog_apply_feedback_pro</text>
+<rect x="440" y="424" width="176" height="40" rx="6" fill="#f6f8fa"/>
+<rect x="440" y="424" width="176" height="40" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="528.0" y="448" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">blog_finalize_draft</text>
+<circle cx="416" cy="640" r="4" fill="#34343c"/>
+<rect x="192" y="704" width="208" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="192" y="704" width="208" height="48" rx="6" fill="rgba(52,52,60,0.05)" stroke="#585858" stroke-width="1"/>
+<text x="296.0" y="724" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">blog_save</text>
+<text x="296.0" y="740" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">로컬 저장</text>
+<rect x="432" y="704" width="208" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="432" y="704" width="208" height="48" rx="6" fill="rgba(52,52,60,0.05)" stroke="#585858" stroke-width="1"/>
+<text x="536.0" y="724" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">blog_deploy_github</text>
+<text x="536.0" y="740" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">GitHub 배포</text>
+</svg>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 720 432" width="720" height="432" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="idempotent-worker-dark-title idempotent-worker-dark-desc">
+<title id="idempotent-worker-dark-title">같은 작업 신호의 중복 처리</title>
+<desc id="idempotent-worker-dark-desc">Producer가 같은 작업 신호를 두 번 보내도 Worker가 작업 키로 조건부 기록해, 첫 처리만 성공하고 두 번째는 이미 처리됨으로 끝나는 순서.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="idempotent-worker-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="idempotent-worker-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="idempotent-worker-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="idempotent-worker-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="idempotent-worker-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="idempotent-worker-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="idempotent-worker-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="idempotent-worker-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="idempotent-worker-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<line x1="120" y1="80" x2="120" y2="408" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="360" y1="80" x2="360" y2="408" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="600" y1="80" x2="600" y2="408" stroke="rgba(204,204,204,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+<path d="M 124,128 L 356,128" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#idempotent-worker-dark-arrow)"/>
+<path d="M 124,176 L 356,176" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#idempotent-worker-dark-arrow)"/>
+<path d="M 364,224 L 596,224" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#idempotent-worker-dark-arrow)"/>
+<path d="M 596,272 L 364,272" fill="none" stroke="#a7a7a7" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#idempotent-worker-dark-arrow)"/>
+<path d="M 364,320 L 596,320" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#idempotent-worker-dark-arrow)"/>
+<path d="M 596,368 L 364,368" fill="none" stroke="#8ab4f8" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#idempotent-worker-dark-arrow-accent)"/>
+<rect x="196" y="106" width="88" height="16" rx="2" fill="#151515"/><text x="240" y="118" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">같은 작업 신호</text>
+<rect x="176" y="154" width="128" height="16" rx="2" fill="#151515"/><text x="240" y="166" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">같은 작업 신호 재전달</text>
+<rect x="416" y="202" width="128" height="16" rx="2" fill="#151515"/><text x="480" y="214" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">작업 키로 조건부 기록</text>
+<rect x="442" y="250" width="76" height="16" rx="2" fill="#151515"/><text x="480" y="262" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">첫 처리 성공</text>
+<rect x="402" y="298" width="156" height="16" rx="2" fill="#151515"/><text x="480" y="310" fill="#a7a7a7" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">같은 작업 키로 조건부 기록</text>
+<rect x="444" y="346" width="72" height="16" rx="2" fill="#151515"/><text x="480" y="358" fill="#8ab4f8" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">이미 처리됨</text>
+<rect x="72" y="40" width="96" height="40" rx="6" fill="#151515"/>
+<rect x="72" y="40" width="96" height="40" rx="6" fill="rgba(204,204,204,0.06)" stroke="#868686" stroke-width="1"/>
+<text x="120.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Producer</text>
+<rect x="312" y="40" width="96" height="40" rx="6" fill="#151515"/>
+<rect x="312" y="40" width="96" height="40" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="360.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Worker</text>
+<rect x="552" y="40" width="96" height="40" rx="6" fill="#151515"/>
+<rect x="552" y="40" width="96" height="40" rx="6" fill="rgba(204,204,204,0.05)" stroke="#a7a7a7" stroke-width="1"/>
+<text x="600.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">DB</text>
+</svg>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>단계별 타임아웃</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --paper: #f6f8fa; --ink: #34343c; --muted: #585858; }
+    body { font-family: 'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh;
+           display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 704px; width: 100%; }
+    .eyebrow { font-family: SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace; font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    h1 { font-family: 'Instrument Serif', 'Apple SD Gothic Neo', serif; font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+         letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Process · Diagram Design</p>
+    <h1>단계별 타임아웃</h1>
+<svg viewBox="0 0 624 128" width="624" height="128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="timeout-phases-title timeout-phases-desc">
+<title id="timeout-phases-title">단계별 타임아웃</title>
+<desc id="timeout-phases-desc">HTTP 호출을 연결, 쓰기, 응답 대기, 읽기의 네 단계로 나눈 순서.</desc>
+<defs>
+<marker id="timeout-phases-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="timeout-phases-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="timeout-phases-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="timeout-phases-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="timeout-phases-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="timeout-phases-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="timeout-phases-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="timeout-phases-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="timeout-phases-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<path d="M 152,64 L 184,64" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#timeout-phases-arrow)"/>
+<path d="M 296,64 L 328,64" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#timeout-phases-arrow)"/>
+<path d="M 440,64 L 472,64" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#timeout-phases-arrow)"/>
+<rect x="40" y="40" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="40" y="40" width="112" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="96.0" y="68" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Connect</text>
+<rect x="184" y="40" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="184" y="40" width="112" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="240.0" y="68" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Write</text>
+<rect x="328" y="40" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="328" y="40" width="112" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="384.0" y="68" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Response</text>
+<rect x="472" y="40" width="112" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="472" y="40" width="112" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="528.0" y="68" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Read</text>
+</svg>
+  </div>
+</body>
+</html>

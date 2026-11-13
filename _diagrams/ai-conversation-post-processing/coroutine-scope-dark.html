@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>애플리케이션이 관리하는 스코프</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --paper: #151515; --ink: #cccccc; --muted: #a7a7a7; }
+    body { font-family: 'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh;
+           display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 800px; width: 100%; }
+    .eyebrow { font-family: SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace; font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    h1 { font-family: 'Instrument Serif', 'Apple SD Gothic Neo', serif; font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+         letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Tree · Diagram Design</p>
+    <h1>애플리케이션이 관리하는 스코프</h1>
+<svg viewBox="0 0 720 368" width="720" height="368" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="coroutine-scope-dark-title coroutine-scope-dark-desc">
+<title id="coroutine-scope-dark-title">애플리케이션이 관리하는 스코프</title>
+<desc id="coroutine-scope-dark-desc">애플리케이션 스코프 아래에 이벤트별 Job이 있고 각 Job이 Task를 실행하며, 종료 신호가 스코프 전체에 전달되는 구조.</desc>
+<defs>
+<marker id="coroutine-scope-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="coroutine-scope-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="coroutine-scope-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="coroutine-scope-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="coroutine-scope-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="coroutine-scope-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="coroutine-scope-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="coroutine-scope-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="coroutine-scope-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<path d="M 560,80 L 488,80" fill="none" stroke="rgba(204,204,204,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#coroutine-scope-dark-arrow-soft)"/>
+<path d="M 360,104 L 360,136" fill="none" stroke="#a7a7a7" stroke-width="1.2"/>
+<path d="M 360,136 L 248,136 Q 240,136 240,144 L 240,168" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#coroutine-scope-dark-arrow)"/>
+<path d="M 360,136 L 472,136 Q 480,136 480,144 L 480,168" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#coroutine-scope-dark-arrow)"/>
+<path d="M 240,216 L 240,248" fill="none" stroke="#a7a7a7" stroke-width="1.2"/>
+<path d="M 240,248 L 176,248 Q 168,248 168,256 L 168,280" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#coroutine-scope-dark-arrow)"/>
+<path d="M 240,248 L 304,248 Q 312,248 312,256 L 312,280" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#coroutine-scope-dark-arrow)"/>
+<path d="M 480,216 L 480,280" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#coroutine-scope-dark-arrow)"/>
+<rect x="232" y="56" width="256" height="48" rx="6" fill="#151515"/>
+<rect x="232" y="56" width="256" height="48" rx="6" fill="rgba(138,180,248,0.12)" stroke="#8ab4f8" stroke-width="1.2"/>
+<text x="360.0" y="84" fill="#8ab4f8" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">애플리케이션이 관리하는 스코프</text>
+<rect x="560" y="56" width="120" height="48" rx="6" fill="#151515"/>
+<rect x="560" y="56" width="120" height="48" rx="6" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="620.0" y="84" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">종료 신호</text>
+<rect x="168" y="168" width="144" height="48" rx="6" fill="#151515"/>
+<rect x="168" y="168" width="144" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="240.0" y="196" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Event 1 Job</text>
+<rect x="408" y="168" width="144" height="48" rx="6" fill="#151515"/>
+<rect x="408" y="168" width="144" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="480.0" y="196" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Event 2 Job</text>
+<rect x="104" y="280" width="128" height="48" rx="6" fill="#151515"/>
+<rect x="104" y="280" width="128" height="48" rx="6" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="168.0" y="308" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Task A</text>
+<rect x="248" y="280" width="128" height="48" rx="6" fill="#151515"/>
+<rect x="248" y="280" width="128" height="48" rx="6" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="312.0" y="308" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Task B</text>
+<rect x="416" y="280" width="128" height="48" rx="6" fill="#151515"/>
+<rect x="416" y="280" width="128" height="48" rx="6" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="480.0" y="308" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Task A</text>
+</svg>
+  </div>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>세 책임과 각각의 확인 조건</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --paper: #151515; --ink: #cccccc; --muted: #a7a7a7; }
+    body { font-family: 'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh;
+           display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 768px; width: 100%; }
+    .eyebrow { font-family: SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace; font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    h1 { font-family: 'Instrument Serif', 'Apple SD Gothic Neo', serif; font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+         letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Data flow · Diagram Design</p>
+    <h1>세 책임과 각각의 확인 조건</h1>
+<svg viewBox="0 0 688 288" width="688" height="288" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="responsibility-map-dark-title responsibility-map-dark-desc">
+<title id="responsibility-map-dark-title">세 책임과 각각의 확인 조건</title>
+<desc id="responsibility-map-dark-desc">사건에서 권리 생성, 상태 전이, 효과 반영으로 이어지는 세 책임과, 각 책임이 확인하는 중복 근거·현재 상태·원장과 결과 조건.</desc>
+<defs>
+<marker id="responsibility-map-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="responsibility-map-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="responsibility-map-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="responsibility-map-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="responsibility-map-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="responsibility-map-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="responsibility-map-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="responsibility-map-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="responsibility-map-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<path d="M 168,64 L 200,64" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#responsibility-map-dark-arrow)"/>
+<path d="M 328,64 L 360,64" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#responsibility-map-dark-arrow)"/>
+<path d="M 488,64 L 520,64" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#responsibility-map-dark-arrow)"/>
+<path d="M 264,88 L 264,200" fill="none" stroke="rgba(204,204,204,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#responsibility-map-dark-arrow-soft)"/>
+<path d="M 424,88 L 424,200" fill="none" stroke="rgba(204,204,204,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#responsibility-map-dark-arrow-soft)"/>
+<path d="M 584,88 L 584,200" fill="none" stroke="rgba(204,204,204,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#responsibility-map-dark-arrow-soft)"/>
+<rect x="272" y="136" width="60" height="16" rx="2" fill="#151515"/><text x="302" y="148" fill="#868686" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">생성 조건</text>
+<rect x="432" y="136" width="60" height="16" rx="2" fill="#151515"/><text x="462" y="148" fill="#868686" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">변경 조건</text>
+<rect x="592" y="136" width="60" height="16" rx="2" fill="#151515"/><text x="622" y="148" fill="#868686" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">반영 조건</text>
+<rect x="40" y="40" width="128" height="48" rx="6" fill="#151515"/>
+<rect x="40" y="40" width="128" height="48" rx="6" fill="rgba(204,204,204,0.06)" stroke="#868686" stroke-width="1"/>
+<text x="104.0" y="68" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">사건</text>
+<rect x="200" y="40" width="128" height="48" rx="6" fill="#151515"/>
+<rect x="200" y="40" width="128" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="264.0" y="68" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">권리 생성</text>
+<rect x="360" y="40" width="128" height="48" rx="6" fill="#151515"/>
+<rect x="360" y="40" width="128" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="424.0" y="68" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">상태 전이</text>
+<rect x="520" y="40" width="128" height="48" rx="6" fill="#151515"/>
+<rect x="520" y="40" width="128" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="584.0" y="68" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">효과 반영</text>
+<rect x="200" y="200" width="128" height="48" rx="6" fill="#151515"/>
+<rect x="200" y="200" width="128" height="48" rx="6" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="264.0" y="228" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">중복 근거 확인</text>
+<rect x="360" y="200" width="128" height="48" rx="6" fill="#151515"/>
+<rect x="360" y="200" width="128" height="48" rx="6" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="424.0" y="228" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">현재 상태 확인</text>
+<rect x="520" y="200" width="128" height="48" rx="6" fill="#151515"/>
+<rect x="520" y="200" width="128" height="48" rx="6" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="584.0" y="228" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">원장과 결과 확인</text>
+</svg>
+  </div>
+</body>
+</html>

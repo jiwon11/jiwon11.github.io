@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 720 264" width="720" height="264" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="bulk-update-context-dark-title bulk-update-context-dark-desc">
+<title id="bulk-update-context-dark-title">벌크 UPDATE와 영속성 컨텍스트</title>
+<desc id="bulk-update-context-dark-desc">JPQL 벌크 UPDATE가 데이터베이스만 새 상태로 바꾸고, 영속성 컨텍스트에는 이전 상태가 남아 후속 조회가 혼란스러워질 수 있음을 보여 준다.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="bulk-update-context-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="bulk-update-context-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="bulk-update-context-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="bulk-update-context-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="bulk-update-context-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="bulk-update-context-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="bulk-update-context-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="bulk-update-context-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="bulk-update-context-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<path d="M 216,68 L 272,68" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#bulk-update-context-dark-arrow)"/>
+<path d="M 448,68 L 504,68" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#bulk-update-context-dark-arrow)"/>
+<path d="M 128,96 L 128,176" fill="none" stroke="rgba(204,204,204,0.40)" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#bulk-update-context-dark-arrow-soft)"/>
+<rect x="136" y="128" width="116" height="16" rx="2" fill="#151515"/><text x="194" y="140" fill="#868686" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">그대로 남을 수 있음</text>
+<rect x="40" y="40" width="176" height="56" rx="6" fill="#151515"/>
+<rect x="40" y="40" width="176" height="56" rx="6" fill="rgba(204,204,204,0.05)" stroke="#a7a7a7" stroke-width="1"/>
+<text x="128.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Persistence Context</text>
+<text x="128.0" y="80" fill="#868686" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">old state</text>
+<rect x="272" y="40" width="176" height="56" rx="6" fill="#151515"/>
+<rect x="272" y="40" width="176" height="56" rx="6" fill="rgba(138,180,248,0.12)" stroke="#8ab4f8" stroke-width="1.2"/>
+<text x="360.0" y="72" fill="#8ab4f8" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">JPQL Bulk UPDATE</text>
+<rect x="504" y="40" width="176" height="56" rx="6" fill="#151515"/>
+<rect x="504" y="40" width="176" height="56" rx="6" fill="rgba(204,204,204,0.05)" stroke="#a7a7a7" stroke-width="1"/>
+<text x="592.0" y="64" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Database</text>
+<text x="592.0" y="80" fill="#868686" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">new state</text>
+<rect x="40" y="176" width="176" height="48" rx="6" fill="#151515"/>
+<rect x="40" y="176" width="176" height="48" rx="6" fill="rgba(204,204,204,0.02)" stroke="rgba(204,204,204,0.35)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="128.0" y="204" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">후속 조회의 혼란</text>
+</svg>

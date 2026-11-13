@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 752 128" width="752" height="128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="side-effect-idempotency-title side-effect-idempotency-desc">
+<title id="side-effect-idempotency-title">후속 작업의 멱등성</title>
+<desc id="side-effect-idempotency-desc">조건부 상태 전이 뒤 부수효과 명령이 멱등 키 검증을 거쳐 원장 또는 결과로 저장되는 단계.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="side-effect-idempotency-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="side-effect-idempotency-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="side-effect-idempotency-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="side-effect-idempotency-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="side-effect-idempotency-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="side-effect-idempotency-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="side-effect-idempotency-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="side-effect-idempotency-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="side-effect-idempotency-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<path d="M 184,64 L 216,64" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#side-effect-idempotency-arrow)"/>
+<path d="M 360,64 L 392,64" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#side-effect-idempotency-arrow)"/>
+<path d="M 536,64 L 568,64" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#side-effect-idempotency-arrow)"/>
+<rect x="40" y="40" width="144" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="40" y="40" width="144" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="112.0" y="68" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">조건부 상태 전이</text>
+<rect x="216" y="40" width="144" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="216" y="40" width="144" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="288.0" y="68" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">부수효과 명령</text>
+<rect x="392" y="40" width="144" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="392" y="40" width="144" height="48" rx="6" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="464.0" y="68" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">멱등 키 검증</text>
+<rect x="568" y="40" width="144" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="568" y="40" width="144" height="48" rx="6" fill="rgba(52,52,60,0.05)" stroke="#585858" stroke-width="1"/>
+<text x="640.0" y="68" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">원장 또는 결과 저장</text>
+</svg>

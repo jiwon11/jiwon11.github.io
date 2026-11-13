@@ -4,7 +4,6 @@ date: 2026-06-29
 category: 개발기
 tags: [spring-boot, kotlin, coroutine, event-driven, openai, transaction, architecture]
 readTime: 15min
-mermaid: true
 image:
   path: /assets/images/posts/ai-conversation-post-processing/network-cables.jpg
   thumbnail: /assets/images/posts/ai-conversation-post-processing/network-cables.jpg
@@ -13,7 +12,7 @@ image:
 
 AI 요청을 처리한 후에는 추가 분석이나 데이터 갱신처럼 사용자 응답과 바로 관계없는 작업이 이어질 수 있습니다. 이 작업을 모두 같은 요청에서 실행하면 외부 API를 기다리는 시간까지 응답이 늦어집니다.
 
-이번 글에서는 요청 데이터가 저장된 후 코루틴으로 후처리를 실행하고, 외부 API 호출과 저장 트랜잭션을 나누는 과정을 정리해보겠습니다.
+이번 글에서는 요청 데이터가 저장된 후 코루틴으로 후처리를 실행하고 외부 API 호출과 저장 트랜잭션을 나누는 과정을 정리해보겠습니다.
 
 > 아래 이벤트 이름, Task A·B·C, 코드와 다이어그램은 설명을 위해 만든 예제입니다. 실제 실행 조건, 처리 순서, 프롬프트, 모델, 재시도와 운영 규칙은 포함하지 않았습니다.
 {: .prompt-info }
@@ -31,17 +30,9 @@ AI 요청을 처리한 후에는 추가 분석이나 데이터 갱신처럼 사�
 
 먼저 사용자에게 응답하기 전에 반드시 끝나야 하는 작업과 나중에 실행해도 되는 작업을 나누어보았습니다.
 
-~~~mermaid
-flowchart LR
-    R["사용자 요청"] --> K["요청 처리"]
-    K --> DB[("결과 커밋")]
-    DB --> H["응답 가능"]
-    DB -. "후처리" .-> A["Task A"]
-    DB -. "후처리" .-> B["Task B"]
-    DB -. "후처리" .-> C["Task C"]
-~~~
-
-요청 결과는 사용자에게 성공을 반환하기 전에 반드시 저장해야 합니다. 후처리 결과는 나중에 계산할 수 있지만, 늦어지거나 실패했을 때 확인할 방법이 필요합니다.
+![요청 안의 작업과 후처리](/assets/images/posts/ai-conversation-post-processing/diagrams/request-vs-post.svg){: .light }
+![요청 안의 작업과 후처리](/assets/images/posts/ai-conversation-post-processing/diagrams/request-vs-post-dark.svg){: .dark }
+요청 결과는 사용자에게 성공을 반환하기 전에 반드시 저장해야 합니다. 후처리 결과는 나중에 계산할 수 있지만 늦어지거나 실패했을 때 확인할 방법이 필요합니다.
 
 | 질문 | 요청 안에서 처리 | 후처리로 분리 |
 |---|---:|---:|
@@ -58,24 +49,8 @@ flowchart LR
 
 후처리를 요청 밖으로 옮기면 HTTP 응답은 빨라질 수 있습니다. 하지만 실행해야 할 작업과 실패 가능성이 사라지는 것은 아닙니다.
 
-~~~mermaid
-sequenceDiagram
-    actor U as 사용자
-    participant API as API
-    participant DB as DB
-    participant W as Worker
-    participant X as External API
-
-    U->>API: 요청
-    API->>DB: 요청 결과 저장
-    DB-->>API: COMMIT
-    API-->>U: 응답
-    API-->>W: 후처리 작업 신호
-    W->>X: 외부 연산
-    X-->>W: 결과
-    W->>DB: 후처리 결과 저장
-~~~
-
+![응답 후 실행되는 후처리](/assets/images/posts/ai-conversation-post-processing/diagrams/async-sequence.svg){: .light }
+![응답 후 실행되는 후처리](/assets/images/posts/ai-conversation-post-processing/diagrams/async-sequence-dark.svg){: .dark }
 이 구조가 유효하려면 다음 질문에 답해야 합니다.
 
 - 신호가 유실되면 어떻게 발견하는가?
@@ -84,7 +59,7 @@ sequenceDiagram
 - 후처리 결과는 언제까지 필요한가?
 - 운영자가 실패를 재처리할 수 있는가?
 
-따라서 “코루틴을 실행했다”는 사실만으로 신뢰할 수 있는 파이프라인이 완성되지는 않습니다. 전달 보장, 멱등성, 관측 가능성과 종료 절차까지 하나의 설계로 봐야 합니다.
+“코루틴을 실행했다”는 사실만으로 신뢰할 수 있는 파이프라인이 완성되지는 않습니다. 전달 보장, 멱등성, 관측 가능성과 종료 절차까지 하나의 설계로 봐야 합니다.
 
 ---
 
@@ -92,16 +67,8 @@ sequenceDiagram
 
 후처리에서 방금 저장한 데이터를 다시 조회한다면 저장 메서드가 호출된 시점에 바로 시작하면 안 됩니다. 트랜잭션이 정상적으로 커밋된 후에 작업을 시작해야 합니다.
 
-~~~mermaid
-stateDiagram-v2
-    [*] --> 처리중
-    처리중 --> 커밋완료: 저장 성공
-    처리중 --> 롤백완료: 저장 실패
-    커밋완료 --> 후처리시작
-    롤백완료 --> 종료
-    후처리시작 --> 종료
-~~~
-
+![커밋 결과에 따른 상태](/assets/images/posts/ai-conversation-post-processing/diagrams/commit-states.svg){: .light }
+![커밋 결과에 따른 상태](/assets/images/posts/ai-conversation-post-processing/diagrams/commit-states-dark.svg){: .dark }
 의사 코드로 표현하면 다음과 같습니다.
 
 ~~~kotlin
@@ -138,7 +105,7 @@ fun handle(command: ExampleCommand): ExampleResult =
 
 ## 4. 이벤트 전달 방식 비교하기
 
-그럼 커밋 후 작업을 어떤 방식으로 전달할지 비교해보겠습니다. 프로세스 메모리 안의 이벤트는 구현이 단순하지만, 커밋 직후 애플리케이션이 종료되면 신호가 사라질 수 있습니다. 작업 레코드나 메시지 브로커를 사용하면 구성은 복잡해지지만 다시 처리할 근거를 남길 수 있습니다.
+그럼 커밋 후 작업을 어떤 방식으로 전달할지 비교해보겠습니다. 프로세스 메모리 안의 이벤트는 구현이 단순하지만 커밋 직후 애플리케이션이 종료되면 신호가 사라질 수 있습니다. 작업 레코드나 메시지 브로커를 사용하면 구성은 복잡해지지만 다시 처리할 근거를 남길 수 있습니다.
 
 | 방식 | 장점 | 반드시 검토할 위험 |
 |---|---|---|
@@ -146,15 +113,8 @@ fun handle(command: ExampleCommand): ExampleResult =
 | DB 작업 레코드 | 요청 데이터와 작업 예약을 함께 커밋 가능 | 폴링, 정리, 중복 실행 관리 |
 | 메시지 브로커 | 소비자 분리와 확장에 유리 | 인프라 운영, 중복 전달, 순서 관리 |
 
-~~~mermaid
-flowchart TB
-    COMMIT["요청 데이터 커밋"]
-    COMMIT --> M{"필요한 전달 보장"}
-    M -->|"프로세스 범위로 충분"| MEM["인메모리 실행"]
-    M -->|"복구 가능한 예약 필요"| OUT["작업 레코드·아웃박스"]
-    M -->|"독립 소비자·확장 필요"| MQ["메시지 브로커"]
-~~~
-
+![필요한 전달 보장에 따른 선택](/assets/images/posts/ai-conversation-post-processing/diagrams/delivery-choice.svg){: .light }
+![필요한 전달 보장에 따른 선택](/assets/images/posts/ai-conversation-post-processing/diagrams/delivery-choice-dark.svg){: .dark }
 어느 방식이 맞는지는 작업의 중요도와 허용 가능한 지연에 따라 달라집니다.
 
 ---
@@ -163,22 +123,9 @@ flowchart TB
 
 외부 AI API는 응답 시간이 일정하지 않고 타임아웃이나 일시 오류가 발생할 수 있습니다. 이 호출을 DB 트랜잭션 안에서 실행하면 응답을 기다리는 동안 커넥션과 잠금을 계속 사용하게 됩니다.
 
-~~~mermaid
-flowchart LR
-    subgraph risky["긴 트랜잭션"]
-        T1["BEGIN"] --> Q1["데이터 조회"]
-        Q1 --> X1["외부 API 대기"]
-        X1 --> S1["결과 저장"]
-        S1 --> C1["COMMIT"]
-    end
-
-    subgraph separated["분리된 경계"]
-        Q2["필요 데이터 조회"] --> X2["외부 API 호출"]
-        X2 --> T2["짧은 저장 트랜잭션"]
-    end
-~~~
-
-코드는 다음과 같이 외부 호출과 저장을 나눌 수 있습니다.
+![외부 API 대기와 트랜잭션 경계](/assets/images/posts/ai-conversation-post-processing/diagrams/transaction-split.svg){: .light }
+![외부 API 대기와 트랜잭션 경계](/assets/images/posts/ai-conversation-post-processing/diagrams/transaction-split-dark.svg){: .dark }
+외부 호출과 저장은 다음 코드처럼 나눌 수 있습니다.
 
 ~~~kotlin
 suspend fun runExampleTask(id: ExampleRecordId) {
@@ -202,21 +149,8 @@ suspend fun runExampleTask(id: ExampleRecordId) {
 
 후처리 작업을 모두 병렬로 실행할 수 있는 것은 아닙니다. 먼저 각 작업이 어떤 결과를 사용하는지 그림으로 정리해보았습니다.
 
-~~~mermaid
-flowchart LR
-    E["이벤트"]
-    E --> A["Task A"]
-    E --> B["Task B"]
-    A --> C["Task C"]
-    B --> C
-    E --> D["Task D"]
-
-    style A fill:#e3f2fd,stroke:#1565c0
-    style B fill:#e3f2fd,stroke:#1565c0
-    style C fill:#fff8e1,stroke:#f9a825
-    style D fill:#e8f5e9,stroke:#2e7d32
-~~~
-
+![후처리 작업의 의존 관계](/assets/images/posts/ai-conversation-post-processing/diagrams/task-dependencies.svg){: .light }
+![후처리 작업의 의존 관계](/assets/images/posts/ai-conversation-post-processing/diagrams/task-dependencies-dark.svg){: .dark }
 | 관계 | 실행 방법 예시 |
 |---|---|
 | 서로 입력과 출력이 독립 | 제한된 동시성으로 병렬 실행 |
@@ -230,20 +164,10 @@ flowchart LR
 
 ## 7. 코루틴 스코프 정하기
 
-코루틴을 사용하기 전에 작업을 어느 스코프에서 실행할지 정해야 합니다. 요청 스코프에서 시작한 작업은 요청이 끝날 때 취소될 수 있고, 애플리케이션 스코프에서 실행한 작업은 종료 시점을 직접 관리해야 합니다.
+코루틴을 사용하기 전에 작업을 어느 스코프에서 실행할지 정해야 합니다. 요청 스코프에서 시작한 작업은 요청이 끝날 때 취소될 수 있고 애플리케이션 스코프에서 실행한 작업은 종료 시점을 직접 관리해야 합니다.
 
-~~~mermaid
-flowchart TB
-    S["애플리케이션이 관리하는 스코프"]
-    S --> J1["Event 1 Job"]
-    S --> J2["Event 2 Job"]
-    J1 --> A1["Task A"]
-    J1 --> B1["Task B"]
-    J2 --> A2["Task A"]
-
-    STOP["종료 신호"] -.-> S
-~~~
-
+![애플리케이션이 관리하는 스코프](/assets/images/posts/ai-conversation-post-processing/diagrams/coroutine-scope.svg){: .light }
+![애플리케이션이 관리하는 스코프](/assets/images/posts/ai-conversation-post-processing/diagrams/coroutine-scope-dark.svg){: .dark }
 검토할 항목은 다음과 같습니다.
 
 - 요청 스코프와 애플리케이션 스코프 중 누가 작업을 소유하는가?
@@ -275,21 +199,9 @@ suspend fun processExample(event: PostProcessRequested) =
 
 이벤트나 작업 신호는 같은 내용이 두 번 전달될 수 있습니다. 그래서 같은 작업인지 확인할 수 있는 키를 함께 저장해야 합니다.
 
-~~~mermaid
-sequenceDiagram
-    participant P as Producer
-    participant W as Worker
-    participant DB as DB
-
-    P->>W: 같은 작업 신호
-    P->>W: 같은 작업 신호 재전달
-    W->>DB: 작업 키로 조건부 기록
-    DB-->>W: 첫 처리 성공
-    W->>DB: 같은 작업 키로 조건부 기록
-    DB-->>W: 이미 처리됨
-~~~
-
-멱등성 키는 이벤트 식별자, 원본 레코드 버전, 작업 종류의 조합 등으로 만들 수 있습니다. 중요한 것은 재시도 때 같은 작업임을 판별할 수 있어야 한다는 점입니다.
+![같은 작업 신호의 중복 처리](/assets/images/posts/ai-conversation-post-processing/diagrams/idempotent-worker.svg){: .light }
+![같은 작업 신호의 중복 처리](/assets/images/posts/ai-conversation-post-processing/diagrams/idempotent-worker-dark.svg){: .dark }
+멱등성 키는 이벤트 식별자, 원본 레코드 버전, 작업 종류의 조합 등으로 만들 수 있습니다. 재시도할 때 같은 작업인지 판별할 수 있어야 합니다.
 
 ~~~sql
 CREATE TABLE example_async_operation (
@@ -317,17 +229,8 @@ CREATE TABLE example_async_operation (
 | 사용자 영향 | 결과 지연을 사용자에게 보여줘야 하는가? |
 | 운영 대응 | 자동 재처리와 수동 복구의 경계는 어디인가? |
 
-~~~mermaid
-flowchart TD
-    F["작업 실패"] --> C{"분류"}
-    C -->|"일시적 가능성"| R["제한된 재시도"]
-    C -->|"입력·규칙 오류"| Q["격리 및 원인 기록"]
-    C -->|"알 수 없음"| O["관측 후 운영 판단"]
-    R --> D{"재시도 예산 소진?"}
-    D -->|"아니오"| R
-    D -->|"예"| Q
-~~~
-
+![작업 실패 분류](/assets/images/posts/ai-conversation-post-processing/diagrams/failure-handling.svg){: .light }
+![작업 실패 분류](/assets/images/posts/ai-conversation-post-processing/diagrams/failure-handling-dark.svg){: .dark }
 재시도 횟수, 간격, 격리 저장 기간 같은 값은 시스템 용량과 작업의 중요도에 맞춰 정해야 합니다.
 
 ---
@@ -336,20 +239,8 @@ flowchart TD
 
 사용자가 이미 성공 응답을 받은 뒤에는 후처리 실패가 HTTP 오류로 나타나지 않습니다. 별도의 로그와 메트릭이 없으면 작업이 누락돼도 확인하기 어렵습니다.
 
-~~~mermaid
-flowchart LR
-    E["작업 신호"] --> Q["대기"]
-    Q --> X["실행"]
-    X --> S["성공"]
-    X --> F["실패"]
-    F --> R["재처리 대기"]
-
-    Q -.-> M["메트릭"]
-    X -.-> L["구조화 로그"]
-    F -.-> A["알림"]
-    R -.-> D["운영 화면"]
-~~~
-
+![후처리 상태와 관측 신호](/assets/images/posts/ai-conversation-post-processing/diagrams/post-observability.svg){: .light }
+![후처리 상태와 관측 신호](/assets/images/posts/ai-conversation-post-processing/diagrams/post-observability-dark.svg){: .dark }
 후처리 상태는 다음과 같은 지표로 확인할 수 있습니다.
 
 - 큐 또는 작업 레코드의 대기 시간
@@ -383,8 +274,6 @@ flowchart LR
 
 ## 12. 마무리
 
-이번 작업에서 확인한 내용을 정리하면 다음과 같습니다.
-
 1. 요청 결과와 후처리 결과의 완료 조건을 먼저 구분합니다.
 2. 후처리는 요청 데이터가 커밋된 뒤 시작합니다.
 3. 커밋 후 실행과 내구성 있는 전달을 같은 것으로 보지 않습니다.
@@ -393,4 +282,4 @@ flowchart LR
 6. 중복 전달을 전제로 멱등성 키와 상태 기록을 설계합니다.
 7. 응답 이후의 실패를 발견할 메트릭과 재처리 경로를 준비합니다.
 
-이번 글에서는 AI 요청의 저장과 후처리를 나누고, 커밋 시점, 외부 API, 코루틴 스코프, 중복 실행과 실패 기록을 차례로 살펴보았습니다. 코루틴으로 요청을 빠르게 반환하는 것뿐 아니라, 요청 밖으로 옮긴 작업을 다시 확인하고 처리할 수 있게 만드는 과정이 함께 필요했습니다.
+이번 글에서는 AI 요청의 저장과 후처리를 나누고 커밋 시점, 외부 API, 코루틴 스코프, 중복 실행과 실패 기록을 차례로 살펴보았습니다. 코루틴으로 요청을 빠르게 반환하는 것뿐 아니라, 요청 밖으로 옮긴 작업을 다시 확인하고 처리할 수 있게 만드는 과정이 함께 필요했습니다.

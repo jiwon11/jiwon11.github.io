@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>저장 Port 나누기</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --paper: #f6f8fa; --ink: #34343c; --muted: #585858; }
+    body { font-family: 'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh;
+           display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 800px; width: 100%; }
+    .eyebrow { font-family: SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace; font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    h1 { font-family: 'Instrument Serif', 'Apple SD Gothic Neo', serif; font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+         letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · Diagram Design</p>
+    <h1>저장 Port 나누기</h1>
+<svg viewBox="0 0 720 288" width="720" height="288" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="storage-ports-title storage-ports-desc">
+<title id="storage-ports-title">저장 Port 나누기</title>
+<desc id="storage-ports-desc">Application이 Entitlement, Asset, Operation Record 세 Port에 의존하고, 각 Port는 별도의 Persistence Adapter로 구현되는 구조.</desc>
+<defs>
+<marker id="storage-ports-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="storage-ports-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="storage-ports-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="storage-ports-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="storage-ports-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="storage-ports-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="storage-ports-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="storage-ports-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="storage-ports-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<path d="M 176,140 L 196,140 Q 204,140 204,132 L 204,88 Q 204,80 212,80 L 232,80" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#storage-ports-arrow)"/>
+<path d="M 176,152 L 232,152" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#storage-ports-arrow)"/>
+<path d="M 176,164 L 196,164 Q 204,164 204,172 L 204,216 Q 204,224 212,224 L 232,224" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#storage-ports-arrow)"/>
+<path d="M 408,80 L 480,80" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#storage-ports-arrow)"/>
+<path d="M 408,152 L 480,152" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#storage-ports-arrow)"/>
+<path d="M 408,224 L 480,224" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#storage-ports-arrow)"/>
+<rect x="40" y="128" width="136" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="40" y="128" width="136" height="48" rx="6" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="108.0" y="156" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Application</text>
+<rect x="232" y="56" width="176" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="232" y="56" width="176" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="320.0" y="84" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Entitlement Port</text>
+<rect x="480" y="56" width="200" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="480" y="56" width="200" height="48" rx="6" fill="rgba(52,52,60,0.05)" stroke="#585858" stroke-width="1"/>
+<text x="580.0" y="84" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Persistence Adapter A</text>
+<rect x="232" y="128" width="176" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="232" y="128" width="176" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="320.0" y="156" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Asset Port</text>
+<rect x="480" y="128" width="200" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="480" y="128" width="200" height="48" rx="6" fill="rgba(52,52,60,0.05)" stroke="#585858" stroke-width="1"/>
+<text x="580.0" y="156" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Persistence Adapter B</text>
+<rect x="232" y="200" width="176" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="232" y="200" width="176" height="48" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="320.0" y="228" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Operation Record Port</text>
+<rect x="480" y="200" width="200" height="48" rx="6" fill="#f6f8fa"/>
+<rect x="480" y="200" width="200" height="48" rx="6" fill="rgba(52,52,60,0.05)" stroke="#585858" stroke-width="1"/>
+<text x="580.0" y="228" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Persistence Adapter C</text>
+</svg>
+  </div>
+</body>
+</html>

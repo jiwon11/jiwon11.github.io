@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 776 432" width="776" height="432" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="redirect-ssrf-guard-title redirect-ssrf-guard-desc">
+<title id="redirect-ssrf-guard-title">리다이렉트도 새로운 요청이다</title>
+<desc id="redirect-ssrf-guard-desc">최초 URL만 검증하고 자동 리다이렉트를 따르면 내부 자원에 접근할 수 있지만, 자동 리다이렉트를 끄고 홉마다 재검증하면 요청을 차단할 수 있다.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="redirect-ssrf-guard-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#585858"/></marker>
+<marker id="redirect-ssrf-guard-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#585858"/></marker>
+<marker id="redirect-ssrf-guard-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0056b2"/></marker>
+<marker id="redirect-ssrf-guard-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0056b2"/></marker>
+<marker id="redirect-ssrf-guard-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0070cb"/></marker>
+<marker id="redirect-ssrf-guard-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#0070cb"/></marker>
+<marker id="redirect-ssrf-guard-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="redirect-ssrf-guard-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(52,52,60,0.40)"/></marker>
+<marker id="redirect-ssrf-guard-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#585858" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f6f8fa"/>
+<rect x="40" y="56" width="696" height="112" rx="8" fill="rgba(52,52,60,0.025)" stroke="rgba(52,52,60,0.18)" stroke-width="1"/><rect x="52" y="49" width="188" height="14" rx="2" fill="#f6f8fa"/><text x="146.0" y="60" fill="#757575" font-size="11" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">최초 URL만 검증 + 자동 리다이렉트</text>
+<rect x="40" y="216" width="696" height="112" rx="8" fill="rgba(52,52,60,0.025)" stroke="rgba(52,52,60,0.18)" stroke-width="1"/><rect x="52" y="209" width="196" height="14" rx="2" fill="#f6f8fa"/><text x="150.0" y="220" fill="#757575" font-size="11" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">자동 리다이렉트 OFF + 홉마다 재검증</text>
+<path d="M 196,112 L 236,112" fill="none" stroke="#0056b2" stroke-width="1.4" marker-end="url(#redirect-ssrf-guard-arrow-accent)"/>
+<path d="M 376,112 L 596,112" fill="none" stroke="#0056b2" stroke-width="1.4" marker-end="url(#redirect-ssrf-guard-arrow-accent)"/>
+<path d="M 196,272 L 236,272" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#redirect-ssrf-guard-arrow)"/>
+<path d="M 376,272 L 416,272" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#redirect-ssrf-guard-arrow)"/>
+<path d="M 556,272 L 596,272" fill="none" stroke="#585858" stroke-width="1.2" marker-end="url(#redirect-ssrf-guard-arrow)"/>
+<rect x="56" y="76" width="140" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="56" y="76" width="140" height="72" rx="6" fill="rgba(52,52,60,0.06)" stroke="#757575" stroke-width="1"/>
+<text x="126.0" y="108" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">공개 URL</text>
+<text x="126.0" y="124" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Guard 통과</text>
+<rect x="236" y="76" width="140" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="236" y="76" width="140" height="72" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="306.0" y="108" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">302 Location</text>
+<text x="306.0" y="124" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">내부 주소로 변경</text>
+<rect x="596" y="76" width="124" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="596" y="76" width="124" height="72" rx="6" fill="rgba(0,86,178,0.05)" stroke="rgba(0,86,178,0.50)" stroke-width="1" stroke-dasharray="4,4"/>
+<text x="658.0" y="108" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">내부 자원 접근</text>
+<text x="658.0" y="124" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">SSRF 우회 위험</text>
+<rect x="56" y="236" width="140" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="56" y="236" width="140" height="72" rx="6" fill="rgba(52,52,60,0.06)" stroke="#757575" stroke-width="1"/>
+<text x="126.0" y="268" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">공개 URL</text>
+<text x="126.0" y="284" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">1차 Guard</text>
+<rect x="236" y="236" width="140" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="236" y="236" width="140" height="72" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="306.0" y="268" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">302 수신</text>
+<text x="306.0" y="284" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Location 직접 해석</text>
+<rect x="416" y="236" width="140" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="416" y="236" width="140" height="72" rx="6" fill="#ffffff" stroke="#34343c" stroke-width="1"/>
+<text x="486.0" y="268" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">목적지 재검증</text>
+<text x="486.0" y="284" fill="#757575" font-size="11" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">2차 Guard</text>
+<rect x="596" y="236" width="124" height="72" rx="6" fill="#f6f8fa"/>
+<rect x="596" y="236" width="124" height="72" rx="6" fill="rgba(0,86,178,0.08)" stroke="#0056b2" stroke-width="1.2"/>
+<text x="658.0" y="268" fill="#0056b2" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">요청 차단</text>
+<text x="658.0" y="284" fill="#757575" font-size="10" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Noto Sans Mono CJK KR', monospace" text-anchor="middle">invalid_url</text>
+<text x="388" y="372" fill="#34343c" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">구현 원칙</text>
+<text x="388" y="392" fill="#585858" font-size="12" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">Location을 URI.resolve로 정규화하고 최대 5회까지만 추적한다</text>
+</svg>

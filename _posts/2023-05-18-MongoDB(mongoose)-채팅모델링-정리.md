@@ -16,7 +16,7 @@ author: NOWIL
 
 이전 프로젝트에서 코치와 사용자간의 1대1 채팅을 구성하였습니다. 코치의 역할과 사용자의 역할이 분명하게 분리되어 있습니다. 따라서 저희는 코치와 사용자의 컬렉션을 분리하여 모델링을 하였습니다.
 
-이로 인해, 채팅의 발송자를 필드에 추가하기 위해선 하나의 컬렉션의 필드에서 여러 컬렉션의 references를 가져야합니다. 또한 채팅을 보낸 유저의 role이 코치냐 사용자냐에 상관없이 sender로 똑같아야 합니다. 이 문제를 해결하기 위한 방법을 정리하였습니다.
+그래서 채팅 발송자를 필드에 추가하려면 한 컬렉션의 필드가 여러 컬렉션을 references로 가리켜야 합니다. 또한 채팅을 보낸 유저의 role이 코치냐 사용자냐에 상관없이 sender로 똑같아야 합니다. 이 문제를 해결하기 위한 방법을 정리하였습니다.
 
 # Mongoose ‘refPath’
 
@@ -36,7 +36,7 @@ author: NOWIL
 
 [Mongoose가 'undefined'를 처리하는 방식에 대해](https://blog.ull.im/engineering/2019/03/22/mongooses-undefined-handling.html)
 
-> **[mongoose](https://mongoosejs.com/)를 사용하면서 특정 필드의 값이 채워지지 않은채로 입력값이 들어오는 경우 `null` 필드가 만들어질 수 있다**
+> **[mongoose](https://mongoosejs.com/)를 사용하면서 특정 필드의 값이 채워지지 않은채로 입력값이 들어오는 경우 `null` 필드가 만들어질 수 있다**
 
 # \$lookup과 \$project Stage 활용
 
@@ -90,7 +90,7 @@ db.orders.aggregate([
 }
 ```
 
-우리는 \$lookup stage를 통해 사용자와 코치의 컬렉션을 각각 `sender_user` ,`sender_coach` 필드에 결합하였습니다. 그리고 각각의 필드는 배열로 결합되기 때문에 $project stage에서 원활하게 사용하기 위해 \$unwind stage를 사용합니다. 그리고 \$isNull stage를 사용하기 위해 \$unwind stage의 `preserveNullAndEmptyArrays` 옵션을 `true`로 설정합니다.
+\$lookup stage로 사용자와 코치의 컬렉션을 각각 `sender_user` ,`sender_coach` 필드에 결합하였습니다. 그리고 각각의 필드는 배열로 결합되기 때문에 $project stage에서 원활하게 사용하기 위해 \$unwind stage를 사용합니다. 그리고 \$isNull stage를 사용하기 위해 \$unwind stage의 `preserveNullAndEmptyArrays` 옵션을 `true`로 설정합니다.
 
 > Deconstructs an array field from the input documents to output a document for each element.
 > (입력 문서에서 배열 필드를 분해하여 각 요소에 대한 문서를 출력합니다.)
@@ -100,7 +100,7 @@ db.orders.aggregate([
 
 그리고 \$unwind stage가 반드시 \$lookup stage 뒤에 정의되어야 합니다.
 
-> In the `db.collection.aggregate()` method and `db.aggregate()` method, pipeline stages appear in an array. **Documents pass through the stages in sequence.**
+> In the `db.collection.aggregate()` method and `db.aggregate()` method, pipeline stages appear in an array. **Documents pass through the stages in sequence.**
 > (db.collection.aggregate() 메서드 및 db.aggregate() 메서드에서 파이프라인 단계는 배열에 나타납니다. 문서는 순서대로 단계를 거칩니다.)
 
 - 참고 : mongodb 공식문서

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 568 368" width="568" height="368" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="v5-roadmap-dark-title v5-roadmap-dark-desc">
+<title id="v5-roadmap-dark-title">v5.0 계획</title>
+<desc id="v5-roadmap-dark-desc">현재 v4.1에서 v5.0으로 가며 다중 AI 모델 통합, 이미지 자동 생성, 시리즈 글 관리, SEO 자동 최적화, 다국어 지원을 계획한 구조.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="v5-roadmap-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="v5-roadmap-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="v5-roadmap-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="v5-roadmap-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="v5-roadmap-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="v5-roadmap-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="v5-roadmap-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="v5-roadmap-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="v5-roadmap-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<path d="M 160,184 L 192,184" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#v5-roadmap-dark-arrow)"/>
+<path d="M 312,184 L 332,184" fill="none" stroke="#a7a7a7" stroke-width="1.2"/>
+<path d="M 332,184 L 332,72 Q 332,64 340,64 L 352,64" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#v5-roadmap-dark-arrow)"/>
+<path d="M 332,184 L 332,132 Q 332,124 340,124 L 352,124" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#v5-roadmap-dark-arrow)"/>
+<path d="M 332,184 L 352,184" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#v5-roadmap-dark-arrow)"/>
+<path d="M 332,184 L 332,236 Q 332,244 340,244 L 352,244" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#v5-roadmap-dark-arrow)"/>
+<path d="M 332,184 L 332,296 Q 332,304 340,304 L 352,304" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#v5-roadmap-dark-arrow)"/>
+<rect x="40" y="160" width="120" height="48" rx="6" fill="#151515"/>
+<rect x="40" y="160" width="120" height="48" rx="6" fill="rgba(204,204,204,0.04)" stroke="rgba(204,204,204,0.30)" stroke-width="1"/>
+<text x="100.0" y="188" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">현재 v4.1</text>
+<rect x="192" y="160" width="120" height="48" rx="6" fill="#151515"/>
+<rect x="192" y="160" width="120" height="48" rx="6" fill="rgba(138,180,248,0.12)" stroke="#8ab4f8" stroke-width="1.2"/>
+<text x="252.0" y="188" fill="#8ab4f8" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">v5.0 계획</text>
+<rect x="352" y="40" width="176" height="48" rx="6" fill="#151515"/>
+<rect x="352" y="40" width="176" height="48" rx="6" fill="rgba(204,204,204,0.02)" stroke="rgba(204,204,204,0.35)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="440.0" y="68" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">다중 AI 모델 통합</text>
+<rect x="352" y="100" width="176" height="48" rx="6" fill="#151515"/>
+<rect x="352" y="100" width="176" height="48" rx="6" fill="rgba(204,204,204,0.02)" stroke="rgba(204,204,204,0.35)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="440.0" y="128" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">이미지 자동 생성</text>
+<rect x="352" y="160" width="176" height="48" rx="6" fill="#151515"/>
+<rect x="352" y="160" width="176" height="48" rx="6" fill="rgba(204,204,204,0.02)" stroke="rgba(204,204,204,0.35)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="440.0" y="188" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">시리즈 글 관리</text>
+<rect x="352" y="220" width="176" height="48" rx="6" fill="#151515"/>
+<rect x="352" y="220" width="176" height="48" rx="6" fill="rgba(204,204,204,0.02)" stroke="rgba(204,204,204,0.35)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="440.0" y="248" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">SEO 자동 최적화</text>
+<rect x="352" y="280" width="176" height="48" rx="6" fill="#151515"/>
+<rect x="352" y="280" width="176" height="48" rx="6" fill="rgba(204,204,204,0.02)" stroke="rgba(204,204,204,0.35)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="440.0" y="308" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">다국어 지원</text>
+</svg>

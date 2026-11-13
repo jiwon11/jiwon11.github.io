@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 752 152" width="752" height="152" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ledger-scope-dark-title ledger-scope-dark-desc">
+<title id="ledger-scope-dark-title">원장과 잔액을 함께 처리하기</title>
+<desc id="ledger-scope-dark-desc">전이에 성공한 권리에서 원장 항목 생성과 잔액 변화를 한 범위로 묶어 처리한 뒤 커밋하는 단계.</desc>
+<defs>
+<style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Source+Sans+Pro:wght@400;600;700&amp;display=swap');</style>
+<marker id="ledger-scope-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a7a7a7"/></marker>
+<marker id="ledger-scope-dark-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#a7a7a7"/></marker>
+<marker id="ledger-scope-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8ab4f8"/></marker>
+<marker id="ledger-scope-dark-arrow-accent-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#8ab4f8"/></marker>
+<marker id="ledger-scope-dark-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#74b2f3"/></marker>
+<marker id="ledger-scope-dark-arrow-link-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#74b2f3"/></marker>
+<marker id="ledger-scope-dark-arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="ledger-scope-dark-arrow-soft-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="rgba(204,204,204,0.40)"/></marker>
+<marker id="ledger-scope-dark-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#a7a7a7" stroke-width="1.2"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#151515"/>
+<rect x="200" y="40" width="352" height="80" rx="8" fill="rgba(204,204,204,0.025)" stroke="rgba(204,204,204,0.18)" stroke-width="1"/><rect x="212" y="33" width="96" height="14" rx="2" fill="#151515"/><text x="260.0" y="44" fill="#868686" font-size="11" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">함께 처리할 범위</text>
+<path d="M 184,80 L 216,80" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#ledger-scope-dark-arrow)"/>
+<path d="M 360,80 L 392,80" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#ledger-scope-dark-arrow)"/>
+<path d="M 536,80 L 568,80" fill="none" stroke="#a7a7a7" stroke-width="1.2" marker-end="url(#ledger-scope-dark-arrow)"/>
+<rect x="40" y="56" width="144" height="48" rx="6" fill="#151515"/>
+<rect x="40" y="56" width="144" height="48" rx="6" fill="rgba(204,204,204,0.06)" stroke="#868686" stroke-width="1"/>
+<text x="112.0" y="84" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">전이에 성공한 권리</text>
+<rect x="216" y="56" width="144" height="48" rx="6" fill="#151515"/>
+<rect x="216" y="56" width="144" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="288.0" y="84" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">원장 항목 생성</text>
+<rect x="392" y="56" width="144" height="48" rx="6" fill="#151515"/>
+<rect x="392" y="56" width="144" height="48" rx="6" fill="#1e1e21" stroke="#cccccc" stroke-width="1"/>
+<text x="464.0" y="84" fill="#cccccc" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">잔액 변화</text>
+<rect x="568" y="56" width="144" height="48" rx="6" fill="#151515"/>
+<rect x="568" y="56" width="144" height="48" rx="6" fill="rgba(138,180,248,0.12)" stroke="#8ab4f8" stroke-width="1.2"/>
+<text x="640.0" y="84" fill="#8ab4f8" font-size="12" font-weight="600" font-family="'Source Sans Pro', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" text-anchor="middle">커밋</text>
+</svg>
