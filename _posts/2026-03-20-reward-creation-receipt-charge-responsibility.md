@@ -8,9 +8,8 @@ mermaid: true
 image:
   path: /assets/images/posts/reward-responsibility/building-blocks.jpg
   thumbnail: /assets/images/posts/reward-responsibility/building-blocks.jpg
+  alt: "서로 다른 책임을 가진 구성 요소를 떠올리게 하는 블록. Photo by Duc Anh Nguyen on Pexels."
 ---
-
-# 리워드 생성·수령·충전 책임을 분리한 과정
 
 리워드 기능을 하나의 메서드에서 처리하면 처음에는 구현하기 쉽습니다. 하지만 생성, 상태 변경과 실제 반영이 한곳에 모이면 수정할 때마다 여러 책임을 함께 확인해야 합니다.
 
@@ -19,17 +18,12 @@ image:
 > 아래 도메인 이름, 상태, 처리 순서, 코드와 스키마는 설명을 위해 만든 예제입니다. 실제 보상 조건, 지급량, 수령 방식과 운영 규칙은 포함하지 않았습니다.
 {: .prompt-info }
 
-![분리된 모듈을 상징하는 블록](/assets/images/posts/reward-responsibility/building-blocks.jpg)
-
-<small>서로 다른 책임을 가진 구성 요소를 떠올리게 하는 블록. Photo by [Duc Anh Nguyen on Pexels](https://www.pexels.com/photo/colorful-building-blocks-on-a-table-8289844/).</small>
-
-<div class="notice--info" markdown="1">
-**연관 개발기**
-
-1. [AI 대화 후처리를 요청 트랜잭션에서 분리하기](/posts/ai-conversation-post-processing-pipeline/)
-2. **리워드 생성·수령·충전 책임을 분리한 과정** — 현재 글
-3. [상태 조건 UPDATE로 중복 리워드 처리 막기](/posts/reward-conditional-update-idempotency/)
-</div>
+> **연관 개발기**
+>
+> 1. [중복 리워드 처리를 막기 위해 상태 조건 UPDATE를 선택한 이유](/posts/reward-conditional-update-idempotency/)
+> 2. **리워드 생성·수령·충전 책임을 분리한 과정** — 현재 글
+> 3. [AI 대화 후처리를 요청 트랜잭션에서 분리하기](/posts/ai-conversation-post-processing-pipeline/)
+{: .prompt-info }
 
 ---
 
@@ -41,7 +35,7 @@ image:
 - 그 권리는 아직 사용할 수 있는가?
 - 자산 변화가 정확히 한 번 기록됐는가?
 
-세 질문은 비슷해 보여도 확인할 데이터와 조건이 다릅니다.
+세 질문은 비슷해 보여도 확인할 데이터와 조건이 다릅니다. 이 글에서는 리워드의 생성을 권리 생성, 수령을 상태 전이, 충전을 효과 반영으로 나누어 부르겠습니다.
 
 | 개념 | 설명을 위한 이름 | 확인할 조건 |
 |---|---|---|
@@ -51,7 +45,7 @@ image:
 
 ~~~mermaid
 flowchart LR
-    S["가상의 사건"] --> C["권리 생성"]
+    S["사건"] --> C["권리 생성"]
     C --> T["상태 전이"]
     T --> E["효과 반영"]
 
@@ -60,7 +54,7 @@ flowchart LR
     E -. "반영 조건" .-> EI["원장과 결과 확인"]
 ~~~
 
-여기서 화살표는 실제 서비스의 처리 순서를 뜻하지 않습니다. 각 책임이 어떤 결과를 다음 책임에 제공할 수 있는지 보여주는 개념도입니다.
+화살표는 처리 순서보다 각 책임이 어떤 결과를 다음 책임에 넘기는지를 나타냅니다.
 
 ---
 
@@ -105,10 +99,9 @@ classDiagram
 
 ## 3. 유스케이스 연결하기
 
-서비스를 나눈 후 서로의 저장소를 직접 수정하게 두면 클래스만 늘어나고 결합은 그대로 남습니다. 그래서 앞 단계가 다음 단계에 필요한 결과만 반환하도록 구성하였습니다.
+서비스를 나눈 후 서로의 저장소를 직접 수정하게 두면 클래스만 늘어나고 결합은 그대로 남습니다. 그래서 앞 단계가 다음 단계에 필요한 결과만 반환하도록 구성했습니다.
 
 ~~~kotlin
-// 공개 설명을 위한 가상 타입이다.
 data class CreatedEntitlement(
     val id: ExampleId,
 )
@@ -131,7 +124,7 @@ interface ApplyEffect {
 }
 ~~~
 
-여기서 <code>TransitionedEntitlement</code>는 “상태 전이에 성공한 대상”만 다음 책임으로 전달하기 위한 예시입니다. 실제 반환 타입이나 호출 구조를 나타내지 않습니다.
+여기서 <code>TransitionedEntitlement</code>는 “상태 전이에 성공한 대상”만 다음 책임으로 전달하기 위한 타입입니다.
 
 ~~~mermaid
 flowchart TB
@@ -182,9 +175,9 @@ WHERE id = :id
   AND state = :expected_state;
 ~~~
 
-영향받은 행이 한 건이면 전이 성공, 없으면 누군가 먼저 처리했거나 입력 조건이 맞지 않은 것으로 해석할 수 있습니다. 단, “행이 없음”을 어떤 사용자 응답으로 바꿀지는 제품 정책이므로 이 글에서는 다루지 않습니다.
+영향받은 행이 한 건이면 전이 성공, 없으면 누군가 먼저 처리했거나 입력 조건이 맞지 않은 것으로 해석할 수 있습니다. “행이 없음”을 사용자에게 어떻게 응답할지는 따로 정해야 합니다.
 
-상태 조건 UPDATE의 동시성 원리와 저장 컨텍스트 주의점은 [상태 조건 UPDATE로 중복 수령 방지](/posts/reward-conditional-update-idempotency/)에서 별도로 정리했습니다.
+상태 조건 UPDATE의 동시성 원리와 저장 컨텍스트 주의점은 [중복 리워드 처리를 막기 위해 상태 조건 UPDATE를 선택한 이유](/posts/reward-conditional-update-idempotency/)에서 별도로 정리했습니다.
 
 ---
 
@@ -194,13 +187,13 @@ WHERE id = :id
 
 ~~~mermaid
 flowchart LR
-    V["전이에 성공한 가상 권리"] --> L["원장 항목 생성"]
+    V["전이에 성공한 권리"] --> L["원장 항목 생성"]
     L --> B["잔액 변화"]
     B --> C["커밋"]
     L -. "함께 처리할 범위" .- B
 ~~~
 
-가상의 원장 모델은 다음처럼 최소한의 참조 키를 가질 수 있습니다.
+원장 모델은 다음처럼 최소한의 참조 키를 가질 수 있습니다.
 
 ~~~sql
 CREATE TABLE example_asset_ledger (
@@ -213,7 +206,7 @@ CREATE TABLE example_asset_ledger (
 );
 ~~~
 
-이 스키마는 실제 테이블이나 컬럼이 아닙니다. <code>reference_key</code>에 유일성 제약을 두어 같은 근거의 중복 반영을 방어할 수 있다는 설계 예시입니다.
+<code>reference_key</code>에 유일성 제약을 두면 같은 근거로 두 번 반영되는 것을 데이터베이스에서 막을 수 있습니다.
 
 애플리케이션에서 먼저 조회하는 것만으로는 동시 요청을 완전히 막기 어렵습니다. 조건부 상태 변경과 원장 유일성 제약을 함께 사용하면 한쪽의 검사가 누락되어도 중복 기록을 한 번 더 막을 수 있습니다.
 
@@ -221,11 +214,11 @@ CREATE TABLE example_asset_ledger (
 
 ## 6. 트랜잭션 범위 정하기
 
-책임을 세 개로 나누었다고 트랜잭션도 반드시 세 개가 되는 것은 아닙니다. 실패했을 때 함께 되돌려야 하는 작업을 기준으로 트랜잭션 범위를 정하였습니다.
+책임을 세 개로 나누었다고 트랜잭션도 반드시 세 개가 되는 것은 아닙니다. 실패했을 때 함께 되돌려야 하는 작업을 기준으로 트랜잭션 범위를 정했습니다.
 
 ~~~mermaid
 flowchart TB
-    subgraph TX["가상의 원자적 처리 범위"]
+    subgraph TX["원자적 처리 범위"]
         T["허용된 상태 전이"]
         L["원장 기록"]
         B["잔액 반영"]
@@ -235,7 +228,7 @@ flowchart TB
     C["권리 생성"] -. "별도 트랜잭션 가능" .-> TX
 ~~~
 
-트랜잭션 범위를 정할 때에는 다음 내용을 확인하였습니다.
+트랜잭션 범위를 정할 때에는 다음 내용을 확인했습니다.
 
 - 상태는 바뀌었지만 자산은 반영되지 않아도 되는가?
 - 원장은 생겼지만 잔액이 바뀌지 않은 상태를 허용하는가?
@@ -291,13 +284,13 @@ flowchart LR
 
 데이터베이스의 <code>RETURNING</code>, 항목별 조건부 UPDATE, 처리 토큰 등 여러 구현 전략이 있습니다. 어떤 전략이 적절한지는 데이터 양, 잠금 비용, 부분 성공 허용 여부와 데이터베이스 기능에 따라 달라집니다.
 
-부분 성공을 허용할지, 전체를 롤백할지, 재시도를 어떻게 보여줄지는 제품 정책입니다. 공개 예시에서는 한 가지를 정답처럼 제시하지 않고 결정이 필요한 지점으로만 남겼습니다.
+부분 성공을 허용할지, 전체를 롤백할지, 재시도를 어떻게 보여줄지는 기능 요구사항에 따라 함께 정해야 합니다.
 
 ---
 
 ## 9. 동시성과 실패 상황 테스트하기
 
-마지막으로 동시 요청과 중간 실패 상황을 테스트하였습니다.
+마지막으로 동시 요청과 중간 실패 상황을 테스트했습니다.
 
 | 테스트 범주 | 확인할 내용 |
 |---|---|
@@ -310,20 +303,20 @@ flowchart LR
 ~~~kotlin
 @Test
 fun one_transition_wins_for_the_same_example_id() {
-    // Given: 같은 가상 권리를 가리키는 동시 명령
+    // Given: 같은 권리를 가리키는 동시 명령
     // When: 여러 실행자가 조건부 전이를 시도
     // Then: 성공한 전이의 수가 정한 조건과 일치
 }
 
 @Test
 fun the_same_reference_does_not_create_duplicate_effects() {
-    // Given: 같은 가상 참조 키
+    // Given: 같은 참조 키
     // When: 효과 반영 명령이 반복
     // Then: 원장과 자산 변화가 중복되지 않음
 }
 ~~~
 
-테스트 이름과 타입 역시 설명용입니다. 실제 정책값 대신 상태 변경 횟수와 중복 저장 여부를 확인하였습니다.
+테스트에서는 정책값 대신 상태 변경 횟수와 중복 저장 여부를 확인했습니다.
 
 ---
 

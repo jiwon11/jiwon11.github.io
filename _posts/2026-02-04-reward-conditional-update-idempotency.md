@@ -8,9 +8,8 @@ mermaid: true
 image:
   path: /assets/images/posts/reward-conditional-update/server-rack.jpg
   thumbnail: /assets/images/posts/reward-conditional-update/server-rack.jpg
+  alt: "동시 요청의 최종 판정자는 데이터베이스다. Photo by panumas nikhomkhai on Pexels."
 ---
-
-# 중복 리워드 처리를 막기 위해 상태 조건 UPDATE를 선택한 이유
 
 상태를 확인한 후 엔티티를 저장하는 코드는 한 요청만 들어올 때에는 문제없이 동작합니다. 하지만 같은 자원을 여러 요청이 동시에 변경하면 두 요청이 모두 이전 상태를 읽을 수 있습니다.
 
@@ -21,17 +20,12 @@ image:
 > 아래의 엔티티·테이블·컬럼·상태·메트릭 이름은 모두 가상 예시입니다. 실제 구현의 상태 전이, API 응답, 재시도, 부분 성공 여부를 설명하지 않으며 특정 서비스 정책과 대응되지 않습니다.
 {: .prompt-info }
 
-![데이터베이스 상태 전이를 상징하는 서버 랙](/assets/images/posts/reward-conditional-update/server-rack.jpg)
-
-<small>동시 요청의 최종 판정자는 데이터베이스다. Photo by [panumas nikhomkhai on Pexels](https://www.pexels.com/photo/computer-server-in-data-center-room-17489163/).</small>
-
-<div class="notice--info" markdown="1">
-**관련 개발기**
-
-1. [AI 대화 후처리를 요청 트랜잭션에서 분리하기](/posts/ai-conversation-post-processing-pipeline/)
-2. [리워드 생성·수령·충전 책임을 분리한 과정](/posts/reward-creation-receipt-charge-responsibility/)
-3. **상태 조건 UPDATE로 중복 리워드 처리 막기** — 현재 글
-</div>
+> **연관 개발기**
+>
+> 1. **중복 리워드 처리를 막기 위해 상태 조건 UPDATE를 선택한 이유** — 현재 글
+> 2. [리워드 생성·수령·충전 책임을 분리한 과정](/posts/reward-creation-receipt-charge-responsibility/)
+> 3. [AI 대화 후처리를 요청 트랜잭션에서 분리하기](/posts/ai-conversation-post-processing-pipeline/)
+{: .prompt-info }
 
 ---
 
@@ -97,8 +91,6 @@ WHERE id = :id
   AND state = :expectedState;
 ~~~
 
-이 쿼리의 식별자와 상태는 실제 스키마가 아닌 설명용 이름입니다.
-
 데이터베이스가 반환하는 affected rows는 다음 의미를 갖습니다.
 
 | 결과 | 기술적 의미 |
@@ -106,7 +98,7 @@ WHERE id = :id
 | 1 | 이 요청이 조건을 만족한 행을 변경함 |
 | 0 | 대상이 없거나 현재 상태가 기대와 다름 |
 
-0행의 구체적인 API 응답은 제품 정책입니다. 예외로 처리할지, 멱등 성공으로 간주할지, 최신 상태를 돌려줄지는 공개 글에서 다루지 않습니다.
+0행을 API에서 어떻게 응답할지는 따로 정해야 합니다. 예외로 처리할 수도 있고, 멱등 성공으로 간주하거나 최신 상태를 돌려줄 수도 있습니다.
 
 ~~~mermaid
 flowchart LR
@@ -141,7 +133,7 @@ fun transitionIfCurrent(
 ): Int
 ~~~
 
-이 예시는 실제 엔티티·메서드·상태 이름을 사용하지 않습니다. 핵심은 수정 쿼리의 성공 여부를 예외 유무가 아니라 행 수로 판정한다는 점입니다.
+핵심은 수정 쿼리의 성공 여부를 예외 유무가 아니라 행 수로 판정한다는 점입니다.
 
 ### clearAutomatically 설정하기
 
@@ -169,7 +161,7 @@ flowchart TD
 | 낙관적 락 | 일반 엔티티 수정 흐름과 결합하기 쉬움 | 충돌 예외와 재시도 정책 필요 |
 | 분산 락 | 여러 자원을 아우르는 조정 가능 | 운영 복잡도와 락 유실 고려 필요 |
 
-상태 하나의 단방향 전이를 경쟁시키는 문제라면 조건부 UPDATE가 단순한 편입니다. 반면 여러 행을 읽고 복잡한 조건을 검증해야 한다면 다른 전략이 더 적합할 수 있습니다.
+이번 문제는 상태 하나를 한 방향으로 바꾸는 요청끼리의 경쟁이었기 때문에 가장 단순한 조건부 UPDATE를 선택했습니다. 반면 여러 행을 읽고 복잡한 조건을 검증해야 한다면 다른 전략이 더 적합할 수 있습니다.
 
 ---
 
@@ -230,8 +222,6 @@ WHERE id = ANY(:ids)
 
 스키마 변경이 필요하지만 처리 추적에도 사용할 수 있습니다.
 
-이 중 어떤 방식을 실제 서비스가 선택했는지는 공개 범위에 포함하지 않습니다.
-
 ---
 
 ## 6. 후속 작업의 중복 막기
@@ -245,7 +235,7 @@ flowchart LR
     C --> D["원장 또는 결과 저장"]
 ~~~
 
-공개용 SQL 예시는 출처 식별자를 이용한 유일 제약을 보여줍니다.
+그래서 부수효과를 기록하는 쪽에도 출처 식별자로 유일 제약을 둘 수 있습니다.
 
 ~~~sql
 CREATE UNIQUE INDEX uq_example_effect_source
@@ -257,13 +247,13 @@ ON effect_ledger_example (
 WHERE deleted = false;
 ~~~
 
-이 이름과 컬럼은 실제 스키마가 아닙니다. 핵심은 같은 원인으로 동일한 부수효과가 두 번 기록되지 않도록 데이터베이스에도 방어선을 두는 것입니다.
+핵심은 같은 원인으로 동일한 부수효과가 두 번 기록되지 않도록 데이터베이스에도 방어선을 두는 것입니다.
 
 ---
 
 ## 7. 동시성 테스트 작성하기
 
-코드를 수정한 후에는 여러 작업이 최대한 같은 시점에 시작하도록 동시성 테스트를 작성하였습니다.
+코드를 수정한 후에는 여러 작업이 최대한 같은 시점에 시작하도록 동시성 테스트를 작성했습니다.
 
 ~~~kotlin
 val ready = CountDownLatch(workerCount)
@@ -281,7 +271,7 @@ ready.await()
 start.countDown()
 ~~~
 
-검증할 불변식은 제품 상태명 대신 기술적 조건으로 표현할 수 있습니다.
+테스트에서는 다음 불변식을 검증했습니다.
 
 - 허용된 상태 변경 횟수는 기대 범위를 넘지 않는다.
 - 동일한 원인의 부수효과가 중복 저장되지 않는다.
@@ -292,7 +282,7 @@ start.countDown()
 
 ## 8. 운영 지표 확인하기
 
-실제 메트릭 이름과 임계값은 공개하지 않고 다음 범주만 남길 수 있습니다.
+운영 지표는 다음 범주로 나누어 볼 수 있습니다.
 
 | 범주 | 의미 |
 |---|---|
@@ -324,4 +314,4 @@ start.countDown()
 
 한 계층의 방어만 믿지 않고 원장이나 결과 저장소에도 유일성을 둬야 합니다.
 
-이번 글에서는 조회 후 저장에서 발생할 수 있는 동시성 문제를 확인하고, 상태 조건 UPDATE와 변경 행 수를 이용해 처리 결과를 구분해보았습니다. 글의 상태명과 스키마는 예제이지만, 같은 상태를 여러 요청이 동시에 변경하는 기능이라면 동일한 방식으로 검토할 수 있습니다.
+이번 글에서는 조회 후 저장에서 발생할 수 있는 동시성 문제를 확인하고, 상태 조건 UPDATE와 변경 행 수를 이용해 처리 결과를 구분해보았습니다. 같은 상태를 여러 요청이 동시에 변경하는 기능이라면 동일한 방식으로 검토할 수 있습니다.

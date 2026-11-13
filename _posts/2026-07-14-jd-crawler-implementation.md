@@ -8,11 +8,10 @@ mermaid: false
 image:
   path: /assets/images/posts/2026-07-14-jd-crawler-implementation/thumbnail.jpg
   thumbnail: /assets/images/posts/2026-07-14-jd-crawler-implementation/thumbnail.jpg
+  alt: "JD 크롤러는 HTML 파서 하나가 아니라, 신뢰할 수 없는 입력을 제한하면서 여러 문서 구조를 단계적으로 해석하는 파이프라인이었다."
 ---
 
-# JD 크롤러 구현기 — 정적 HTML 파싱부터 SSRF 방어까지
-
-채용 공고를 등록할 때 긴 본문을 직접 복사하지 않고 URL만 입력할 수 있도록 크롤러를 구현하였습니다.
+Jobdori는 채용 공고(JD)를 바탕으로 지원 전략과 이력서를 만드는 서비스입니다. 이 서비스에 채용 공고를 등록할 때 긴 본문을 직접 복사하지 않고 URL만 입력할 수 있도록 크롤러를 구현했습니다.
 
 처음에는 URL을 요청하고 Jsoup의 `body.text()`를 반환하면 끝날 것으로 생각했습니다. 하지만 사이트마다 HTML 구조가 달랐습니다. Next.js 페이지는 `__NEXT_DATA__`에 데이터를 넣었고, 다른 페이지는 schema.org의 `JobPosting` JSON-LD를 제공했습니다. 일반 HTML에서는 메뉴와 푸터, 사이드바가 본문에 함께 들어왔습니다.
 
@@ -26,10 +25,6 @@ image:
 
 > 예제의 제한값, User-Agent, 오류 코드, 프롬프트 키와 테스트 경로는 임의로 바꾸었습니다.
 {: .prompt-info }
-
-![채용 공고 페이지가 보안 검증을 거쳐 구조화 데이터로 변환되는 모습](/assets/images/posts/2026-07-14-jd-crawler-implementation/thumbnail.jpg)
-
-<small>JD 크롤러는 HTML 파서 하나가 아니라, 신뢰할 수 없는 입력을 제한하면서 여러 문서 구조를 단계적으로 해석하는 파이프라인이었다.</small>
 
 ---
 
@@ -83,7 +78,7 @@ image:
 
 ### 2.1 Infrastructure에 구현하기
 
-Jobdori의 컴파일 의존 방향은 다음과 같습니다.
+Jobdori 백엔드의 컴파일 의존 방향은 다음과 같습니다.
 
 ```text
 jobdori-api → jobdori-core → jobdori-common
@@ -568,11 +563,10 @@ private fun fetchHtml(startUrl: String): ByteArray? {
 
 상대 경로 `Location`도 `URI.resolve`로 현재 URL 기준의 절대 주소로 바꾼 뒤 검증합니다. 최대 리다이렉트 횟수는 설정값으로 제한했습니다.
 
-<div class="notice--warning" markdown="1">
-**⚠️ 애플리케이션 레벨 검증만으로 SSRF 방어가 완성되지는 않는다**
-
-현재 가드는 DNS 조회 결과를 검사한 뒤 HTTP 연결 단계에서 호스트를 다시 해석합니다. 두 시점의 DNS 응답이 바뀌는 DNS rebinding 가능성까지 완전히 제거하려면, 검증한 IP로 연결을 고정하는 커스텀 네트워크 계층이나 egress 방화벽 같은 추가 방어가 필요합니다. URL 가드는 중요한 1차 방어지만 네트워크 레벨 통제와 함께 사용해야 합니다.
-</div>
+> **애플리케이션 레벨 검증만으로 SSRF 방어가 완성되지는 않는다**
+>
+> 현재 가드는 DNS 조회 결과를 검사한 뒤 HTTP 연결 단계에서 호스트를 다시 해석합니다. 두 시점의 DNS 응답이 바뀌는 DNS rebinding 가능성까지 완전히 제거하려면, 검증한 IP로 연결을 고정하는 커스텀 네트워크 계층이나 egress 방화벽 같은 추가 방어가 필요합니다. URL 가드는 중요한 1차 방어지만 네트워크 레벨 통제와 함께 사용해야 합니다.
+{: .prompt-warning }
 
 ---
 
@@ -580,7 +574,7 @@ private fun fetchHtml(startUrl: String): ByteArray? {
 
 ### 6.1 오류 종류 나누기
 
-크롤링 실패의 원인에 따라 사용자가 취해야 할 행동이 다릅니다. 공개용 예시에서는 오류를 네 범주로 나눴습니다.
+크롤링 실패의 원인에 따라 사용자가 취해야 할 행동이 다릅니다. 그래서 오류를 네 범주로 나눴습니다.
 
 | 오류 범주 | 응답 분류 | 발생 조건 | 사용자 안내 |
 |---|---|---|---|
@@ -589,25 +583,7 @@ private fun fetchHtml(startUrl: String): ByteArray? {
 | `FETCH_FAILED` | 처리 불가 | 네트워크·서버 오류·짧은 본문·리다이렉트 실패 | 원문 직접 붙여 넣기 |
 | `NOT_A_POSTING` | 처리 불가 | AI가 채용 공고로 판단하지 못함 | 공고 주소·내용 확인 |
 
-접근 거부 응답은 원인을 보존하고, 네트워크 오류와 서버 오류는 본문 없음으로 처리해 최종적으로 수집 실패 범주가 되게 했습니다.
-
-```kotlin
-when {
-    status.is4xxClientError ->
-        throw JdCrawlException(
-            "접근 불가: $url",
-            CrawlErrorCode.ACCESS_DENIED,
-        )
-
-    !status.is2xxSuccessful -> Fetched(null)
-
-    else -> Fetched(
-        response.body.use {
-            readLimited(it, properties.maxBodyBytes)
-        },
-    )
-}
-```
+앞의 `fetchHtml`에서 4xx 응답은 `ACCESS_DENIED`로 바로 던져 원인을 보존하고, 그 밖의 비정상 응답은 `Fetched(null)`로 돌려 최종적으로 수집 실패(`FETCH_FAILED`) 범주가 되게 했습니다.
 
 GraphQL에서는 예상 가능한 크롤링 오류를 내부 서버 오류와 구분되는 클라이언트 처리 범주로 매핑했습니다. 프론트엔드는 에러 종류에 따라 붙여넣기 화면으로 사용자를 안내할 수 있습니다.
 
@@ -706,7 +682,7 @@ class TestJdCrawlController(
 )
 ```
 
-배포 프로필로 제한한 내부 테스트 도구에서는 저장 없이 다음을 한 번에 확인할 수 있습니다. 실제 경로는 공개용 글에서 제외했습니다.
+운영 환경에서는 열리지 않는 내부 테스트 도구라서, 저장 없이 다음을 한 번에 확인할 수 있습니다.
 
 1. 크롤링된 원문
 2. 메타 추출 프롬프트의 구조화 결과
@@ -741,12 +717,7 @@ verify(exactly = 1) { urlGuard.validate(start) }
 verify(exactly = 1) { urlGuard.validate(redirectTarget) }
 ```
 
-이번 글을 작성하며 관련 테스트가 모두 통과하는 것을 다시 확인했습니다. 클래스 이름과 개수는 공개용으로 일반화했습니다.
-
-| 테스트 범위 | 결과 |
-|---|---|
-| HTTP 수집·파싱 경계 | 모두 통과 |
-| URL·IP 보안 가드 | 모두 통과 |
+이번 글을 작성하며 HTTP 수집·파싱 테스트와 URL·IP 보안 가드 테스트가 모두 통과하는 것을 다시 확인했습니다.
 
 주요 검증 항목은 다음과 같습니다.
 
@@ -822,7 +793,7 @@ verify(exactly = 1) { urlGuard.validate(redirectTarget) }
 
 **2. 구조화된 데이터가 DOM보다 먼저다.**
 
-`__NEXT_DATA__`와 JSON-LD에는 화면 텍스트보다 명확한 필드 경계가 있습니다. 구조화 데이터를 우선하고 일반 DOM을 최후의 폴백으로 두자 사이트별 조건문과 노이즈를 함께 줄일 수 있었습니다.
+`__NEXT_DATA__`와 JSON-LD에는 화면 텍스트보다 명확한 필드 경계가 있습니다. 구조화 데이터를 우선하고 일반 DOM을 최후의 폴백으로 두었더니 사이트별 조건문과 노이즈를 함께 줄일 수 있었습니다.
 
 **3. 폴백은 실패를 숨기는 장치가 아니라 책임을 나누는 장치다.**
 
@@ -834,7 +805,7 @@ Next.js 파서는 자신이 모르는 구조에서 `null`을 반환하고, JSON-
 
 **5. 실제 사이트 수정은 재현 가능한 테스트로 남겨야 한다.**
 
-워드프레스 페이지의 사이드바 노이즈를 발견한 뒤 `.entry-content`, `article`, `main` 우선 추출을 추가했습니다. 이와 함께 MockWebServer 기반 테스트로 네트워크 상태와 리다이렉트를 고정하자 외부 사이트 상태와 무관하게 핵심 경계를 검증할 수 있었습니다.
+워드프레스 페이지의 사이드바 노이즈를 발견한 뒤 `.entry-content`, `article`, `main` 우선 추출을 추가했습니다. 이와 함께 MockWebServer 기반 테스트로 네트워크 상태와 리다이렉트를 고정했더니 외부 사이트 상태와 무관하게 핵심 경계를 검증할 수 있었습니다.
 
 ### 구현을 마치며
 

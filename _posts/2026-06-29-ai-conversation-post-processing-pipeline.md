@@ -8,28 +8,22 @@ mermaid: true
 image:
   path: /assets/images/posts/ai-conversation-post-processing/network-cables.jpg
   thumbnail: /assets/images/posts/ai-conversation-post-processing/network-cables.jpg
+  alt: "비동기 데이터 흐름을 떠올리게 하는 네트워크 연결. Photo by Brett Sayles on Pexels."
 ---
-
-# AI 대화 후처리를 요청 트랜잭션에서 분리하기
 
 AI 요청을 처리한 후에는 추가 분석이나 데이터 갱신처럼 사용자 응답과 바로 관계없는 작업이 이어질 수 있습니다. 이 작업을 모두 같은 요청에서 실행하면 외부 API를 기다리는 시간까지 응답이 늦어집니다.
 
-이번 글에서는 요청 데이터가 저장된 후 Coroutine으로 후처리를 실행하고, 외부 API 호출과 저장 트랜잭션을 나누는 과정을 정리해보겠습니다.
+이번 글에서는 요청 데이터가 저장된 후 코루틴으로 후처리를 실행하고, 외부 API 호출과 저장 트랜잭션을 나누는 과정을 정리해보겠습니다.
 
 > 아래 이벤트 이름, Task A·B·C, 코드와 다이어그램은 설명을 위해 만든 예제입니다. 실제 실행 조건, 처리 순서, 프롬프트, 모델, 재시도와 운영 규칙은 포함하지 않았습니다.
 {: .prompt-info }
 
-![서버의 연결과 데이터 흐름](/assets/images/posts/ai-conversation-post-processing/network-cables.jpg)
-
-<small>비동기 데이터 흐름을 떠올리게 하는 네트워크 연결. Photo by [Brett Sayles on Pexels](https://www.pexels.com/photo/cables-connected-on-server-2881229/).</small>
-
-<div class="notice--info" markdown="1">
-**연관 개발기**
-
-1. **AI 대화 후처리를 요청 트랜잭션에서 분리하기** — 현재 글
-2. [리워드 생성·수령·충전 책임을 분리한 과정](/posts/reward-creation-receipt-charge-responsibility/)
-3. [상태 조건 UPDATE로 중복 리워드 처리 막기](/posts/reward-conditional-update-idempotency/)
-</div>
+> **연관 개발기**
+>
+> 1. [중복 리워드 처리를 막기 위해 상태 조건 UPDATE를 선택한 이유](/posts/reward-conditional-update-idempotency/)
+> 2. [리워드 생성·수령·충전 책임을 분리한 과정](/posts/reward-creation-receipt-charge-responsibility/)
+> 3. **AI 대화 후처리를 요청 트랜잭션에서 분리하기** — 현재 글
+{: .prompt-info }
 
 ---
 
@@ -108,7 +102,7 @@ stateDiagram-v2
     후처리시작 --> 종료
 ~~~
 
-설명용 의사 코드는 다음처럼 표현할 수 있습니다.
+의사 코드로 표현하면 다음과 같습니다.
 
 ~~~kotlin
 data class PostProcessRequested(
@@ -161,7 +155,7 @@ flowchart TB
     M -->|"독립 소비자·확장 필요"| MQ["메시지 브로커"]
 ~~~
 
-어느 방식이 맞는지는 작업의 중요도와 허용 가능한 지연에 따라 달라집니다. 여기서는 각 방식의 차이만 비교하였습니다.
+어느 방식이 맞는지는 작업의 중요도와 허용 가능한 지연에 따라 달라집니다.
 
 ---
 
@@ -210,7 +204,7 @@ suspend fun runExampleTask(id: ExampleRecordId) {
 
 ~~~mermaid
 flowchart LR
-    E["가상 이벤트"]
+    E["이벤트"]
     E --> A["Task A"]
     E --> B["Task B"]
     A --> C["Task C"]
@@ -223,8 +217,6 @@ flowchart LR
     style D fill:#e8f5e9,stroke:#2e7d32
 ~~~
 
-이 그림은 설명을 위한 가상 의존 관계이며 실제 후처리 순서와 대응하지 않습니다.
-
 | 관계 | 실행 방법 예시 |
 |---|---|
 | 서로 입력과 출력이 독립 | 제한된 동시성으로 병렬 실행 |
@@ -236,13 +228,13 @@ flowchart LR
 
 ---
 
-## 7. Coroutine Scope 정하기
+## 7. 코루틴 스코프 정하기
 
-Coroutine을 사용하기 전에 작업을 어느 Scope에서 실행할지 정해야 합니다. 요청 Scope에서 시작한 작업은 요청이 끝날 때 취소될 수 있고, 애플리케이션 Scope에서 실행한 작업은 종료 시점을 직접 관리해야 합니다.
+코루틴을 사용하기 전에 작업을 어느 스코프에서 실행할지 정해야 합니다. 요청 스코프에서 시작한 작업은 요청이 끝날 때 취소될 수 있고, 애플리케이션 스코프에서 실행한 작업은 종료 시점을 직접 관리해야 합니다.
 
 ~~~mermaid
 flowchart TB
-    S["애플리케이션이 관리하는 Scope"]
+    S["애플리케이션이 관리하는 스코프"]
     S --> J1["Event 1 Job"]
     S --> J2["Event 2 Job"]
     J1 --> A1["Task A"]
@@ -262,7 +254,7 @@ flowchart TB
 - 제한 시간 이후 작업을 취소하면 재처리 근거가 남는가?
 
 ~~~kotlin
-// 실제 설정이 아닌 구조 설명용 의사 코드다.
+// 구조를 보여주기 위한 의사 코드
 suspend fun processExample(event: PostProcessRequested) =
     supervisedTaskGroup {
         val a = async { taskA(event) }
@@ -275,7 +267,7 @@ suspend fun processExample(event: PostProcessRequested) =
     }
 ~~~
 
-<code>supervisedTaskGroup</code> 역시 가상 표현입니다. 실패 격리가 필요하다는 이유만으로 모든 예외를 삼키면 안 됩니다. 실패는 상태, 메트릭 또는 재처리 가능한 레코드로 관측되어야 합니다.
+<code>supervisedTaskGroup</code>도 개념을 보여주는 가상 함수입니다. 실패 격리가 필요하다는 이유만으로 모든 예외를 삼키면 안 됩니다. 실패는 상태, 메트릭 또는 재처리 가능한 레코드로 관측되어야 합니다.
 
 ---
 
@@ -297,7 +289,7 @@ sequenceDiagram
     DB-->>W: 이미 처리됨
 ~~~
 
-가능한 멱등성 키는 가상 이벤트 식별자, 원본 레코드 버전, 작업 종류의 조합 등으로 만들 수 있습니다. 중요한 것은 재시도 때 같은 작업임을 판별할 수 있어야 한다는 점입니다.
+멱등성 키는 이벤트 식별자, 원본 레코드 버전, 작업 종류의 조합 등으로 만들 수 있습니다. 중요한 것은 재시도 때 같은 작업임을 판별할 수 있어야 한다는 점입니다.
 
 ~~~sql
 CREATE TABLE example_async_operation (
@@ -308,13 +300,13 @@ CREATE TABLE example_async_operation (
 );
 ~~~
 
-이 역시 실제 스키마가 아닙니다. 성공 전에 키를 선점할지, 실패 상태를 덮어쓸지, 얼마나 보관할지는 운영 정책에 따라 달라지므로 예시에서 제외했습니다.
+성공 전에 키를 선점할지, 실패 상태를 덮어쓸지, 얼마나 보관할지도 운영 정책에 맞춰 함께 정해야 합니다.
 
 ---
 
 ## 9. 작업별 실패 처리 정하기
 
-후처리 전체를 하나의 <code>try/catch</code>로 감싸면 어느 작업에서 실패했는지 확인하기 어렵습니다. 그래서 작업마다 재시도 가능 여부와 사용자 영향을 나누어 정리하였습니다.
+후처리 전체를 하나의 <code>try/catch</code>로 감싸면 어느 작업에서 실패했는지 확인하기 어렵습니다. 그래서 작업마다 재시도 가능 여부와 사용자 영향을 나누어 정리했습니다.
 
 | 항목 | 결정해야 할 질문 |
 |---|---|
@@ -336,7 +328,7 @@ flowchart TD
     D -->|"예"| Q
 ~~~
 
-재시도 횟수, 간격, 격리 저장 기간 같은 값은 시스템 용량과 중요도에 따라 달라지는 내부 운영 기준이므로 이 글에서는 제시하지 않습니다.
+재시도 횟수, 간격, 격리 저장 기간 같은 값은 시스템 용량과 작업의 중요도에 맞춰 정해야 합니다.
 
 ---
 
@@ -358,7 +350,7 @@ flowchart LR
     R -.-> D["운영 화면"]
 ~~~
 
-특정 서비스명을 노출하지 않고도 다음과 같은 일반 지표를 정의할 수 있습니다.
+후처리 상태는 다음과 같은 지표로 확인할 수 있습니다.
 
 - 큐 또는 작업 레코드의 대기 시간
 - 작업 종류별 성공·실패 비율
@@ -373,7 +365,7 @@ flowchart LR
 
 ## 11. 실패와 중복 상황 테스트하기
 
-마지막으로 응답 시간뿐 아니라 작업 유실과 중복 실행도 함께 테스트하였습니다.
+마지막으로 응답 시간뿐 아니라 작업 유실과 중복 실행도 함께 테스트했습니다.
 
 | 검증 범주 | 확인할 내용 |
 |---|---|
@@ -385,7 +377,7 @@ flowchart LR
 | 역압 | 유입량이 처리량을 넘을 때 제한 장치가 작동한다 |
 | 관측성 | 실패 항목을 찾고 재처리 근거를 확인할 수 있다 |
 
-부하 테스트에서도 평균 응답 시간뿐 아니라 꼬리 지연, DB 커넥션 점유, 외부 API 동시 요청 수와 작업 적체를 함께 봐야 합니다. 구체적인 목표값은 공개 예시에 포함하지 않았습니다.
+부하 테스트에서도 평균 응답 시간뿐 아니라 꼬리 지연, DB 커넥션 점유, 외부 API 동시 요청 수와 작업 적체를 함께 봐야 합니다.
 
 ---
 
@@ -401,4 +393,4 @@ flowchart LR
 6. 중복 전달을 전제로 멱등성 키와 상태 기록을 설계합니다.
 7. 응답 이후의 실패를 발견할 메트릭과 재처리 경로를 준비합니다.
 
-이번 글에서는 AI 요청의 저장과 후처리를 나누고, 커밋 시점, 외부 API, Coroutine Scope, 중복 실행과 실패 기록을 차례로 살펴보았습니다. Coroutine으로 요청을 빠르게 반환하는 것뿐 아니라, 요청 밖으로 옮긴 작업을 다시 확인하고 처리할 수 있게 만드는 과정이 함께 필요했습니다.
+이번 글에서는 AI 요청의 저장과 후처리를 나누고, 커밋 시점, 외부 API, 코루틴 스코프, 중복 실행과 실패 기록을 차례로 살펴보았습니다. 코루틴으로 요청을 빠르게 반환하는 것뿐 아니라, 요청 밖으로 옮긴 작업을 다시 확인하고 처리할 수 있게 만드는 과정이 함께 필요했습니다.
